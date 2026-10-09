@@ -160,6 +160,41 @@ body[data-wall=photo] .pay-card,body[data-wall=photo] .card{background:var(--pap
 @media(min-width:721px){.pay-controls{padding:12px 18px 12px 0}.balance-section{padding:32px}.payments .shelf{grid-template-columns:1fr}}
 @media(max-width:720px){.balance-section{padding:22px 18px;border-radius:25px}.balance-section .balance{font-size:clamp(38px,11vw,56px)}.balance-summary>div{padding:13px 11px;border-radius:16px}.balance-section .balance-summary{gap:9px}.balance-summary h2{font-size:11px}.balance-summary strong{font-size:clamp(17px,5.4vw,23px)}.payment-detail{gap:10px;padding:16px}.pay-amount{font-size:16px}.balance-section .quick .button{width:100%}.pay-controls{padding:0 16px 16px}.payments{padding-top:26px}}
 
+/* Paiements : petites fiches illustrées, par ordre d'échéance. */
+.payments .shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(218px,250px));gap:14px;align-items:stretch;margin-bottom:16px}
+.payments .pay-card{display:flex;flex-direction:column;align-items:stretch;min-width:0;width:100%;max-width:250px;border-radius:22px;background:var(--paper-solid);border:1px solid var(--line);box-shadow:0 6px 22px rgba(22,16,38,.07);overflow:hidden}
+.payments .payment-detail{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;flex:none;width:100%;min-height:178px;gap:22px;padding:16px;color:#fff;text-align:left;overflow:hidden}
+.payments .payment-detail::before{content:"";position:absolute;z-index:-1;width:180px;height:180px;right:-48px;top:-80px;border-radius:50%;background:rgba(255,255,255,.12);box-shadow:-40px 190px 0 30px rgba(255,255,255,.055);pointer-events:none}
+.payments .payment-detail:hover{filter:brightness(1.08)}
+.payments .payment-detail:focus-visible{outline:3px solid #fff;outline-offset:-6px}
+.pay-art-home{background:linear-gradient(135deg,#493d85,#22203e)}
+.pay-art-music{background:linear-gradient(135deg,#c42959,#791932)}
+.pay-art-tv{background:linear-gradient(135deg,#633aa4,#29224d)}
+.pay-art-phone{background:linear-gradient(135deg,#23668b,#193545)}
+.pay-art-transport{background:linear-gradient(135deg,#287867,#183d36)}
+.pay-art-subscription{background:linear-gradient(135deg,#955136,#492e38)}
+.pay-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pay-symbol{display:grid;place-items:center;flex-shrink:0;width:44px;height:44px;border:1px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(255,255,255,.13)}
+.pay-symbol svg{width:26px;height:26px}
+.pay-status{max-width:140px;border-radius:999px;background:rgba(0,0,0,.22);padding:6px 9px;font-size:11px;line-height:1.3;font-weight:650;white-space:normal}
+.pay-heading{display:grid;gap:7px}
+.pay-title{display:block;font-size:18px;line-height:1.2;font-weight:750;letter-spacing:-.02em;overflow-wrap:anywhere}
+.payments .pay-amount{display:block;font-size:25px;font-weight:750;line-height:1.15;letter-spacing:-.035em;white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.payments .pay-controls{display:flex;flex-direction:column;gap:7px;padding:13px 14px 14px;flex:1;min-width:0}
+.payments .pay-date{margin:0;color:var(--ink);font-size:12px;font-weight:600}
+.pay-reminder{display:flex;align-items:center;gap:5px;margin:0;color:var(--muted);font-size:11px;line-height:1.4}
+.pay-reminder .ui-icon{width:13px;height:13px;flex-shrink:0}
+.payments .pay-controls .button{margin-top:auto;width:100%;min-height:44px;padding:10px 8px;font-size:12px;border-radius:12px;background:var(--soft);color:var(--accent-text)}
+.payments .pay-urgent{border-color:var(--accent)}
+.pay-urgent .pay-status{background:rgba(255,255,255,.92);color:#612338}
+@media(max-width:720px){
+ .payments .shelf{display:flex;gap:12px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:0;padding:3px 2px 16px;-webkit-overflow-scrolling:touch}
+ .payments .pay-card{flex:0 0 clamp(210px,68vw,242px);max-width:242px;scroll-snap-align:start}
+ .payments .payment-detail{min-height:170px;padding:15px}
+ .payments .section-head{align-items:center;gap:12px}
+ .payments .section-head h2{font-size:21px}
+}
+
 </style>
 </head>
 <body data-wall="plain">
@@ -530,14 +565,29 @@ body[data-wall=photo] .pay-card,body[data-wall=photo] .card{background:var(--pap
   function txRow(t, controls=true) {const c=cat(t.categoryId);return `<div class="row"><span class="row-icon" aria-hidden="true">${t.type==='income'?'+':esc(c.icon)}</span><div class="row-info"><div class="row-name">${esc(t.name || c.label)}${t.autoKey?'<span class="badge">Auto</span>':''}${t.paymentConfirmed?'<span class="badge ok">Payé (confirmé par toi)</span>':''}</div><div class="row-meta">${esc(dateLabel(t.date))} · ${t.type==='income'?'Argent reçu':esc(c.label)}${t.corrected?' · corrigée':''}${t.earlyPaid?' · payé en avance pour le '+esc(dateLabel(t.autoKey.slice(-10))):''}${t.date>E.today()?' · à venir':''}${t.note?' · '+esc(t.note):''}</div></div><span class="row-amount ${t.type==='income'?'income':''}">${t.type==='income'?'+':'−'}${euro(t.amountCents)}</span>${controls?`<button class="button small" data-action="edit-tx" data-id="${esc(t.id)}" aria-label="Modifier ${esc(t.name)}">Modifier</button>`:''}</div>`;}
   function heading(eye,title,desc='',right=''){return `<div class="page-heading"><div><p class="eyebrow">${eye}</p><h1>${title}</h1>${desc?`<p class="muted">${desc}</p>`:''}</div>${right}</div>`;}
   function whenLabel(c){if(c.days<0)return 'À confirmer';if(c.days===0)return 'Aujourd’hui';return `dans ${c.days} jours`;}
-  function payCard(c){return `<article class="pay-card" aria-label="${esc(c.name)}, ${esc(euro(c.amountCents))}, ${esc(whenLabel(c))}"><button class="payment-detail" data-action="edit-rule" data-id="${esc(c.ruleId)}" aria-label="Modifier la règle ${esc(c.name)}"><span class="row-icon">${icon('clock')}</span><span class="row-info"><strong>${esc(c.name)}</strong><span class="pay-date">${esc(shortDate(c.dueDate))} · ${esc(whenLabel(c))}</span></span><strong class="pay-amount">${euro(c.amountCents)}</strong></button><div class="pay-controls"><button class="button small" data-action="pay" data-key="${esc(c.autoKey)}">${c.status==='future'?'Noter un paiement anticipé':'Confirmer si payé'}</button></div></article>`;}
+  function paymentArtwork(c){
+    const name=String(c.name||'').toLowerCase();
+    const kind=c.categoryId==='logement'?'home':/deezer|spotify|music|musique/.test(name)?'music':/disney|netflix|cinéma|cinema|vidéo|video/.test(name)?'tv':c.categoryId==='telephone'?'phone':c.categoryId==='transport'?'transport':'subscription';
+    const paths={home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1Z"/>',music:'<path d="M9 18V5l12-2v13M9 9l12-2"/><ellipse cx="6" cy="18" rx="3" ry="3"/><ellipse cx="18" cy="16" rx="3" ry="3"/>',tv:'<rect x="3" y="5" width="18" height="13" rx="3"/><path d="M8 22h8M12 18v4m-2-12 5 3-5 3Z"/>',phone:'<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4M11 19h2"/>',transport:'<rect x="4" y="3" width="16" height="16" rx="4"/><path d="M4 11h16M8 3v8M16 3v8M7 19v3M17 19v3M8 15h.01M16 15h.01"/>',subscription:'<rect x="3" y="5" width="18" height="15" rx="3"/><path d="M7 2v6M17 2v6M3 11h18m6 5 2 2 4-4"/>'};
+    return {kind,svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+paths[kind]+'</svg>'};
+  }
+  function payCard(c){
+    const art=paymentArtwork(c),urgent=c.days<=2,reminder=Boolean(data.preferences.reminders&&c.reminderEnabled);
+    return `<article class="pay-card ${urgent?'pay-urgent':''}" aria-label="${esc(c.name)}, ${esc(euro(c.amountCents))}, ${esc(whenLabel(c))}">
+      <button class="payment-detail pay-art-${art.kind}" data-action="edit-rule" data-id="${esc(c.ruleId)}" aria-label="Modifier la règle ${esc(c.name)}">
+        <span class="pay-card-top"><span class="pay-symbol">${art.svg}</span><span class="pay-status">${esc(whenLabel(c))}</span></span>
+        <span class="pay-heading"><strong class="pay-title">${esc(c.name)}</strong><strong class="pay-amount">${euro(c.amountCents)}</strong></span>
+      </button>
+      <div class="pay-controls"><p class="pay-date">${esc(shortDate(c.dueDate))}</p><p class="pay-reminder">${reminder?icon('bell')+'Rappel dans Clair à J−2':'Rappel désactivé'}</p><button class="button small" data-action="pay" data-key="${esc(c.autoKey)}" aria-label="${esc((c.status==='future'?'Payer en avance : ':'Confirmer le paiement : ')+c.name)}">${c.status==='future'?'Payer en avance':'Confirmer le paiement'}</button></div>
+    </article>`;
+  }
   function home() {
     if(!data.initialized)return `<div class="big-empty"><div class="brand-mark">c</div><h1>Clair</h1><p class="muted">Ton argent, simplement.</p><button class="button primary" data-action="setup">Configurer mon suivi</button><p class="help">Déjà une sauvegarde ?</p><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label></div>`;
     const now=E.today(), balance=E.balance(data), reserve=E.reserve(data), free=balance-reserve.cents, cards=E.upcoming(data);
     const end=now.slice(0,7)+'-'+E.lastDay(now.slice(0,7));
     return `<section class="balance-section" aria-labelledby="balance-title"><div class="balance-top"><h1 id="balance-title">Solde calculé</h1><button class="icon-button" data-action="notifications" aria-label="Notifications" title="Notifications">${icon('bell')}</button></div><div class="balance ${balance<0?'negative':''}">${euro(balance)}</div><details class="balance-help"><summary>Estimation · comment est-elle calculée ?</summary><p>Aujourd’hui · solde de départ, opérations saisies et dépenses automatiques déjà comptées. Ce n’est pas un relevé bancaire.</p></details><div class="balance-summary"><div><h2>Réservé pour les charges</h2><strong>${euro(reserve.cents)}</strong></div><div><h2>Disponible après charges</h2><strong class="${free<0?'negative':''}">${euro(free)}</strong></div></div><p class="reserve-horizon">Charges prévues d’ici le ${esc(dateLabel(end))}</p><details class="balance-help"><summary>Ce qui est réservé</summary><p>De demain au ${esc(dateLabel(end))} : repas, charges récurrentes et dépenses futures déjà saisies. Les autres dépenses et revenus à venir ne sont pas anticipés.</p></details><div class="quick"><button class="button primary" data-action="add">${icon('plus')}Ajouter</button></div></section>`+
       (!data.setupDone?'<div class="notice">Tes anciennes données sont conservées. <button class="link" data-action="setup">Terminer la configuration</button></div>':'')+
-      `<section class="payments" aria-labelledby="up-title"><div class="section-head"><h2 id="up-title">Échéances</h2><button class="link" data-nav="rules">Gérer les charges</button></div>${cards.length?`<div class="shelf">${cards.map(payCard).join('')}</div>`:'<p class="help">Aucune échéance de loyer ou d’abonnement à afficher.</p>'}<p class="help">Échéances des 62 prochains jours et opérations à confirmer des 31 derniers jours. Une opération passée est déjà comptée, même sans confirmation. Confirme seulement si tu sais qu’elle a été payée ; aucune confirmation quotidienne n’est nécessaire.</p></section>`;
+      `<section class="payments" aria-labelledby="up-title"><div class="section-head"><h2 id="up-title">Paiements à venir</h2><button class="link" data-nav="rules">Gérer les charges</button></div>${cards.length?`<div class="shelf" tabindex="0" role="region" aria-label="Échéances, de la plus urgente à la plus lointaine">${cards.map(payCard).join('')}</div>`:'<p class="help">Aucune échéance de loyer ou d’abonnement à afficher.</p>'}<p class="help">Échéances des 62 prochains jours et opérations à confirmer des 31 derniers jours. Une opération passée est déjà comptée, même sans confirmation. Confirme seulement si tu sais qu’elle a été payée ; aucune confirmation quotidienne n’est nécessaire.</p></section>`;
   }
   function ruleCopy(r){if(r.kind==='weekly')return dayOrder.filter(i=>r.amounts[i]>0).map(i=>dayNames[i].slice(0,3)+' '+euro(r.amounts[i])).join(' · ');return euro(r.amountCents)+' · '+(r.kind==='yearly'?'chaque année':'chaque mois')+' · '+(r.day==='last'?'dernier jour du mois':'le '+r.day)+(r.kind==='yearly'?' · mois '+r.month:'');}
   const isSuspended = r => r.pauses.some(p=>p.start<=nextDay()&&p.end>=nextDay());
