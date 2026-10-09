@@ -10,7 +10,7 @@ self.addEventListener('fetch',e=>{
  if(e.request.method!=='GET'||u.origin!==BASE.origin)return;
  const isHome=u.href===BASE.href||u.pathname===new URL(HOME).pathname;
  if(!isHome&&!ASSETS.includes(u.href))return;
- if(isHome)e.respondWith(fetch(e.request).then(r=>{if(r.ok)e.waitUntil(caches.open(CACHE).then(c=>c.put(HOME,r.clone())));return r}).catch(()=>caches.match(HOME)));
+ if(isHome)e.respondWith(fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();e.waitUntil(caches.open(CACHE).then(c=>c.put(HOME,copy)));}return r}).catch(()=>caches.match(HOME)));
  else e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
 });
 self.addEventListener('push',e=>{
