@@ -1,0 +1,20 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=require('crypto').webcrypto;
+const html=fs.readFileSync(__dirname+'/../index.html','utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
+const nodes=new Map(),storage=new Map(),requests=[];let replies=[];
+const node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',style:{},dataset:{},open:false,showModal(){this.open=true},close(){this.open=false},addEventListener(){},scrollIntoView(){},focus(){}});return nodes.get(s)};
+const client={auth:{signInWithPassword:async p=>{requests.push(p);return replies.shift()},signUp:async p=>{requests.push(p);return replies.shift()},resetPasswordForEmail:async()=>({}),updateUser:async()=>({})}};
+const sandbox={Intl,Date,TextEncoder,URL,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{origin:'https://example.test',protocol:'https:',href:'https://example.test/clair/',pathname:'/clair/'},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener(){}},supabase:{createClient:()=>client},CLAIR_ACCOUNT_CONFIG:{url:'https://test.supabase.co',key:'sb_publishable_test'},FormData:class{constructor(form){this.values=form.values}get(k){return this.values[k]??null}}};sandbox.window=sandbox;sandbox.addEventListener=()=>{};
+vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);let ui=scripts[3];const boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);ui=ui.slice(0,boot)+'window.test={cloud,render,accountGate,accountCard,accountSubmit,accountStatus,legacyBudget,transferLegacy,setData(d){data=d},getData(){return data;}};})();';vm.runInContext(ui,sandbox);const t=sandbox.test;
+(async()=>{
+ const legacy=sandbox.ClairEngine.empty();legacy.initialized=legacy.setupDone=true;legacy.openingCents=1700;storage.set('clair-github-money-v3',JSON.stringify(legacy));
+ t.render();assert(!node('#page').innerHTML.includes('17,00'));t.cloud.ready=true;t.cloud.status='signed-out';t.render();assert(node('#page').innerHTML.includes('account-form'));assert(!node('#page').innerHTML.includes('17,00'));
+ console.log('PASS: login gate hides existing budget until account authentication');
+ const form={id:'account-form',dataset:{mode:'login'},values:{email:'a@example.test',password:'wrong'},querySelector:()=>({disabled:false}),reset(){}};
+ for(let n=0;n<3;n++){replies.push({error:{code:'invalid_credentials'}});await t.accountSubmit(form)}assert.equal(requests.length,3);await t.accountSubmit(form);assert.equal(requests.length,3);assert(node('#account-error').textContent.includes('minute'));
+ console.log('PASS: three failed attempts cause a temporary device cooldown');
+ storage.delete('clair-auth-attempts-v1');replies.push({data:{session:null,user:{}}});form.dataset.mode='signup';form.values={email:'a@example.test',password:'twelve-character-password',displayName:'  El-Hadj  '};await t.accountSubmit(form);assert.equal(requests.at(-1).options.data.display_name,'El-Hadj');assert(node('#account-error').textContent.includes('confirmer'));
+ t.cloud.user={id:'user-a',email:'a@example.test'};t.cloud.displayName='<img src=x onerror=alert(1)>';assert(t.accountCard().includes('&lt;img'));assert(!t.accountCard().includes('<img src=x'));
+ storage.set('clair-local-owner-v1','user-b');assert.equal(t.legacyBudget(),null);
+ console.log('PASS: email confirmation, escaped profile text and prevention of another account claiming local budget');
+ console.log('ALL ACCOUNT UI CHECKS PASSED');
+})().catch(e=>{console.error(e);process.exitCode=1});
