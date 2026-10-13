@@ -30,7 +30,11 @@
     async init(){
       if(!this.enabled)return;
       this.client.auth.onAuthStateChange((event,session)=>{
-        if(event==='PASSWORD_RECOVERY'){this.hooks.recovery?.();this.emit();}
+        if(event==='PASSWORD_RECOVERY'){
+          this.hooks.recovery?.(session?.user);
+          if(session?.user.id&&session.user.id!==this.user?.id){this.ready=false;this.status='loading';}
+          this.emit();
+        }
         if(event==='SIGNED_OUT'||(session?.user.id&&session.user.id!==this.user?.id))setTimeout(()=>this.attach(session?.user||null),0);
       });
       const {data,error}=await this.client.auth.getSession();

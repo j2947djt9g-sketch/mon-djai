@@ -19,7 +19,7 @@ function device(uid,storage=new Map()){
  vm.createContext(context);vm.runInContext(source,context);
  const hooks={normalize:d=>E.normalize(d),enter(){},apply:(p,r)=>applications.push({p,r}),status(){},leave(){},empty(){}};
  const cloud=new context.window.ClairCloud({url:'https://testproject.supabase.co',key:'sb_publishable_test'},hooks,{createClient:()=>client});
- return {cloud,storage,writes,applications,navigator,client,setUser:u=>{currentUser=u},edit:d=>{const raw=cloud.pack(d);storage.set(cloud.key(),raw);cloud.saved(raw)},async init(){await cloud.init()}};
+ return {cloud,storage,writes,applications,navigator,client,authEvent:(event,session)=>callback(event,session),setUser:u=>{currentUser=u},edit:d=>{const raw=cloud.pack(d);storage.set(cloud.key(),raw);cloud.saved(raw)},async init(){await cloud.init()}};
 }
 const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents=n;return d};
 (async()=>{
@@ -49,5 +49,12 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  console.log('PASS: duplicate SDK session events do not restart or block opening');
  const sameA=device('same'),sameB=device('same');await sameA.init();sameA.edit(budget(100));await sameA.cloud.sync();await sameB.init();sameA.edit(budget(200));sameB.edit(budget(200));await sameA.cloud.sync();await sameB.cloud.sync();assert.equal(sameB.cloud.status,'synced');assert.equal(sameB.cloud.conflict,null);
  console.log('PASS: identical automatic updates from two devices do not create a false conflict');
+ const recovered=device('recovery-original');await recovered.init();let recoveryUser;
+ recovered.cloud.hooks.recovery=user=>{recoveryUser=user.id};
+ const recoveryTarget={id:'recovery-target',email:'target@example.test',user_metadata:{}};
+ recovered.setUser(recoveryTarget);recovered.authEvent('PASSWORD_RECOVERY',{user:recoveryTarget});
+ assert.equal(recoveryUser,'recovery-target');assert.equal(recovered.cloud.ready,false);assert.equal(recovered.cloud.status,'loading');
+ await recovered.cloud.attach(recoveryTarget);assert.equal(recovered.cloud.user.id,'recovery-target');assert.equal(recovered.cloud.record,null);
+ console.log('PASS: recovery for another account waits for its session and never uses the previous budget');
  console.log('PASS: all scripts parse; original financial engine unchanged');
 })().catch(e=>{console.error(e);process.exitCode=1});
