@@ -1,11 +1,28 @@
   /* ---------- Compte et synchronisation ---------- */
   window.CLAIR_ACCOUNT_CONFIG=location.protocol==='file:'?null:(window.CLAIR_ACCOUNT_CONFIG===undefined?{"url":"https://hkssnbvktfscizojhftl.supabase.co","key":"sb_publishable_qJeSyD7E0cbi8V--qyJJkw_8M4oOKr8"}:window.CLAIR_ACCOUNT_CONFIG);
-  let accountMode='login',accountBusy=false,accountRecovery=/(?:^#|&)type=recovery(?:&|$)/.test(location.hash||''),accountStarted=false;
+  const recoveryParams=new URLSearchParams((location.hash||'').slice(1));
+  const recoveryQuery=new URLSearchParams(location.search||'');
+  const recoveryError=recoveryParams.get('error_code')||recoveryQuery.get('error_code')||recoveryParams.get('error')||recoveryQuery.get('error');
+  let accountMode='login',accountBusy=false,accountRecovery=recoveryParams.get('type')==='recovery',accountStarted=false;
+  let accountResetStep=accountRecovery?'checking':recoveryError?'expired':null;
+  let accountResetEmail='',accountResetUntil=0,accountRecoveryUserId=null,accountDeferredSetup=false,accountResetTimer=null;
   const cloud=new window.ClairCloud(window.CLAIR_ACCOUNT_CONFIG,{
     normalize: value=>E.normalize(value),
-    status:()=>{if(!cloud.user||!cloud.ready||cloud.status==='loading'||$('#account-form')||$('#account-loading'))render();else renderAccountStatus();if(accountRecovery&&cloud.ready&&cloud.user){accountRecovery=false;setTimeout(passwordDialog,0);}},
-    recovery:()=>{accountRecovery=true;},
-    opened:()=>{catchUp();},
+    status:()=>{
+      if(accountResetStep){
+        if(cloud.ready&&cloud.status!=='loading'&&
+          (accountResetStep==='checking'||(accountResetStep==='password'&&cloud.user?.id!==accountRecoveryUserId)))
+          accountResetStep=cloud.user?.id===accountRecoveryUserId&&accountRecoveryUserId?'password':'expired';
+        const editing=(accountResetStep==='email'&&$('#account-forgot-form'))||
+          (accountResetStep==='password'&&$('#account-password-form'));
+        if(!editing)render();
+        return;
+      }
+      if(!cloud.user||!cloud.ready||cloud.status==='loading'||$('#account-form')||$('#account-loading'))render();
+      else renderAccountStatus();
+    },
+    recovery:user=>{accountRecovery=true;accountRecoveryUserId=user?.id||null;accountResetStep='password';close();},
+    opened:()=>{if(!accountResetStep)catchUp();},
     enter:(user,record)=>{
       close();wizard=null;undo=null;recovery=null;page='home';
       KEY=cloud.key(user.id);BACKUP=KEY+'-backup';REMINDED=KEY+'-reminded';PUSH_KEY=KEY+'-push';
@@ -16,10 +33,11 @@
     apply:(next,raw)=>{
       const changed=JSON.stringify(next)!==JSON.stringify(data);
       if(changed){close();wizard=null;undo=null;}
-      data=next;snapshot=raw;loadError=null;render();catchUp();
+      data=next;snapshot=raw;loadError=null;if(accountResetStep)return;render();catchUp();
       if(changed&&data.initialized)notify('Budget actualisé depuis ton compte.');
     },
     empty:()=>{
+      if(accountResetStep){accountDeferredSetup=true;return;}
       const legacy=legacyBudget();
       if(legacy?.initialized)dialog('Retrouver ton budget actuel',`<p>Ce navigateur contient déjà ${legacy.transactions.length} opérations. Tu peux les transférer vers ton compte.</p><p class="help">Le compte connecté : ${esc(cloud.user.email)}.</p><div class="actions"><button class="button primary" data-action="account-import">Transférer mon budget</button><button class="button" data-action="account-start-empty">Commencer un nouveau budget</button></div>`,'account-import');
       else if(!data.initialized)beginSetup();
@@ -34,7 +52,7 @@
   function accountGate(){
     if(!cloud.ready||cloud.status==='loading')return '<section class="card" id="account-loading"><h1>Ouverture de ton compte…</h1><p class="help">Ta copie locale est conservée.</p></section>';
     const signup=accountMode==='signup';
-    return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div><h1>Ton budget, partout.</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email','','email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}${signup?'<p class="help">12 caractères minimum. Ton adresse e-mail devra être confirmée.</p>':''}<p id="account-error" class="help negative" role="alert"></p><button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié</button>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
+    return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div><h1>Ton budget, partout.</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}${signup?'<p class="help">12 caractères minimum. Ton adresse e-mail devra être confirmée.</p>':''}<p id="account-error" class="help negative" role="alert"></p><button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié ?</button>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
   }
   function accountCard(){
     if(!cloud.enabled||!cloud.user)return '';
@@ -48,11 +66,82 @@
     $('#status-label').textContent=accountStatus();
     target.innerHTML=cloud.conflict?'<div class="notice"><p>Deux appareils ont modifié ton budget. Les deux copies sont conservées.</p><button class="button" data-action="account-conflict">Choisir une copie</button></div>':cloud.error?`<div class="notice">${esc(cloud.error)} <button class="link" data-action="account-sync">Réessayer</button></div>`:'';
   }
-  function passwordDialog(){dialog('Nouveau mot de passe',`<form id="account-password-form">${field('Mot de passe','password','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}${formActions('Enregistrer')}</form>`,'account-password');}
-  function accountMessage(message){const target=$('#account-error')||$('#form-error');if(target)target.textContent=message;else notify(message);}
+  function recoveryView(){
+    let body='';
+    const error='<p id="account-error" class="help negative" role="alert"></p>';
+    const back='<button class="link" data-action="account-reset-back">Retour à la connexion</button>';
+    if(accountResetStep==='checking'||(accountResetStep==='password'&&(!cloud.ready||!cloud.user))){
+      body='<h1>Vérification du lien…</h1><p class="muted" role="status">Un instant, nous ouvrons la récupération de ton compte.</p>';
+    }else if(accountResetStep==='email'){
+      const wait=Math.max(0,Math.ceil((accountResetUntil-Date.now())/1000));
+      body='<h1>Retrouver mon compte</h1><p class="muted">Reçois un lien pour choisir un nouveau mot de passe.</p>'+
+        '<form id="account-forgot-form">'+field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="email" autocapitalize="none" spellcheck="false"')+error+
+        '<button class="button primary" id="account-reset-send" type="submit" '+(wait?'disabled':'')+'>'+(wait?'Réessayer dans '+wait+' s':'Envoyer le lien')+'</button></form>'+back;
+    }else if(accountResetStep==='sent'){
+      const wait=Math.max(0,Math.ceil((accountResetUntil-Date.now())/1000));
+      body='<h1>Vérifie tes e-mails</h1><p class="muted">Si un compte utilise cette adresse, tu recevras un lien pour changer ton mot de passe.</p>'+
+        '<p class="recovery-email">'+esc(accountResetEmail)+'</p><p class="help">Ouvre le lien reçu. Pense à vérifier les indésirables.</p>'+error+
+        '<div class="recovery-actions"><button class="button primary" id="account-reset-resend" data-action="account-reset-resend" '+(wait?'disabled':'')+'>'+(wait?'Renvoyer dans '+wait+' s':'Renvoyer le lien')+'</button>'+
+        '<button class="link" data-action="account-reset-edit">Corriger mon adresse</button>'+back+'</div>';
+    }else if(accountResetStep==='password'){
+      body='<h1>Nouveau mot de passe</h1><p class="muted">Choisis le mot de passe de ton compte Clair.</p>'+
+        '<form id="account-password-form"><label class="field"><span>Nouveau mot de passe</span><input id="account-new-password" name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="account-password-help"></label>'+
+        '<button type="button" class="link password-toggle" data-action="account-password-toggle" aria-controls="account-new-password" aria-pressed="false">Afficher le mot de passe</button>'+
+        '<p class="help" id="account-password-help">12 caractères minimum. Tu peux utiliser une phrase.</p>'+error+
+        '<button class="button primary" type="submit">Enregistrer mon mot de passe</button></form>';
+    }else if(accountResetStep==='done'){
+      body='<h1>Mot de passe modifié</h1><p class="muted" role="status">Ton nouveau mot de passe est enregistré.</p>'+
+        '<button class="button primary" data-action="account-reset-finish">Accéder à mon budget</button>';
+    }else{
+      body='<h1>Ce lien ne fonctionne plus</h1><p class="muted">Il a expiré, a déjà été utilisé ou est incomplet. Demande un nouveau lien pour récupérer ton compte.</p>'+
+        '<button class="button primary" data-action="account-reset-edit">Demander un nouveau lien</button>'+back;
+    }
+    return '<section class="card account-card account-recovery" aria-labelledby="recovery-title"><div class="brand-mark" aria-hidden="true">c</div>'+
+      body.replace('<h1>','<h1 id="recovery-title" tabindex="-1">')+'</section>';
+  }
+  function focusRecovery(){setTimeout(()=>$('#recovery-title')?.focus({preventScroll:true}),0);}
+  function resetCooldown(){
+    clearTimeout(accountResetTimer);
+    const wait=Math.max(0,Math.ceil((accountResetUntil-Date.now())/1000));
+    const button=$('#account-reset-resend')||$('#account-reset-send');
+    if(button){button.disabled=accountBusy||wait>0;button.textContent=accountBusy?'Envoi en cours…':wait?(accountResetStep==='sent'?'Renvoyer dans ':'Réessayer dans ')+wait+' s':accountResetStep==='sent'?'Renvoyer le lien':'Envoyer le lien';}
+    if(wait&&['email','sent'].includes(accountResetStep))accountResetTimer=setTimeout(resetCooldown,1000);
+  }
+  function clearRecoveryAddress(){
+    if(!accountRecovery&&!recoveryError)return;
+    // The SDK has already consumed the return from Auth. Never store its URL tokens.
+    try{const search=new URLSearchParams(location.search||'');for(const key of ['error','error_code','error_description'])search.delete(key);history.replaceState(null,'',location.pathname+(search.size?'?'+search.toString():''));}catch{}
+  }
+  function finishRecovery(){
+    if(accountBusy)return;
+    clearRecoveryAddress();accountResetStep=null;accountRecovery=false;accountRecoveryUserId=null;clearTimeout(accountResetTimer);
+    close();render();
+    if(cloud.user){catchUp();if(accountDeferredSetup){accountDeferredSetup=false;cloud.hooks.empty();}}
+  }
+  function accountMessage(message){
+    const target=($('#dialog').open?$('#form-error'):null)||$('#account-error');
+    if(target){target.textContent=message;if(message)target.scrollIntoView({block:'nearest'});}else notify(message);
+  }
+  async function sendRecovery(email){
+    if(accountResetUntil>Date.now())throw Error('Attends la fin du délai avant de demander un autre lien.');
+    if(!email)throw Error('Indique l’adresse e-mail de ton compte.');
+    accountResetEmail=email;
+    const {error}=await cloud.client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    if(error){
+      if(error.status===429||['over_email_send_rate_limit','over_request_rate_limit'].includes(error.code)){
+        accountResetUntil=Date.now()+60000;resetCooldown();
+        throw Error('L’envoi est temporairement limité. Réessaie plus tard.');
+      }
+      if(navigator.onLine===false||error.name==='AuthRetryableFetchError')
+        throw Error('Vérifie ta connexion Internet, puis réessaie.');
+      throw Error('Le lien ne peut pas être envoyé pour le moment. Réessaie plus tard.');
+    }
+    accountResetUntil=Date.now()+60000;accountResetStep='sent';render();focusRecovery();
+  }
   function attempts(){try{return JSON.parse(localStorage.getItem('clair-auth-attempts-v1')||'{"count":0,"until":0}');}catch{return {count:0,until:0};}}
   async function accountSubmit(form){
     if(accountBusy)return;accountBusy=true;const button=form.querySelector('button[type=submit]');if(button)button.disabled=true;
+    accountMessage('');if(form.id==='account-forgot-form')resetCooldown();
     try{
       const f=new FormData(form),email=String(f.get('email')||'').trim(),password=String(f.get('password')||'');
       if(form.id==='account-form'){
@@ -76,16 +165,24 @@
         if(signup&&!response.data.session){form.reset();accountMessage('Vérifie tes e-mails pour confirmer ton compte, puis connecte-toi ici.');return;}
         await cloud.attach(response.data.user||response.data.session?.user);
       }
-      if(form.id==='account-forgot-form'){
-        const {error}=await cloud.client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-        if(error)throw Error('Envoi indisponible. Attends un moment et réessaie.');close();notify('Si ce compte existe, un lien de récupération a été envoyé.');
-      }
+      if(form.id==='account-forgot-form')await sendRecovery(email);
       if(form.id==='account-password-form'){
-        if(password.length<12)throw Error('Utilise au moins 12 caractères.');const {error}=await cloud.client.auth.updateUser({password});
-        if(error)throw Error('Le mot de passe n’a pas pu être changé. Demande un nouveau lien.');close();notify('Mot de passe modifié.');
+        if(!accountRecoveryUserId||cloud.user?.id!==accountRecoveryUserId){accountResetStep='expired';render();focusRecovery();return;}
+        if(password.length<12||password.length>128)throw Error('Utilise entre 12 et 128 caractères.');
+        const {error}=await cloud.client.auth.updateUser({password});
+        if(error){
+          if(error.status===401||['session_not_found','refresh_token_not_found','refresh_token_already_used','bad_jwt','user_not_found'].includes(error.code)){
+            accountResetStep='expired';render();focusRecovery();return;
+          }
+          if(error.code==='same_password')throw Error('Choisis un mot de passe différent du précédent.');
+          if(error.code==='weak_password')throw Error('Ce mot de passe est trop facile à deviner. Choisis une phrase plus longue.');
+          if(error.status===429)throw Error('Trop de demandes. Attends un moment avant de réessayer.');
+          throw Error(navigator.onLine===false?'Vérifie ta connexion Internet, puis réessaie.':'Le mot de passe n’a pas pu être enregistré. Réessaie.');
+        }
+        accountResetStep='done';accountRecovery=false;accountRecoveryUserId=null;render();focusRecovery();
       }
     }catch(error){accountMessage(error.message||'La connexion n’a pas abouti.');}
-    finally{accountBusy=false;if(button)button.disabled=false;}
+    finally{accountBusy=false;if(button)button.disabled=false;resetCooldown();}
   }
   function transferLegacy(){
     const legacy=legacyBudget();if(!legacy){notify('Aucun ancien budget à transférer sur cet appareil.');return;}
@@ -106,7 +203,25 @@
   }
   async function accountAction(action){
     if(action==='account-mode'){accountMode=accountMode==='login'?'signup':'login';render();}
-    if(action==='account-forgot')dialog('Retrouver mon compte',`<form id="account-forgot-form">${field('Adresse e-mail','email','','email','required maxlength="254" autocomplete="email"')}${formActions('Envoyer le lien')}</form>`,'account-forgot');
+    if(action==='account-forgot'||action==='account-reset-edit'){
+      if(accountBusy)return;
+      if(action==='account-forgot')accountResetEmail=$('#account-form input[name="email"]')?.value?.trim()||accountResetEmail;
+      accountResetStep='email';close();clearRecoveryAddress();render();resetCooldown();focusRecovery();
+    }
+    if(action==='account-reset-back'||action==='account-reset-finish'){
+      if(action==='account-reset-back')accountMode='login';
+      finishRecovery();
+    }
+    if(action==='account-reset-resend'){
+      if(accountBusy)return;
+      accountBusy=true;accountMessage('');resetCooldown();
+      try{await sendRecovery(accountResetEmail);}catch(error){accountMessage(error.message);}
+      finally{accountBusy=false;resetCooldown();}
+    }
+    if(action==='account-password-toggle'){
+      const input=$('#account-new-password'),button=$('[data-action="account-password-toggle"]');
+      if(input&&button){const show=input.type==='password';input.type=show?'text':'password';button.textContent=show?'Masquer le mot de passe':'Afficher le mot de passe';button.setAttribute('aria-pressed',String(show));}
+    }
     if(action==='account-import')transferLegacy();
     if(action==='account-start-empty'){close();beginSetup();}
     if(action==='account-sync')await cloud.sync();

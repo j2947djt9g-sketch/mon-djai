@@ -49,3 +49,14 @@ SHA-256 : `c45136a0ba5c7391646869a734db105ba607a9233fd6ec2e7e5bbab447bdc57a`.
 Licence dans LICENSE-supabase.txt.
 
 Pour les tests locaux : `node clair/accounts/test-cloud.cjs`, `node clair/accounts/test-account-ui.cjs`, `node clair/accounts/test-local.cjs`.
+
+
+## Récupération du mot de passe
+
+Le lien « Mot de passe oublié ? » conserve l'adresse saisie. Après la demande, un écran permanent indique de vérifier les e-mails et les indésirables, permet de corriger l'adresse et de renvoyer le lien après un délai de 60 secondes. La réponse reste neutre sur l'existence du compte. Le délai dans l'interface complète les limites côté Supabase.
+
+Un retour PASSWORD_RECOVERY validé par le SDK ouvre un écran consacré au nouveau mot de passe. Une session déjà ouverte pour un autre compte ne remplace pas la vérification du lien. Le formulaire propose l'affichage du mot de passe et indique les 12 caractères minimum. Ses valeurs restent présentes lors d'une synchronisation ou d'un retour dans l'onglet. L'accueil, le transfert et la configuration du budget attendent la fin de cette étape.
+
+Après enregistrement, une confirmation persistante permet d'accéder directement au budget. Un lien invalide, expiré ou déjà utilisé propose de demander un nouveau lien. Les erreurs de débit, de réseau, de mot de passe identique et de session expirée sont affichées dans le parcours actif.
+
+Tests complémentaires : node clair/accounts/test-recovery.cjs et node clair/accounts/test-recovery-sdk.cjs. Le second utilise le SDK officiel intégré et un transport simulé pour vérifier les événements de récupération, la consommation du retour URL et l'appel updateUser. Aucun e-mail n'est envoyé et aucun compte réel n'est modifié par ces tests. La réception en boîte mail doit toujours être confirmée ; le SMTP public reste à configurer si le projet utilise l'envoi de test.
