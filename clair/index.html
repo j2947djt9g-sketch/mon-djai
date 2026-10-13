@@ -229,6 +229,36 @@ body[data-wall=photo] .pay-card,body[data-wall=photo] .card{background:var(--pap
 @media(max-width:390px){.date-grid{gap:3px}.preset-button{padding:11px 8px;gap:7px;font-size:13px}.dialog-inner{padding:20px}}
 @media(prefers-reduced-motion:reduce){.settings-more summary::before{transition:none}}
 
+
+/* Lisibilité et adaptation aux petits écrans, y compris Safari iOS. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.balance-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+.balance-summary>div{min-width:0}.balance-summary h2{min-height:0;line-height:1.5}
+.balance-summary strong{overflow-wrap:anywhere}.forecast-result p{font-size:13px;line-height:1.5;margin:8px 0 0;color:rgba(255,255,255,.85)}
+.balance-section .quick{margin-top:20px}
+input,select,textarea{font-size:16px;max-width:100%;min-width:0}
+input[type=date]{min-height:44px;display:block;width:100%}
+dialog{max-height:calc(100vh - 32px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);overflow-y:auto;overscroll-behavior:contain}
+.dialog-inner{min-width:0}.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+main{overflow-wrap:break-word}.topbar>*{min-width:0}
+#welcome{border:0;max-width:none;max-height:none;width:100%;height:100%;height:100dvh;margin:0;border-radius:0;background:radial-gradient(ellipse at 30% 20%,#702951,transparent 65%),#18121e;color:white;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));text-align:center}
+#welcome[open]{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px}
+#welcome .hello{font-family:"Snell Roundhand","Segoe Script",cursive;font-size:clamp(60px,17vw,110px);font-weight:400;line-height:1.3;margin:0;animation:hello-in .65s ease-out both}
+#welcome p{margin:0;line-height:1.7}#welcome .welcome-credit{color:#e6cfdc;font-size:14px}
+#welcome button{margin-top:24px;border:1px solid #ffffff55;border-radius:99px;background:#ffffff16;color:white;padding:12px 24px;min-height:44px;font:inherit}
+@keyframes hello-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:720px){
+main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
+.topbar{gap:12px;align-items:center}.topbar .status{font-size:11px;max-width:48%;line-height:1.4;text-align:right}
+.balance-section{padding:22px 18px}.balance{font-size:clamp(36px,10vw,52px)}
+.balance-summary{grid-template-columns:1fr;gap:10px}.balance-summary>div{padding:14px}
+.balance-summary h2{font-size:14px;min-height:0}.balance-summary strong{font-size:26px}
+.balance-top h1{font-size:22px}.form-grid{grid-template-columns:minmax(0,1fr)}
+.bottom-nav{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.section-head{flex-wrap:wrap;gap:10px}.section-head h2{font-size:24px}
+}
+@media(prefers-reduced-motion:reduce){#welcome .hello{animation:none}}
+
 </style>
 </head>
 <body data-wall="plain">
@@ -236,6 +266,7 @@ body[data-wall=photo] .pay-card,body[data-wall=photo] .card{background:var(--pap
 <div class="shell"><aside class="sidebar"><div class="brand"><span class="brand-mark" aria-hidden="true">c</span>clair</div><p class="tagline">Mon argent, simplement.</p><nav class="nav" aria-label="Navigation principale"></nav><div class="sidebar-foot"><p>Sur cet appareil uniquement.</p><button class="link" data-nav="settings">Sauvegarder mes données</button></div></aside>
 <main><header class="topbar"><div class="mobile-brand"><span class="brand-mark" aria-hidden="true">c</span>clair</div><span class="top-date" id="today-label"></span><span class="status"><span class="dot" aria-hidden="true"></span><span id="status-label">Sur cet appareil</span></span></header><div id="alert" role="alert"></div><div id="reminders" aria-live="polite"></div><div id="page"></div></main></div>
 <nav class="bottom-nav" aria-label="Navigation mobile"></nav><dialog id="dialog" aria-labelledby="dialog-title"></dialog><div id="toast" role="status" aria-live="polite"></div>
+<dialog id="welcome" aria-labelledby="welcome-title"><h1 class="hello" id="welcome-title">Bonjour</h1><p>Clair<br><span class="welcome-credit">Développé par El-Hadj</span></p><button type="button" id="welcome-skip" autofocus>Ouvrir Clair</button></dialog>
 <script>
 /* Clair — calculs en centimes, dates civiles, aucune requête réseau. */
 (function (root) {
@@ -619,7 +650,7 @@ body[data-wall=photo] .pay-card,body[data-wall=photo] .card{background:var(--pap
     if(!data.initialized)return `<div class="big-empty"><div class="brand-mark">c</div><h1>Clair</h1><p class="muted">Ton argent, simplement.</p><button class="button primary" data-action="setup">Configurer mon suivi</button><p class="help">Déjà une sauvegarde ?</p><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label></div>`;
     const now=E.today(), balance=E.balance(data), reserve=E.reserve(data), free=balance-reserve.cents, cards=E.upcoming(data);
     const end=now.slice(0,7)+'-'+E.lastDay(now.slice(0,7));
-    return `<section class="balance-section" aria-labelledby="balance-title"><div class="balance-top"><h1 id="balance-title">Solde calculé</h1><button class="icon-button" data-action="notifications" aria-label="Notifications" title="Notifications">${icon('bell')}</button></div><div class="balance ${balance<0?'negative':''}">${euro(balance)}</div><details class="balance-help"><summary aria-label="Comprendre le solde calculé">Comment est-il calculé ?</summary><p>Aujourd’hui · solde de départ, opérations saisies et dépenses automatiques déjà comptées. Ce n’est pas un relevé bancaire.</p></details><div class="balance-summary"><div><h2>Réservé pour les charges</h2><strong>${euro(reserve.cents)}</strong></div><div><h2>Disponible après charges</h2><strong class="${free<0?'negative':''}">${euro(free)}</strong></div></div><p class="reserve-horizon">Charges prévues d’ici le ${esc(dateLabel(end))}</p><div class="quick"><button class="button primary" data-action="add">${icon('plus')}Ajouter</button></div></section>`+
+    return `<section class="balance-section" aria-labelledby="balance-title"><div class="balance-top"><h1 id="balance-title">Mon solde</h1><button class="icon-button" data-action="notifications" aria-label="Notifications" title="Notifications">${icon('bell')}</button></div><div class="balance ${balance<0?'negative':''}">${euro(balance)}</div><details class="balance-help"><summary aria-label="Comprendre le solde calculé">Comment est-il calculé ?</summary><p>Aujourd’hui · solde de départ, opérations saisies et dépenses automatiques déjà comptées. Ce n’est pas un relevé bancaire.</p></details><div class="balance-summary"><div><h2>Dépenses prévues d’ici le ${esc(dateLabel(end))}</h2><strong>${euro(reserve.cents)}</strong></div><div class="forecast-result"><h2>${free<0?'Il manque':'Il restera'}</h2><strong class="${free<0?'negative':''}">${euro(Math.abs(free))}</strong><p>${free<0?'pour couvrir les dépenses prévues':'après les dépenses prévues'}</p></div></div><details class="balance-help"><summary>Voir le calcul</summary><p>${euro(balance)} de solde − ${euro(reserve.cents)} de dépenses prévues = ${euro(free)}.</p><p>Les dépenses prévues ne sont pas encore déduites. Les revenus à venir ne sont pas inclus.</p></details><div class="quick"><button class="button primary" data-action="add">${icon('plus')}Ajouter</button></div></section>`+
       (!data.setupDone?'<div class="notice">Tes anciennes données sont conservées. <button class="link" data-action="setup">Terminer la configuration</button></div>':'')+
       `<section class="payments" aria-labelledby="up-title"><div class="section-head"><h2 id="up-title">Paiements à venir</h2><button class="link" data-nav="rules">Mes habitudes</button></div>${cards.length?`<div class="shelf" tabindex="0" role="region" aria-label="Échéances, de la plus urgente à la plus lointaine">${cards.map(payCard).join('')}</div>`:'<p class="help">Aucune échéance de loyer ou d’abonnement à afficher.</p>'}<details class="settings-more"><summary>À propos des échéances</summary><p class="help">Les prochains paiements et les opérations à confirmer sont classés par date. Les opérations passées sont déjà comptées : confirmer leur paiement ne les déduit pas de nouveau.</p></details><button class="link" data-nav="budget">Voir mon bilan du mois ${icon('arrow')}</button></section>`;
   }
@@ -826,9 +857,20 @@ function submitCharge(f){
   if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
   window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;if(page==='settings'&&!$('#dialog').open)render();});
   window.addEventListener('appinstalled',()=>{installPrompt=null;if(page==='settings')render();notify('Clair a été installé.');});
-  render();catchUp();if(!loadError&&!data.initialized)beginSetup();
+  render();catchUp();
+  function welcome(){
+    const intro=$('#welcome');
+    const ready=()=>{if(!loadError&&!data.initialized)beginSetup();};
+    let seen=false;try{seen=sessionStorage.getItem('clair-welcome-v1')==='1';sessionStorage.setItem('clair-welcome-v1','1');}catch(_){}
+    if(seen||matchMedia('(prefers-reduced-motion: reduce)').matches){ready();return;}
+    let timer;intro.addEventListener('close',()=>{clearTimeout(timer);ready();},{once:true});
+    $('#welcome-skip').addEventListener('click',()=>intro.close(),{once:true});
+    intro.showModal();timer=setTimeout(()=>{if(intro.open)intro.close();},1600);
+  }
+  welcome();
   if(!loadError&&data.initialized)syncPush();
 })();
 
 </script>
 </body></html>
+
