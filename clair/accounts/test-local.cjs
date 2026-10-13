@@ -5,7 +5,7 @@ const nodes=new Map(),storage=new Map(),events={};
 const node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',style:{},dataset:{},open:false,content:'',showModal(){this.open=true;},close(){this.open=false;},addEventListener(){},scrollIntoView(){},focus(){}});return nodes.get(s);};
 let payloads=[],notifications=[],fetched=[];
 const sandbox={Intl,Date,TextEncoder,URL,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{protocol:'https:',href:'https://example.test/clair/'},navigator:{userAgent:'iPhone',platform:'iPhone',maxTouchPoints:5},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener:(type,fn)=>{events[type]=fn;}},fetch:async url=>{fetched.push(String(url));return {ok:true,text:async()=>html};}};
-sandbox.window=sandbox;sandbox.addEventListener=()=>{};
+sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;
 vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
 let ui=scripts[3];const boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert.ok(boot>0);
 ui=ui.slice(0,boot)+`

@@ -30,7 +30,7 @@
     async init(){
       if(!this.enabled)return;
       this.client.auth.onAuthStateChange((event,session)=>{
-        if(event==='PASSWORD_RECOVERY')this.hooks.recovery?.();
+        if(event==='PASSWORD_RECOVERY'){this.hooks.recovery?.();this.emit();}
         if(event==='SIGNED_OUT'||(session?.user.id&&session.user.id!==this.user?.id))setTimeout(()=>this.attach(session?.user||null),0);
       });
       const {data,error}=await this.client.auth.getSession();
@@ -38,7 +38,7 @@
       await this.attach(data.session?.user||null);
     }
     async attach(user){
-      if(user?.id===this.user?.id&&this.ready)return;
+      if(user?.id===this.user?.id&&(this.ready||(this.user&&this.status==='loading')))return;
       const epoch=++this.epoch;clearTimeout(this.timer);this.record=null;this.conflict=null;this.error='';this.ready=false;this.user=user;
       if(!user){this.status='signed-out';this.ready=true;this.hooks.leave?.();this.emit();return;}
       this.displayName=String(user.user_metadata?.display_name||'').slice(0,64);
@@ -50,6 +50,7 @@
         this.ready=true;
         await this.sync(epoch);
         if(epoch!==this.epoch)return;
+        this.hooks.opened?.();
         if(!this.record&&!this.conflict&&this.status==='synced')this.hooks.empty?.(user);
       }catch(error){if(epoch!==this.epoch)return;this.hooks.badCache?.(error,localStorage.getItem(this.key()));this.error=error.message;this.status='error';this.ready=true;this.emit();}
     }
@@ -81,6 +82,7 @@
         const raw=localStorage.getItem(this.key(userId));this.record=this.decode(raw,userId);
         if(this.record?.meta.dirty){
           const pending=this.record;
+          if(remote&&JSON.stringify(this.wire(pending.payload))===JSON.stringify(this.wire(this.hooks.normalize(remote.payload)))){this.adopt(remote,expectedEpoch);return;}
           if((remote?.revision||0)!==pending.meta.revision&&remote?.operation_id!==pending.meta.operationId){this.setConflict(remote);return;}
           const {data,error}=await this.client.rpc('save_clair_budget',{p_payload:this.wire(pending.payload),p_expected_revision:pending.meta.revision,p_operation_id:pending.meta.operationId,p_display_name:this.displayName});
           if(expectedEpoch!==this.epoch)return;if(error)throw error;

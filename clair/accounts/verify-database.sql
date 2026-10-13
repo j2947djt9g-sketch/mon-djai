@@ -1,10 +1,8 @@
 -- Run AFTER schema.sql on the dedicated Clair project. Fixtures are rolled back.
 begin;
-create temporary table clair_test_ids(a uuid,b uuid);
-insert into clair_test_ids values(gen_random_uuid(),gen_random_uuid());
-grant select on clair_test_ids to authenticated;
-insert into auth.users(id) select a from clair_test_ids union all select b from clair_test_ids;
-select set_config('request.jwt.claim.sub',(select a::text from clair_test_ids),true);
+select set_config('clair.test_a',gen_random_uuid()::text,true),set_config('clair.test_b',gen_random_uuid()::text,true);
+insert into auth.users(id) values(current_setting('clair.test_a')::uuid),(current_setting('clair.test_b')::uuid);
+select set_config('request.jwt.claim.sub',current_setting('clair.test_a'),true);
 set local role authenticated;
 do $$
 declare result jsonb; first_op uuid := gen_random_uuid();
@@ -17,7 +15,7 @@ begin
   if (result->>'saved')::boolean then raise exception 'Stale revision overwrote data'; end if;
 end $$;
 reset role;
-select set_config('request.jwt.claim.sub',(select b::text from clair_test_ids),true);
+select set_config('request.jwt.claim.sub',current_setting('clair.test_b'),true);
 set local role authenticated;
 do $$
 declare modified integer;
@@ -28,12 +26,12 @@ begin
   if modified > 0 then raise exception 'Account B can update account A'; end if;
 end $$;
 reset role;
-select set_config('request.jwt.claim.sub',(select a::text from clair_test_ids),true);
+select set_config('request.jwt.claim.sub',current_setting('clair.test_a'),true);
 set local role authenticated;
 do $$
 begin
   begin
-    update public.clair_budgets set user_id=(select b from pg_temp.clair_test_ids);
+    update public.clair_budgets set user_id=current_setting('clair.test_b')::uuid;
     raise exception 'Ownership reassignment succeeded';
   exception when insufficient_privilege then null;
   end;

@@ -2,7 +2,7 @@
 <html lang="fr" data-theme="auto">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#fa2d58">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://hkssnbvktfscizojhftl.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Clair"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icons/icon-180.png">
 <title>Clair — Mon argent, simplement</title>
@@ -531,7 +531,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     async init(){
       if(!this.enabled)return;
       this.client.auth.onAuthStateChange((event,session)=>{
-        if(event==='PASSWORD_RECOVERY')this.hooks.recovery?.();
+        if(event==='PASSWORD_RECOVERY'){this.hooks.recovery?.();this.emit();}
         if(event==='SIGNED_OUT'||(session?.user.id&&session.user.id!==this.user?.id))setTimeout(()=>this.attach(session?.user||null),0);
       });
       const {data,error}=await this.client.auth.getSession();
@@ -539,7 +539,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       await this.attach(data.session?.user||null);
     }
     async attach(user){
-      if(user?.id===this.user?.id&&this.ready)return;
+      if(user?.id===this.user?.id&&(this.ready||(this.user&&this.status==='loading')))return;
       const epoch=++this.epoch;clearTimeout(this.timer);this.record=null;this.conflict=null;this.error='';this.ready=false;this.user=user;
       if(!user){this.status='signed-out';this.ready=true;this.hooks.leave?.();this.emit();return;}
       this.displayName=String(user.user_metadata?.display_name||'').slice(0,64);
@@ -551,6 +551,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         this.ready=true;
         await this.sync(epoch);
         if(epoch!==this.epoch)return;
+        this.hooks.opened?.();
         if(!this.record&&!this.conflict&&this.status==='synced')this.hooks.empty?.(user);
       }catch(error){if(epoch!==this.epoch)return;this.hooks.badCache?.(error,localStorage.getItem(this.key()));this.error=error.message;this.status='error';this.ready=true;this.emit();}
     }
@@ -582,6 +583,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         const raw=localStorage.getItem(this.key(userId));this.record=this.decode(raw,userId);
         if(this.record?.meta.dirty){
           const pending=this.record;
+          if(remote&&JSON.stringify(this.wire(pending.payload))===JSON.stringify(this.wire(this.hooks.normalize(remote.payload)))){this.adopt(remote,expectedEpoch);return;}
           if((remote?.revision||0)!==pending.meta.revision&&remote?.operation_id!==pending.meta.operationId){this.setConflict(remote);return;}
           const {data,error}=await this.client.rpc('save_clair_budget',{p_payload:this.wire(pending.payload),p_expected_revision:pending.meta.revision,p_operation_id:pending.meta.operationId,p_display_name:this.displayName});
           if(expectedEpoch!==this.epoch)return;if(error)throw error;
@@ -696,12 +698,13 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     } catch(err) { $('#alert').innerHTML=`<div class="notice error">Le rattrapage n’a pas pu être effectué : ${esc(err.message)} Tes données sont conservées.</div>`; }
   }
   /* ---------- Compte et synchronisation ---------- */
-  window.CLAIR_ACCOUNT_CONFIG=window.CLAIR_ACCOUNT_CONFIG||null;
-  let accountMode='login',accountBusy=false,accountRecovery=false,accountStarted=false;
+  window.CLAIR_ACCOUNT_CONFIG=location.protocol==='file:'?null:(window.CLAIR_ACCOUNT_CONFIG===undefined?{"url":"https://hkssnbvktfscizojhftl.supabase.co","key":"sb_publishable_qJeSyD7E0cbi8V--qyJJkw_8M4oOKr8"}:window.CLAIR_ACCOUNT_CONFIG);
+  let accountMode='login',accountBusy=false,accountRecovery=/(?:^#|&)type=recovery(?:&|$)/.test(location.hash||''),accountStarted=false;
   const cloud=new window.ClairCloud(window.CLAIR_ACCOUNT_CONFIG,{
     normalize: value=>E.normalize(value),
     status:()=>{if(!cloud.user||!cloud.ready||cloud.status==='loading'||$('#account-form')||$('#account-loading'))render();else renderAccountStatus();if(accountRecovery&&cloud.ready&&cloud.user){accountRecovery=false;setTimeout(passwordDialog,0);}},
     recovery:()=>{accountRecovery=true;},
+    opened:()=>{catchUp();},
     enter:(user,record)=>{
       close();wizard=null;undo=null;recovery=null;page='home';
       KEY=cloud.key(user.id);BACKUP=KEY+'-backup';REMINDED=KEY+'-reminded';PUSH_KEY=KEY+'-push';
@@ -1134,7 +1137,7 @@ function submitCharge(f){
   }catch(e){if($('#form-error')&&$('#dialog').open)$('#form-error').textContent=e.message;else{notify(e.message);render();}}});
   $('#dialog').addEventListener('close',()=>{modal=null;});
   window.addEventListener('storage',event=>{if(event.key!==KEY)return;if(cloud.enabled&&cloud.user){try{cloud.record=cloud.decode(event.newValue,cloud.user.id);}catch(error){notify(error.message);return;}} try{snapshot=event.newValue;data=snapshot?E.normalize(JSON.parse(snapshot)):E.empty();loadError=null;close();render();notify('Données actualisées depuis un autre onglet.');}catch(e){loadError=e.message;rawRecovery=event.newValue||'';render();}});
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden){catchUp();render();if(cloud.enabled)cloud.sync();}});
+  document.addEventListener('visibilitychange',async()=>{if(!document.hidden){if(cloud.enabled&&cloud.user)await cloud.sync();catchUp();render();}});
   window.addEventListener('online',()=>cloud.sync());
   setInterval(()=>{if(cloud.enabled&&cloud.user&&!document.hidden)cloud.sync();},60000);
   matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',applyPrefs);

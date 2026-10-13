@@ -3,12 +3,12 @@ const source=fs.readFileSync(__dirname+'/cloud.js','utf8'),html=fs.readFileSync(
 const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);scripts.forEach(s=>new vm.Script(s));
 const ectx={window:{},Date,Intl};vm.createContext(ectx);vm.runInContext(scripts[0],ectx);const E=ectx.window.ClairEngine;
 assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'d6c1a581119b4d636cf98f3fe20d5823d0f592e48ed9c2856409f34ecb8fa39c');
-let rows=new Map(),saveDelay=null,loseResponse=false;
+let rows=new Map(),saveDelay=null,readDelay=null,loseResponse=false;
 function device(uid,storage=new Map()){
  let currentUser={id:uid,email:uid+'@example.test',user_metadata:{display_name:uid}};
  const writes=[],applications=[],navigator={onLine:true};let callback;
  const client={auth:{onAuthStateChange:f=>callback=f,getSession:async()=>({data:{session:{user:currentUser}}}),signOut:async()=>({})},
- from:()=>({select(){return this},eq(_field,value){this.uid=value;return this},async maybeSingle(){return {data:structuredClone(rows.get(this.uid)||null)}}}),
+ from:()=>({select(){return this},eq(_field,value){this.uid=value;return this},async maybeSingle(){if(readDelay)await readDelay;return {data:structuredClone(rows.get(this.uid)||null)}}}),
  async rpc(name,params){const id=currentUser.id;if(saveDelay)await saveDelay;const row=rows.get(id);
  if(row?.operation_id===params.p_operation_id)return {data:{saved:true,row:structuredClone(row)}};
  if((row?.revision||0)!==params.p_expected_revision)return {data:{saved:false,row:structuredClone(row||null)}};
@@ -45,5 +45,9 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  console.log('PASS: sign-out removes account cache; original local budget remains; photos are not transmitted');
  const bad=device('c');bad.storage.set(bad.cloud.key('c'),'{broken');await bad.init();assert.equal(bad.cloud.status,'error');assert.equal(bad.cloud.record,null);assert.equal(bad.storage.get(bad.cloud.key('c')),'{broken');
  console.log('PASS: corrupt cache is retained; no previous account data is displayed');
+ const duplicate=device('duplicate');let unlock;readDelay=new Promise(r=>unlock=r);const opening=duplicate.init();await new Promise(r=>setImmediate(r));const epoch=duplicate.cloud.epoch;await duplicate.cloud.attach({id:'duplicate',email:'duplicate@example.test'});assert.equal(duplicate.cloud.epoch,epoch);unlock();await opening;readDelay=null;assert.equal(duplicate.cloud.status,'synced');
+ console.log('PASS: duplicate SDK session events do not restart or block opening');
+ const sameA=device('same'),sameB=device('same');await sameA.init();sameA.edit(budget(100));await sameA.cloud.sync();await sameB.init();sameA.edit(budget(200));sameB.edit(budget(200));await sameA.cloud.sync();await sameB.cloud.sync();assert.equal(sameB.cloud.status,'synced');assert.equal(sameB.cloud.conflict,null);
+ console.log('PASS: identical automatic updates from two devices do not create a false conflict');
  console.log('PASS: all scripts parse; original financial engine unchanged');
 })().catch(e=>{console.error(e);process.exitCode=1});

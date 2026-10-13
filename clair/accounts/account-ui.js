@@ -1,10 +1,11 @@
   /* ---------- Compte et synchronisation ---------- */
-  window.CLAIR_ACCOUNT_CONFIG=window.CLAIR_ACCOUNT_CONFIG||null;
-  let accountMode='login',accountBusy=false,accountRecovery=false,accountStarted=false;
+  window.CLAIR_ACCOUNT_CONFIG=location.protocol==='file:'?null:(window.CLAIR_ACCOUNT_CONFIG===undefined?{"url":"https://hkssnbvktfscizojhftl.supabase.co","key":"sb_publishable_qJeSyD7E0cbi8V--qyJJkw_8M4oOKr8"}:window.CLAIR_ACCOUNT_CONFIG);
+  let accountMode='login',accountBusy=false,accountRecovery=/(?:^#|&)type=recovery(?:&|$)/.test(location.hash||''),accountStarted=false;
   const cloud=new window.ClairCloud(window.CLAIR_ACCOUNT_CONFIG,{
     normalize: value=>E.normalize(value),
     status:()=>{if(!cloud.user||!cloud.ready||cloud.status==='loading'||$('#account-form')||$('#account-loading'))render();else renderAccountStatus();if(accountRecovery&&cloud.ready&&cloud.user){accountRecovery=false;setTimeout(passwordDialog,0);}},
     recovery:()=>{accountRecovery=true;},
+    opened:()=>{catchUp();},
     enter:(user,record)=>{
       close();wizard=null;undo=null;recovery=null;page='home';
       KEY=cloud.key(user.id);BACKUP=KEY+'-backup';REMINDED=KEY+'-reminded';PUSH_KEY=KEY+'-push';

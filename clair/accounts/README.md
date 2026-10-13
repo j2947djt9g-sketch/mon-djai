@@ -1,46 +1,54 @@
-# Clair — comptes et synchronisation (préparation)
+# Clair — comptes et synchronisation
 
-Cette branche prépare la connexion et la synchronisation sur plusieurs appareils. Elle n’est pas activée : `CLAIR_ACCOUNT_CONFIG` reste à `null`. Le site publié continue à utiliser son stockage local.
+Cette branche relie Clair au projet Supabase `hkssnbvktfscizojhftl`. Elle est conservée dans la PR brouillon #1 et n'est pas encore déployée sur le site public.
+
+## État vérifié
+
+- Migration `clair_private_budgets_and_revision_sync` appliquée.
+- Tests SQL passés sur la base réelle : création du budget, rejeu idempotent d'une sauvegarde, refus d'une révision obsolète, isolation entre deux identités, refus de réaffecter le propriétaire et refus d'accès anonyme.
+- Les fixtures de vérification sont annulées par ROLLBACK. Aucun compte ni budget de test n'est resté dans le projet.
+- Advisors Supabase de sécurité et de performance : aucune alerte.
+- L'API REST refuse la lecture anonyme avec HTTP 401 / code `42501`.
+- Fournisseur e-mail actif et confirmation d'adresse obligatoire.
+- Tests Node passés : reprise hors ligne, conflits entre appareils, réponses perdues, modification pendant une sauvegarde, caches distincts, déconnexion, événements de session répétés et mises à jour automatiques identiques.
+- Tests de l'interface simulée passés : masquage du budget avant connexion, confirmation de l'e-mail, échappement du prénom, reprise explicite du budget local et pause locale après trois erreurs.
+- Vérifications du mode local passées : réglages, saisie guidée, paiements anticipés sans double débit, téléchargement et installation iPhone.
+- Moteur financier inchangé. Le HTML utilise une clé publishable et restreint la connexion à l'origine exacte du projet.
+
+## Dernier réglage avant activation
+
+Dans [Authentication → URL Configuration](https://supabase.com/dashboard/project/hkssnbvktfscizojhftl/auth/url-configuration), enregistrer :
+
+Site URL :
+`https://j2947djt9g-sketch.github.io/mon-djai/clair/`
+
+Redirect URLs :
+- `https://j2947djt9g-sketch.github.io/mon-djai/clair/`
+- `https://j2947djt9g-sketch.github.io/mon-djai/clair/index.html`
+
+Le connecteur utilisé ne fournit pas d'action pour modifier ces paramètres. Vérifier ensuite les liens d'e-mail, la connexion réelle sur deux appareils et le rendu navigateur avant fusion et déploiement.
 
 ## Fonctionnement
 
-- Adresse e-mail, mot de passe, confirmation de l’adresse et récupération du mot de passe par Supabase Auth. Prénom de 64 caractères maximum, affiché avec échappement HTML.
-- Une ligne de budget par utilisateur, avec RLS sur l’UUID fourni par `auth.uid()`. Aucun identifiant utilisateur fourni par le navigateur n’est utilisé pour déterminer le propriétaire lors d’une sauvegarde RPC.
-- Sauvegarde locale atomique avec indicateur de modification, numéro de révision et UUID de l’opération. Comparaison de révision côté serveur et rejeu idempotent : une réponse perdue ne provoque pas de double sauvegarde.
-- Vérification à l’ouverture, au retour de connexion et chaque minute pendant que l’application est visible. Aucun canal Realtime permanent.
-- En cas de conflit entre deux appareils, conserver une copie exige un choix explicite. Une sauvegarde de la copie remplacée est téléchargée.
-- Transfert explicite du budget existant. Le budget local original reste présent et devient associé à son premier propriétaire. Il n’est pas importé automatiquement dans le compte d’une autre personne.
-- Les photos de fond restent sur chaque appareil, pour éviter de retransmettre une image avec chaque dépense. Les dépenses, les habitudes, les enveloppes et les autres préférences sont synchronisées.
-- La déconnexion retire la copie locale du compte connecté. Elle demande d’abord la sauvegarde des modifications en attente.
+Le prénom personnalise le compte. L'adresse e-mail et le mot de passe servent à la connexion. La propriété du budget est déterminée par `auth.uid()`, sans identifiant de propriétaire fourni à la fonction de sauvegarde par le client. RLS protège chaque ligne et les paramètres JSON ne sont pas concaténés dans une requête SQL.
 
-## Activation restante
+Le budget est conservé localement avec un numéro de révision, un indicateur de modification et un UUID d'opération dans une seule écriture. Une sauvegarde distante compare la révision et accepte le rejeu d'une même opération. En cas de conflit, un choix explicite est demandé ; la copie remplacée est téléchargée avant résolution.
 
-1. Créer un projet **Clair**, idéalement dans la région Paris, dans l’organisation choisie. Le connecteur n’a pas permis de le créer : `get_cost` a retourné `MCP tool get_cost was not returned by tools/list`. Aucun coût n’a été confirmé et aucun projet n’a été créé automatiquement.
-2. Appliquer `schema.sql` au projet via Supabase MCP `apply_migration` (DDL). Cette version est conçue pour un projet neuf.
-3. Exécuter `verify-database.sql` et les advisors de sécurité. Les tests sont dans une transaction terminée par `ROLLBACK`. Vérifier ensuite deux sessions réelles sur des navigateurs distincts : budget A invisible pour B, sauvegarde hors ligne, conflit de modifications, confirmation d’adresse et récupération du mot de passe.
-4. Configurer Supabase Auth : Site URL et redirections exactes vers `https://j2947djt9g-sketch.github.io/mon-djai/clair/` et la variante `index.html`. Garder la confirmation d’e-mail active ; minimum de mot de passe 12 caractères. Pour accueillir des utilisateurs hors de l’équipe Supabase, configurer un fournisseur SMTP : le SMTP de test Supabase ne suffit pas à une application publique.
-5. Récupérer l’URL du projet et une **clé publishable** `sb_publishable_...`. Ne jamais insérer de clé secrète ou `service_role` dans le HTML.
-6. Dans le bloc de compte du HTML, remplacer la configuration nulle par `window.CLAIR_ACCOUNT_CONFIG={url:'https://PROJECT_REF.supabase.co',key:'sb_publishable_...'};`. Restreindre `connect-src` à l’origine exacte du projet plutôt qu’à `https://*.supabase.co`.
-7. Vérifier les flux réels, puis fusionner la branche. Ne pas annoncer la synchronisation active avant ces vérifications.
+Le budget existant est transféré après confirmation. Les copies et les sauvegardes de comptes utilisent des clés distinctes par utilisateur. L'ancien budget local est associé au premier compte qui le transfère, et ne peut pas être repris dans l'interface par un autre compte. La déconnexion retire la copie locale du compte après sauvegarde de ses changements en attente.
 
-## Tentatives de connexion
+La synchronisation s'effectue à l'ouverture, au retour de connexion et chaque minute pendant que l'application est visible. Aucun canal Realtime permanent. Les photos de fond restent sur chaque appareil afin de limiter les transferts. Les autres préférences et les données financières sont synchronisées. Le fichier HTML téléchargé conserve le mode local.
 
-Le code impose une pause d’une minute après trois erreurs de mot de passe **sur cet appareil**. Ce compteur n’est pas une protection serveur : il peut être contourné en appelant directement l’API. Les limites de débit serveur de Supabase doivent rester actives, et un CAPTCHA peut être configuré lors de la mise en service publique.
+## Limites restantes
 
-Un plafond exact de trois erreurs par compte côté serveur n’est pas inclus. Le hook Supabase « Password Verification Attempt » nécessite actuellement une offre Teams ou Enterprise. Ne pas présenter le compteur local comme un verrouillage global du compte et ne pas changer d’offre payante sans validation.
+Le compteur de trois erreurs impose une pause d'une minute sur l'appareil. Il complète les limites de débit de Supabase et n'est pas un verrouillage global côté serveur. Le hook Password Verification Attempt nécessite actuellement une offre Teams ou Enterprise ; aucune offre payante n'est activée.
 
-## Validation effectuée
-
-`test-cloud.cjs` vérifie avec un serveur simulé : clés distinctes par compte, transfert explicite, conflit entre deux appareils, réponse réseau perdue, modification pendant une sauvegarde, reprise hors ligne et déconnexion.
-
-`test-account-ui.cjs` vérifie le masquage du budget avant connexion, les trois essais côté appareil, la confirmation de l’e-mail, l’échappement du prénom et la protection contre la reprise d’un ancien budget par un autre compte.
-
-`test-local.cjs` vérifie la version avec les comptes désactivés : réglages, paiements anticipés sans double débit, saisie guidée, téléchargement et installation iPhone.
-
-Ces tests sont passés. Les scripts JavaScript sont valides et le moteur financier est identique à la version actuellement publiée. **Les tests SQL, l’isolation réelle RLS et les flux d’e-mail ne sont pas encore exécutés**, faute de projet accessible. Le rendu navigateur de cette branche reste aussi à vérifier avant sa mise en ligne.
+Le service d'e-mail par défaut de Supabase est destiné aux essais et restreint les destinataires aux adresses autorisées de l'équipe. Un SMTP doit être configuré avant d'ouvrir les inscriptions au grand public. La réception des e-mails et les sessions de navigateur réelles restent à vérifier.
 
 ## Dépendance
 
-Le client officiel `@supabase/supabase-js` **2.102.0** est intégré au HTML pour permettre le démarrage hors ligne, sans requête vers un CDN. Source : `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.102.0/dist/umd/supabase.js`.
+`@supabase/supabase-js` 2.102.0 est intégré au HTML pour le démarrage hors ligne.
+Source : `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.102.0/dist/umd/supabase.js`.
+SHA-256 : `c45136a0ba5c7391646869a734db105ba607a9233fd6ec2e7e5bbab447bdc57a`.
+Licence dans LICENSE-supabase.txt.
 
-SHA-256 : `c45136a0ba5c7391646869a734db105ba607a9233fd6ec2e7e5bbab447bdc57a`. Licence dans `LICENSE-supabase.txt`. Ce fichier, les tests et les SQL ne contiennent ni mot de passe ni donnée financière réelle.
+Pour les tests locaux : `node clair/accounts/test-cloud.cjs`, `node clair/accounts/test-account-ui.cjs`, `node clair/accounts/test-local.cjs`.
