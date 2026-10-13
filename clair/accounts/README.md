@@ -1,6 +1,6 @@
 # Clair — comptes et synchronisation
 
-Cette branche relie Clair au projet Supabase `hkssnbvktfscizojhftl`. Elle est conservée dans la PR brouillon #1 et n'est pas encore déployée sur le site public.
+Clair est relié au projet Supabase `hkssnbvktfscizojhftl`. La PR #1 a été fusionnée et la version avec comptes est publiée sur GitHub Pages.
 
 ## État vérifié
 
@@ -15,18 +15,15 @@ Cette branche relie Clair au projet Supabase `hkssnbvktfscizojhftl`. Elle est co
 - Vérifications du mode local passées : réglages, saisie guidée, paiements anticipés sans double débit, téléchargement et installation iPhone.
 - Moteur financier inchangé. Le HTML utilise une clé publishable et restreint la connexion à l'origine exacte du projet.
 
-## Dernier réglage avant activation
+## Vérification de l’activation
 
-Dans [Authentication → URL Configuration](https://supabase.com/dashboard/project/hkssnbvktfscizojhftl/auth/url-configuration), enregistrer :
+La Site URL et les deux Redirect URLs sont enregistrées. Les retours réels d’Auth vers `/mon-djai/clair/` et `/mon-djai/clair/index.html` ont été vérifiés par HTTP 303, sans envoyer de message.
 
-Site URL :
-`https://j2947djt9g-sketch.github.io/mon-djai/clair/`
+Deux comptes temporaires ont été utilisés avec le SDK officiel sur les API réelles : connexion, sauvegarde et relecture, rejeu idempotent, refus de lecture et de modification du budget d’un autre compte, refus d’une sauvegarde issue d’une révision obsolète. Les comptes, sessions et budgets de test ont ensuite été supprimés.
 
-Redirect URLs :
-- `https://j2947djt9g-sketch.github.io/mon-djai/clair/`
-- `https://j2947djt9g-sketch.github.io/mon-djai/clair/index.html`
+Pour reprendre le budget actuel, créer le compte depuis le navigateur qui le contient, confirmer l’adresse e-mail, puis choisir « Transférer mon budget ». Utiliser le même compte sur les autres appareils.
 
-Le connecteur utilisé ne fournit pas d'action pour modifier ces paramètres. Vérifier ensuite les liens d'e-mail, la connexion réelle sur deux appareils et le rendu navigateur avant fusion et déploiement.
+La réception des e-mails et les appareils mobiles physiques ne sont pas vérifiés automatiquement. Le service d’e-mail de test Supabase est destiné aux adresses autorisées de l’équipe ; l’envoi à d’autres utilisateurs reste à finaliser pour une ouverture au grand public.
 
 ## Fonctionnement
 
