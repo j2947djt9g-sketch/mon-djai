@@ -1038,7 +1038,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     modal={kind,...state};$('#dialog').innerHTML=`<div class="dialog-inner"><div class="dialog-head"><h2 id="dialog-title">${title}</h2><button class="close" data-action="close" aria-label="Fermer">×</button></div>${kind==='wizard'?'':'<div id="form-error" class="notice error" role="alert"></div>'}${body}</div>`;
     if(!$('#dialog').open)$('#dialog').showModal();
   }
-  function close(){ $('#dialog').close();modal=null; }
+  function close(){ modal=null;if($('#dialog').open)$('#dialog').close(); }
   const formActions = (save='Enregistrer') => `<div class="dialog-actions"><button type="button" class="button" data-action="close">Annuler</button><button class="button primary" type="submit">${save}</button></div>`;
   const monthNav = () => `<div class="month-nav"><button data-action="month-prev" aria-label="Mois précédent">‹</button><span>${esc(monthLabel(month))}</span><button data-action="month-next" aria-label="Mois suivant">›</button></div>`;
   function txRow(t, controls=true) {const c=cat(t.categoryId);return `<div class="row"><span class="row-icon" aria-hidden="true">${t.type==='income'?'+':esc(c.icon)}</span><div class="row-info"><div class="row-name">${esc(t.name || c.label)}${t.autoKey?'<span class="badge">Auto</span>':''}${t.paymentConfirmed?'<span class="badge ok">Payé (confirmé par toi)</span>':''}</div><div class="row-meta">${esc(dateLabel(t.date))} · ${t.type==='income'?'Argent reçu':esc(c.label)}${t.corrected?' · corrigée':''}${t.earlyPaid?' · payé en avance pour le '+esc(dateLabel(t.autoKey.slice(-10))):''}${t.date>E.today()?' · à venir':''}${t.note?' · '+esc(t.note):''}</div></div><span class="row-amount ${t.type==='income'?'income':''}">${t.type==='income'?'+':'−'}${euro(t.amountCents)}</span>${controls?`<button class="button small" data-action="edit-tx" data-id="${esc(t.id)}" aria-label="Modifier ${esc(t.name)}">Modifier</button>`:''}</div>`;}
@@ -1202,7 +1202,7 @@ function submitCharge(f){
   function suspendRule(rid,on){const t=nextDay();commit(d=>{const r=d.rules.find(x=>x.id===rid);if(!r)return;if(on){if(!r.pauses.some(p=>p.start<=t&&p.end>=t))r.pauses.push({start:t,end:INFINITE});}else{r.pauses=r.pauses.flatMap(p=>{if(p.end<t)return [p];if(p.start>=t)return [];return [{start:p.start,end:E.today()}];});}},on?'Habitude en pause à partir de demain.':'Habitude reprise à partir de demain.');}
   function pay(key){
     const c=E.upcoming(data).find(x=>x.autoKey===key);if(!c){notify('Échéance introuvable.');return;}
-    if(c.status!=='future'){const before={paymentConfirmed:false,confirmedAt:null};if(commit(d=>{const t=d.transactions.find(t=>t.id===c.id);if(t){t.paymentConfirmed=true;t.confirmedAt=E.today();}},''))notify(`Paiement de ${c.name} noté comme confirmé (déjà compté, rien n’est retiré en plus).`,()=>commit(d=>{const t=d.transactions.find(t=>t.id===c.id);if(t)Object.assign(t,before);},'Confirmation annulée.'));return;}
+    if(c.status!=='future'){const before={paymentConfirmed:false,confirmedAt:null};if(commit(d=>{const t=d.transactions.find(t=>t.id===c.id);if(t){t.paymentConfirmed=true;t.confirmedAt=E.today();}},'')){close();notify(`Paiement de ${c.name} noté comme confirmé (déjà compté, rien n’est retiré en plus).`,()=>commit(d=>{const t=d.transactions.find(t=>t.id===c.id);if(t)Object.assign(t,before);},'Confirmation annulée.'));}return;}
     confirm('Payer maintenant ?',`${esc(c.name)} · ${esc(euro(c.amountCents))} sera enregistré aujourd’hui et retiré de ton solde. L’échéance du ${esc(dateLabel(c.dueDate))} ne sera pas comptée une deuxième fois.`,()=>{const txId=id('tx');if(commit(d=>{d.transactions.push({id:txId,type:'expense',amountCents:c.amountCents,name:c.name,categoryId:c.categoryId,date:E.today(),note:'Payé en avance',autoKey:c.autoKey,ruleId:c.ruleId,fixedExpenseId:c.fixedExpenseId||null,fixedMonth:c.fixedMonth||null,corrected:false,paymentConfirmed:true,confirmedAt:E.today(),earlyPaid:true});},''))notify('Paiement anticipé enregistré.',()=>commit(d=>{d.transactions=d.transactions.filter(t=>t.id!==txId);},'Paiement anticipé annulé.'));},'Payer maintenant');
   }
   document.addEventListener('click',async event=>{const b=event.target.closest('button');if(!b)return;try{
@@ -1219,7 +1219,7 @@ function submitCharge(f){
     if(action==='income')openTx(null,'income');if(action==='expense')openTx();if(action==='savings')openTx(null,'expense','epargne');
     if(action==='edit-tx'&&t)openTx(t);
     if(action?.startsWith('account-')){await accountAction(action);return;}
-    if(action==='pay'){const key=b.dataset.key;close();pay(key);}
+    if(action==='pay')pay(b.dataset.key);
     if(action==='delete-tx'&&t){confirm(t.earlyPaid?'Annuler ce paiement anticipé ?':t.autoKey?'Annuler cette occurrence ?':'Supprimer cette opération ?',t.earlyPaid?'L’échéance redeviendra prévue à sa date normale.':t.autoKey?'Elle ne sera pas recréée à la prochaine ouverture. La règle continue pour les autres dates.':'Elle sera retirée de tes totaux.',()=>{const tx=structuredClone(t);if(commit(d=>{if(tx.earlyPaid)d.transactions=d.transactions.filter(x=>x.id!==tx.id);else E.skip(d,tx.id);},'Opération retirée.')){close();notify('Opération retirée.',()=>commit(d=>{if(tx.autoKey)d.skipped=d.skipped.filter(k=>k!==tx.autoKey);if(!d.transactions.some(x=>x.id===tx.id||(tx.autoKey&&x.autoKey===tx.autoKey)))d.transactions.push(tx);},'Opération restaurée.'));}});}
     if(action==='new-rule')startCharge();
     if(action==='charge-advanced')openRule();
@@ -1265,7 +1265,8 @@ function submitCharge(f){
     if(el.dataset.suspend){suspendRule(el.dataset.suspend,!el.checked);return;}
     if(el.id==='kind-filter')journalResults();if(el.id==='rule-kind'){const f=new FormData($('#rule-form')),r=data.rules.find(r=>r.id===modal.id),kind=el.value;openRule(r,kind,{name:String(f.get('name')),categoryId:String(f.get('categoryId')),kind,start:String(f.get('start')),amountCents:f.get('amount')?num(f.get('amount'),true):0,amounts:[0,300,300,300,300,300,0],day:f.get('day')||'last',month:f.get('month')||1});}
   }catch(e){if($('#form-error')&&$('#dialog').open)$('#form-error').textContent=e.message;else{notify(e.message);render();}}});
-  $('#dialog').addEventListener('close',()=>{modal=null;});
+  // A previous native close event can arrive after this dialog has reopened.
+  $('#dialog').addEventListener('close',()=>{if(!$('#dialog').open)modal=null;});
   window.addEventListener('storage',event=>{if(event.key!==KEY)return;if(cloud.enabled&&cloud.user){try{cloud.record=cloud.decode(event.newValue,cloud.user.id);}catch(error){notify(error.message);return;}} try{snapshot=event.newValue;data=snapshot?E.normalize(JSON.parse(snapshot)):E.empty();loadError=null;close();render();notify('Données actualisées depuis un autre onglet.');}catch(e){loadError=e.message;rawRecovery=event.newValue||'';render();}});
   document.addEventListener('visibilitychange',async()=>{if(!document.hidden){if(cloud.enabled&&cloud.user)await cloud.sync();catchUp();render();}});
   window.addEventListener('online',()=>cloud.sync());
