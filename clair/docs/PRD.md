@@ -1,8 +1,12 @@
 # Clair — PRD : fonctionnement du produit
 
+- Application documentée : révision 97b3b8290d382c32d10c76d6c0eaa88085b14b5b, publiée sur GitHub Pages.
+- Publication publique de ces documents autorisée par l’utilisateur le 16 octobre 2026.
+
+
 - Référence : code du dépôt j2947djt9g-sketch/mon-djai, dossier clair/.
-- Base examinée avant cette retouche : 82384ef332f08c1e773c0a41ac34dafdd1527fa0.
-- Date de mise à jour : 15 octobre 2026.
+- Base examinée avant cette retouche : 4d6706fcab50033712da59c79c1d98adc77afa78.
+- Date de mise à jour : 16 octobre 2026.
 - Application : https://j2947djt9g-sketch.github.io/mon-djai/clair/
 - Lire d'abord [CONTEXTE.md](CONTEXTE.md). Architecture et données : [CONSTRUCTION.md](CONSTRUCTION.md). Code : [SOURCES.md](SOURCES.md).
 - Ce document décrit le produit existant et les demandes déjà acceptées. Il ne transforme pas une fonction préparée dans le code en service opérationnel.
@@ -34,7 +38,11 @@
 - Confirmation de l'adresse requise dans la configuration Auth vérifiée.
 - Minimum de 12 caractères dans les formulaires d'inscription et de nouveau mot de passe.
 - Après trois réponses de connexion incorrecte, pause locale d'une minute. Ce compteur ne constitue pas un verrouillage global côté serveur.
-- Réglages : adresse et état de synchronisation, synchronisation manuelle et déconnexion.
+- Réglages : adresse, synchronisation, modification du mot de passe et déconnexion.
+- Modifier mon mot de passe demande le mot de passe actuel, le nouveau et sa confirmation ; affichage/masquage des saisies, nouveau mot de passe de 12 à 128 caractères. La vérification Auth préserve la session et le budget ouverts.
+- Si Auth demande un code de vérification supplémentaire, un champ et un renvoi après 60 secondes sont proposés.
+- E-mail normalisé : un seul compte e-mail non SSO par adresse. L’index unique est présent et aucun groupe de doublons normalisés au contrôle du 15 octobre 2026.
+- Adresse existante confirmée par Auth : proposer connexion et récupération. Réponse masquée : explication neutre et mêmes choix. Conserver l’adresse saisie sans ajouter de recherche publique d’e-mail.
 - La déconnexion attend la sauvegarde des changements en attente ou indique qu'elle n'a pas pu aboutir.
 
 ### F02 — Récupération du mot de passe
@@ -119,7 +127,7 @@
 
 ### F09 — Apparence et navigation
 
-- Évolution visuelle validée le 14 octobre 2026 : mascotte à quatre expressions sur la bienvenue, les formulaires de compte et les quatre étapes de configuration.
+- Six poses fixes ; animation uniquement à l’entrée, pendant deux secondes. Comptes, solde, configuration et historique utilisent des images statiques.
 - Accueil avec accès à la création du compte et à la connexion ; les utilisateurs déjà connus gardent un accès rapide à leur budget.
 - La mascotte est décorative, se réduit pendant la saisie sur mobile et respecte la préférence de réduction des animations.
 - L'accompagnement utilise les écrans et calculs existants ; aucun agent conversationnel n'est ajouté par cette évolution.
@@ -179,22 +187,23 @@
 - Aucune connexion bancaire, paiement réel ou nouvelle collecte personnelle n'est décrite comme disponible.
 
 
-## Mascotte : évolution validée le 15 octobre 2026
+## Mascotte — version validée le 15 octobre 2026
 
-- Guide visuel à l’accueil, à la connexion, à l’inscription et aux quatre étapes de configuration.
-- Quatre expressions : accueil, attention avec tablette, réflexion et satisfaction.
-- Le premier accueil propose « Créer mon compte » et « J’ai déjà un compte » et attend un choix explicite.
-- La mascotte se réduit sur petit écran pendant la saisie ; les instructions restent du texte lisible.
-- Aucun appel à une IA : messages fixes et illustration décorative.
-- La dernière expression accompagne la vérification avant activation ; seul le succès de l’enregistrement active le suivi.
+- Une animation de bienvenue de deux secondes à l’entrée, une lecture par session de navigateur. Un choix permet de passer immédiatement ; aucun rejeu à chaque navigation ou enregistrement.
+- Nouvel utilisateur : création ou connexion explicite. Utilisateur connu : passage automatique après deux secondes. Récupération et réduction des mouvements : accès direct sans animation.
+- Toutes les autres utilisations de la mascotte sont des images fixes. Les anciens mouvements du solde et de l’historique sont retirés.
 
-## Mascotte au quotidien — 15 octobre 2026
+| Condition, dans cet ordre | Image fixe |
+|---|---|
+| Solde actuel négatif | Couchée sur le côté, recroquevillée, très triste, deux petites larmes |
+| Solde actuel nul | Assise, clairement triste |
+| Solde positif, configuration incomplète | Tablette, invitation à terminer les habitudes |
+| Solde positif, prévision négative | Inquiète avec sa tablette |
+| Solde positif, prévision nulle | Vigilante, sans tristesse marquée |
+| Solde positif, prévision positive | Debout avec un sourire serein |
 
-- Présente à côté du solde et dans l’historique ; les messages décrivent les calculs existants.
-- Halo vert si les dépenses prévues laissent une marge, jaune si elles sont couvertes sans marge, rouge si la prévision montre un manque.
-- Halo neutre pour une configuration incomplète ou sans dépenses à venir ; aucune nouvelle limite financière arbitraire.
-- Un repère coloré accompagne le message écrit ; la couleur ne porte pas seule l’information.
-- Bref mouvement d’accueil et réaction de satisfaction après un enregistrement réussi dans l’historique. Pas d’animation continue.
-- Les mouvements sont désactivés lorsque l’appareil demande une réduction des animations.
-- Les expressions restent visibles lorsque les mouvements sont désactivés. Les dimensions mobiles et les deux sous-cartes de prévision sont conservées.
-- Tests de logique de la mascotte et du paiement anticipé réussis. Rendu navigateur automatique et essai iPhone physique : [À CONFIRMER].
+- Prévision = solde actuel − dépenses prévues. Aucun seuil arbitraire de petit solde. Les messages décrivent les calculs sans jugement sur une dépense.
+- Boîte fixe de rapport 3:4, personnage complet, fond transparent et halos séparés en CSS. La pose couchée a été recadrée pour garder le personnage entier.
+- Montants lisibles et deux sous-cartes côte à côte sur téléphone ; mascotte réduite pendant la saisie. Confirmation écrite dans le journal avec une image fixe.
+- Sept ressources visuelles précachées et intégrées dans le téléchargement HTML. Aucun appel à une IA depuis Clair.
+- Neuf suites Node réussies. Réception réelle des e-mails et iPhone physique : [À CONFIRMER].

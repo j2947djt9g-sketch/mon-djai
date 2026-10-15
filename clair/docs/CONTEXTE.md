@@ -1,11 +1,14 @@
 # Clair — contexte de reprise pour une IA
 
+- Application documentée : révision 97b3b8290d382c32d10c76d6c0eaa88085b14b5b, publiée sur GitHub Pages.
+- Publication publique de ces documents autorisée par l’utilisateur le 16 octobre 2026.
+
 ## À lire en premier
 
 - Projet : Clair, suivi de budget personnel automatisé.
 - Auteur affiché : El-Hadj.
-- Date du dossier : 15 octobre 2026.
-- Base de référence : 1fde897568d24339e28db6a16f383760d13ab05e ; évolution mascotte décrite ci-dessous.
+- Date du dossier : 16 octobre 2026.
+- Base vérifiée avant intégration : 4d6706fcab50033712da59c79c1d98adc77afa78. Les fichiers de ce même commit décrivent la version courante.
 - Site : https://j2947djt9g-sketch.github.io/mon-djai/clair/
 - Dépôt : https://github.com/j2947djt9g-sketch/mon-djai ; périmètre de travail : clair/.
 - Ces quatre documents suffisent pour comprendre la version décrite sans relire la discussion. Ils doivent être actualisés après les changements.
@@ -49,7 +52,7 @@
 - PWA installable ; photo de fond conservée sur chaque appareil.
 - Parcours de récupération déployé : adresse conservée, renvoi limité, formulaire dédié, succès puis budget.
 - Paiement anticipé corrigé : confirmation dans la fiche ouverte, protection contre les anciens événements de fermeture, un seul débit après validation.
-- Les cinq suites de tests Node passent ; le parcours complet inclut les événements close différés, annulation/réouverture, double appui et échec du stockage.
+- Les neuf suites de tests Node passent ; le parcours complet inclut les événements close différés, annulation/réouverture, double appui et échec du stockage.
 
 ## Ce qui n'est pas terminé ou prouvé
 
@@ -99,24 +102,17 @@
 5. Actualiser ces documents avec la nouvelle version et les points restant à vérifier.
 
 
-## Dernière évolution — mascotte, 15 octobre 2026
+## Dernière intégration validée — 15 octobre 2026
 
-- Direction visuelle et publication autorisées par l’utilisateur.
-- Illustration à quatre expressions dans l’accueil, les comptes et la configuration existante.
-- Aucun agent IA ajouté ; aucun nouveau service externe.
-- Les six scripts Node passent, y compris le paiement anticipé sans double débit et la récupération.
-- Le moteur financier et le module cloud sont inchangés.
-- Les fichiers présents dans ce dépôt sont la référence ; ce dossier docs/ contient les quatre documents actualisés.
-- Sources complètes dans SOURCES.md ; consulter seulement les fichiers utiles à la tâche.
-- Affichage sur iPhone physique : [À CONFIRMER].
-
-## Reprise et retouche des réactions — 15 octobre 2026
-
-- Les pièces jointes du 14 octobre étaient antérieures aux ajouts de mascotte de ce matin. La reprise est partie du dernier commit main vérifié : 82384ef332f08c1e773c0a41ac34dafdd1527fa0.
-- Choix confirmé par l’utilisateur : priorité à la mascotte.
-- Halos et repères vert/jaune/rouge liés aux états de prévision existants ; états incomplets ou sans dépenses à venir neutres.
-- Mouvements courts à l’accueil et lors d’une opération enregistrée, désactivés avec prefers-reduced-motion.
-- Modification CSS uniquement dans index.html ; les quatre scripts intégrés sont conservés. Service worker v9 pour renouveler la coque hors ligne.
-- test-mascot-daily.cjs et test-local.cjs réussis ; les quatre scripts intégrés compilent.
-- Le contrôle visuel automatique n’a pas pu démarrer dans cet environnement ; navigateur et iPhone physique restent à vérifier.
-- SOURCES.md contient le HTML et le service worker de cette retouche ainsi que le test quotidien de la mascotte.
+- Intégration et publication autorisées par l’utilisateur : bienvenue animée seule, images fixes ailleurs, changement du mot de passe et parcours d’adresse existante.
+- Bienvenue de deux secondes, une seule lecture par session, passage immédiat possible, bypass récupération et réduction des mouvements. Aucun mouvement dans le solde ou l’historique.
+- Six images fixes et une animation sous assets/mascotte/. 06-solde-negatif-v2.webp est statique et recadrée, avec le personnage complet.
+- Priorité au solde actuel : négatif → couchée en pleurs ; zéro → assise triste. Solde positif → tablette si prévision négative, vigilance si prévision nulle, sérénité si marge positive. Configuration incomplète → tablette et invitation à terminer les habitudes.
+- Réglages → Mon compte → Modifier mon mot de passe : actuel, nouveau, confirmation, affichage/masquage et 12–128 caractères. Vérification via une session Auth temporaire non persistée ; updateUser utilise ensuite la session originale. Budget inchangé.
+- Code supplémentaire pris en charge si Auth le réclame ; renvoi limité à 60 secondes.
+- Inscription : e-mail normalisé, adresse conservée et actions connexion/récupération. Message explicite seulement si Auth confirme l’existence ; sinon message neutre. Aucun RPC public de recherche d’adresse.
+- Index users_email_partial_key présent et zéro groupe de doublons lower(btrim(email)) parmi les comptes non SSO au contrôle en lecture seule du 15 octobre 2026. Aucun schéma ou paramètre Auth modifié.
+- Service worker v10 ; ressources visuelles aussi intégrées dans la copie HTML téléchargée, sans données de budget.
+- Neuf suites Node réussies, dont test-account-security et test-account-security-sdk. Vérification avec SDK officiel et transport simulé : mot de passe incorrect bloqué, session temporaire supprimée, session originale et budget conservés.
+- Moteur financier et cloud inchangés ; sources de compte et copie intégrée cohérentes. SOURCES.md comprend les tests et les empreintes des images.
+- Aucun compte réel modifié, aucun mot de passe réel utilisé et aucun e-mail réel envoyé pour les essais. Réception des e-mails et iPhone physique : [À CONFIRMER].

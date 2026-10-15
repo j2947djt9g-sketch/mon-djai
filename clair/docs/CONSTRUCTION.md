@@ -1,7 +1,10 @@
 # Clair — construction, architecture et exploitation
 
-- Date de mise à jour : 15 octobre 2026.
-- Base de référence : 1fde897568d24339e28db6a16f383760d13ab05e ; évolution mascotte décrite ci-dessous.
+- Application documentée : révision 97b3b8290d382c32d10c76d6c0eaa88085b14b5b, publiée sur GitHub Pages.
+- Publication publique de ces documents autorisée par l’utilisateur le 16 octobre 2026.
+
+- Date de mise à jour : 16 octobre 2026.
+- Base vérifiée avant intégration : 4d6706fcab50033712da59c79c1d98adc77afa78 ; état courant dans la dernière section.
 - Ce document décrit le fonctionnement technique existant, les décisions prises et les limites vérifiées.
 - Produit : [PRD.md](PRD.md). Point d'entrée : [CONTEXTE.md](CONTEXTE.md). Sources exactes : [SOURCES.md](SOURCES.md).
 - Les identifiants de projet et la clé publishable du client sont des paramètres publics. Aucun mot de passe réel, jeton actif ou clé serveur ne doit entrer dans ce dossier.
@@ -42,7 +45,7 @@
 
 - Site : https://j2947djt9g-sketch.github.io/mon-djai/clair/
 - Dépôt : https://github.com/j2947djt9g-sketch/mon-djai
-- Version : https://github.com/j2947djt9g-sketch/mon-djai/tree/1fde897568d24339e28db6a16f383760d13ab05e/clair
+- Version : https://github.com/j2947djt9g-sketch/mon-djai/tree/97b3b8290d382c32d10c76d6c0eaa88085b14b5b/clair
 - Projet Supabase : hkssnbvktfscizojhftl, nom Clair.
 - API : https://hkssnbvktfscizojhftl.supabase.co
 - Région du projet vérifiée : eu-central-1, Francfort.
@@ -59,7 +62,8 @@
 | clair/accounts/account-ui.js | Source des écrans et actions de compte intégrés au HTML |
 | clair/accounts/schema.sql | Définition de table, politiques RLS et fonction de sauvegarde |
 | clair/accounts/verify-database.sql | Vérifications SQL à transaction annulée |
-| clair/accounts/test-*.cjs | Cinq suites de tests |
+| clair/accounts/test-*.cjs | Neuf suites de tests |
+| clair/assets/mascotte/ | Six images fixes transparentes et bienvenue animée |
 | clair/accounts/README.md | Documentation de l'ajout des comptes et de la récupération |
 | clair/accounts/LICENSE-supabase.txt | Licence du SDK fourni |
 | clair/manifest.webmanifest | Nom, icônes, chemin de démarrage et scope PWA |
@@ -299,7 +303,7 @@
 - Une preuve de publication ne remplace pas un essai de réception d'e-mail ni un essai sur appareil réel.
 
 
-## Intégration de la mascotte — 15 octobre 2026
+## Historique — première intégration, 15 octobre 2026
 
 - Base : commit 1fde897568d24339e28db6a16f383760d13ab05e, correctif du paiement anticipé conservé.
 - Image validée : clair/assets/mascotte-poses.png, feuille de quatre poses affichée directement par CSS.
@@ -315,7 +319,7 @@
 - _config.yml exclut clair/docs du rendu Jekyll : les exemples de code brut doivent rester des sources, sans interprétation Liquid.
 - Les quatre documents se consultent directement dans le dépôt GitHub.
 
-## Réactions visuelles de la mascotte — 15 octobre 2026
+## Historique — réactions remplacées, 15 octobre 2026
 
 - Base avant modification : 82384ef332f08c1e773c0a41ac34dafdd1527fa0 ; le correctif du paiement anticipé et les ajouts de mascotte quotidiens sont conservés.
 - CSS : variables de halo et repère de couleur sur balance-companion-row selon data-mascot-state. covered = vert, committed = jaune, shortfall = rouge ; setup et unreserved = neutre.
@@ -325,3 +329,32 @@
 - Aucun changement de JavaScript, d’authentification, du modèle de données ou des tailles mobiles. Le service worker passe de v8 à v9.
 - Vérifications exécutées : test-mascot-daily.cjs (états, recherche, mois, filtres, annulation et stockage plein), test-local.cjs (paiement anticipé, fermeture différée et absence de double débit) et compilation des quatre scripts.
 - Aucun budget ou compte réel lu. Le contrôle visuel automatique n’a pas pu démarrer ; rendu navigateur et iPhone physique : [À CONFIRMER].
+
+## État actuel — bienvenue, expressions fixes et compte, 15 octobre 2026
+
+- Point de départ contrôlé : 4d6706fcab50033712da59c79c1d98adc77afa78. Les sections historiques ne sont pas les règles visuelles courantes.
+- mascot-pose : boîte fixe 3:4, background-size:contain. pose-0 bienvenue ; pose-1 tablette ; pose-2 vigilance ; pose-3 sérénité ; pose-4 zéro ; pose-5 négatif.
+- balanceCompanion reçoit solde actuel et free = solde − dépenses prévues. Solde négatif et nul prioritaires, sans seuil arbitraire et sans modifier le budget.
+- La bienvenue seule reçoit welcome-playing : 01-bienvenue.webp, huit images, durée décodée de 2 000 ms, une lecture, retour au PNG fixe. sessionStorage empêche le rejeu. Choix immédiat ou fermeture automatique pour un utilisateur connu. Récupération et prefers-reduced-motion passent directement au compte ; un changement de préférence arrête le mouvement.
+- companion-greet et companion-celebrate retirés. Halos seulement en CSS ; historique statique avec confirmation écrite.
+- 06-solde-negatif-v2.webp : image unique corrigée avec Imagegen intégré à partir de la pose originale, puis encodée sans perte, fond alpha, personnage complet.
+- Service worker v10 précache les sept visuels. downloadClair insère leurs octets en data URI dans le HTML propre, sans données de budget ou session.
+
+### Mot de passe et inscription
+
+- account-change-password-form : actuel, nouveau, confirmation, afficher/masquer ; nouveau de 12 à 128 caractères. Les champs sont vidés au succès ou à la fermeture.
+- La vérification utilise un client distinct : persistSession:false, autoRefreshToken:false, detectSessionInUrl:false, storageKey unique. signInWithPassword doit renvoyer le même utilisateur ; signOut(scope:local) ferme la session temporaire. Cela fonctionne même lorsque l’exigence serveur current_password est désactivée.
+- updateUser({password,current_password}) utilise ensuite le client et le token originaux, sans recharger le budget. Le SDK transmet les attributs sans renommage.
+- reauthentication_needed affiche un champ nonce, appelle reauthenticate et limite localement le renvoi à 60 secondes. Erreurs de code, mot de passe, réseau, limite ou session : message dans le dialogue actif. Une fermeture pendant vérification ou un changement d’utilisateur empêche la modification. Succès persistant sans close/reopen.
+- Aucun mot de passe dans le budget ou localStorage. USER_UPDATED du même utilisateur ne provoque pas de nouvelle ouverture du budget.
+- E-mail trim/minuscules ; index auth.users users_email_partial_key présent, limité aux comptes non SSO. Zéro groupe de doublons lower(btrim(email)) le 15 octobre 2026. Métadonnées et agrégat seuls consultés ; aucune adresse individuelle lue.
+- user_already_exists/email_exists : actions connexion/récupération et message explicite. signUp sans session : message conditionnel de confirmation, mêmes actions et adresse conservée. identities vide n’est pas une preuve publique d’existence. Aucun RPC de recherche d’adresse ni clé administrateur.
+- Aucune modification de schéma ou de configuration Auth.
+
+### Validation
+
+- Neuf suites .cjs : test-cloud, test-account-ui, test-local, test-recovery, test-recovery-sdk, test-mascot, test-mascot-daily, test-account-security et test-account-security-sdk.
+- Couverture : solde zéro/négatif, prévision, durée et arrêt de bienvenue, absence de mouvement ailleurs, récupération, paiement anticipé, téléchargement des images, e-mails existants/masqués, règles et confirmation du mot de passe, vérification isolée, erreurs et code supplémentaire, annulation et changement de compte.
+- Le SDK officiel 2.102.0 avec transport simulé vérifie les tokens distincts, logout local de la seule session temporaire, absence de cache temporaire et conservation du budget et de la session originaux. Aucun vrai mot de passe, compte ou e-mail modifié pour les tests.
+- Moteur et cloud inchangés ; scripts compilés et copies des sources de compte cohérentes. Réception des e-mails et iPhone physique à confirmer.
+- Sources officielles : https://supabase.com/docs/reference/javascript/auth-updateuser ; https://supabase.com/docs/reference/javascript/auth-signup ; https://supabase.com/docs/guides/auth/password-security ; https://github.com/supabase/auth/blob/master/internal/api/user.go.

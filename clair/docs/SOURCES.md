@@ -1,15 +1,154 @@
 # Clair — sources brutes
 
-- Évolution mascotte du 15 octobre 2026, reprise depuis 82384ef332f08c1e773c0a41ac34dafdd1527fa0.
-- Ce document reproduit les fichiers texte de l’application, à l’exception des quatre documents eux-mêmes.
-- Les empreintes SHA-256 permettent de comparer les copies. Les ressources binaires sont à récupérer dans le même commit du dépôt.
+- Application documentée : révision 97b3b8290d382c32d10c76d6c0eaa88085b14b5b, publiée sur GitHub Pages.
+- Publication publique de ces documents autorisée par l’utilisateur le 16 octobre 2026.
+
+- Intégration validée du 15 octobre 2026 : bienvenue animée seule, images fixes et parcours de compte.
+- Base contrôlée : 4d6706fcab50033712da59c79c1d98adc77afa78.
+- Fichiers texte exacts, sauf les quatre documents eux-mêmes. Ressources binaires décrites par empreinte, à récupérer dans le même commit.
 - Dépôt : https://github.com/j2947djt9g-sketch/mon-djai/tree/main/clair
-- Entrée : [CONTEXTE.md](CONTEXTE.md). Produit : [PRD.md](PRD.md). Construction : [CONSTRUCTION.md](CONSTRUCTION.md).
+- [CONTEXTE.md](CONTEXTE.md), [PRD.md](PRD.md), [CONSTRUCTION.md](CONSTRUCTION.md).
+
+## clair/LISEZ-MOI.md
+
+- SHA-256 : afe4d33be6c0fe702b84fa8d5ae5a000cd69aa3ca609866d81d6570054270ee9
+- Taille : 2145 octets.
+
+````text
+# Clair — version autonome
+
+Application statique publiée dans le dossier clair du dépôt mon-djai.
+
+## Migrer son budget
+1. Dans Clair sur Lovable : Réglages → sauvegarde/export JSON.
+2. Ouvrir la nouvelle version GitHub : Réglages → import JSON, sélectionner la sauvegarde.
+3. Vérifier solde, historique et charges avant de supprimer l'ancienne sauvegarde.
+
+Le changement d'adresse ne transfère pas les données automatiquement. Les données sont propres au navigateur. Cette version utilise des clés distinctes afin de préserver l'application historique située à la racine du dépôt.
+
+## Utilisation
+Configurer le solde disponible, les jours de repas et les charges récurrentes. Ajouter manuellement revenus et dépenses exceptionnelles. Le solde est calculé, pas un relevé bancaire. Les dépenses automatiques rattrapent les dates écoulées à l'ouverture sans déduction en double.
+
+## Installation
+iPhone : Safari → Partager → Sur l'écran d'accueil. Android/PC : utiliser l'option d'installation proposée par le navigateur compatible. Les chemins du manifest et du service worker sont relatifs au dossier clair. Le cache ne couvre que les fichiers de cette application.
+
+## Notifications
+Les rappels visibles à l'ouverture et l'export calendrier sont disponibles. Les notifications push lorsque l'application est fermée ne sont pas connectées : aucun serveur de rappels n'est configuré. Aucune donnée de budget n'est envoyée à un serveur par cette version.
+
+## Vérifications de cette migration
+Syntaxe des deux scripts JavaScript vérifiée. Moteur comptable inchangé. Vérification de la déduction mensuelle et de son idempotence réussie. Manifest et cache isolés au sous-dossier ; le worker ne supprime pas les caches des autres applications. Le nouvel habillage et l'installation sur un vrai appareil restent à vérifier dans un navigateur.
+
+## Source
+Base : public/clair.html de Clair, révision Lovable 2bf0524fe80750ceb995eb16bd6f11dd1ecc0b59. Habillage des cartes, explications repliables, chemins PWA et stockage séparé adaptés pour GitHub Pages. Aucun secret ou budget personnel inclus.
+
+````
+
+## clair/accounts/LICENSE-supabase.txt
+
+- SHA-256 : fdb243e5b2475ac0a6ecbf774e386a5dfa37d6072c295cdc88227b895d9c8537
+- Taille : 1066 octets.
+
+````text
+MIT License
+
+Copyright (c) 2020 Supabase
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+````
+
+## clair/accounts/README.md
+
+- SHA-256 : a3893a591d1dad5f1f05b056d16ea53075444114cebb539de7598b67f9c6560b
+- Taille : 6804 octets.
+
+````text
+# Clair — comptes et synchronisation
+
+Clair est relié au projet Supabase `hkssnbvktfscizojhftl`. La PR #1 a été fusionnée et la version avec comptes est publiée sur GitHub Pages.
+
+## État vérifié
+
+- Migration `clair_private_budgets_and_revision_sync` appliquée.
+- Tests SQL passés sur la base réelle : création du budget, rejeu idempotent d'une sauvegarde, refus d'une révision obsolète, isolation entre deux identités, refus de réaffecter le propriétaire et refus d'accès anonyme.
+- Les fixtures de vérification sont annulées par ROLLBACK. Aucun compte ni budget de test n'est resté dans le projet.
+- Advisors Supabase de sécurité et de performance : aucune alerte.
+- L'API REST refuse la lecture anonyme avec HTTP 401 / code `42501`.
+- Fournisseur e-mail actif et confirmation d'adresse obligatoire.
+- Tests Node passés : reprise hors ligne, conflits entre appareils, réponses perdues, modification pendant une sauvegarde, caches distincts, déconnexion, événements de session répétés et mises à jour automatiques identiques.
+- Tests de l'interface simulée passés : masquage du budget avant connexion, confirmation de l'e-mail, échappement du prénom, reprise explicite du budget local et pause locale après trois erreurs.
+- Vérifications du mode local passées : réglages, saisie guidée, paiements anticipés sans double débit, téléchargement et installation iPhone.
+- Moteur financier inchangé. Le HTML utilise une clé publishable et restreint la connexion à l'origine exacte du projet.
+
+## Vérification de l’activation
+
+La Site URL et les deux Redirect URLs sont enregistrées. Les retours réels d’Auth vers `/mon-djai/clair/` et `/mon-djai/clair/index.html` ont été vérifiés par HTTP 303, sans envoyer de message.
+
+Deux comptes temporaires ont été utilisés avec le SDK officiel sur les API réelles : connexion, sauvegarde et relecture, rejeu idempotent, refus de lecture et de modification du budget d’un autre compte, refus d’une sauvegarde issue d’une révision obsolète. Les comptes, sessions et budgets de test ont ensuite été supprimés.
+
+Pour reprendre le budget actuel, créer le compte depuis le navigateur qui le contient, confirmer l’adresse e-mail, puis choisir « Transférer mon budget ». Utiliser le même compte sur les autres appareils.
+
+La réception des e-mails et les appareils mobiles physiques ne sont pas vérifiés automatiquement. Le service d’e-mail de test Supabase est destiné aux adresses autorisées de l’équipe ; l’envoi à d’autres utilisateurs reste à finaliser pour une ouverture au grand public.
+
+## Fonctionnement
+
+Le prénom personnalise le compte. L'adresse e-mail et le mot de passe servent à la connexion. La propriété du budget est déterminée par `auth.uid()`, sans identifiant de propriétaire fourni à la fonction de sauvegarde par le client. RLS protège chaque ligne et les paramètres JSON ne sont pas concaténés dans une requête SQL.
+
+Le budget est conservé localement avec un numéro de révision, un indicateur de modification et un UUID d'opération dans une seule écriture. Une sauvegarde distante compare la révision et accepte le rejeu d'une même opération. En cas de conflit, un choix explicite est demandé ; la copie remplacée est téléchargée avant résolution.
+
+Le budget existant est transféré après confirmation. Les copies et les sauvegardes de comptes utilisent des clés distinctes par utilisateur. L'ancien budget local est associé au premier compte qui le transfère, et ne peut pas être repris dans l'interface par un autre compte. La déconnexion retire la copie locale du compte après sauvegarde de ses changements en attente.
+
+La synchronisation s'effectue à l'ouverture, au retour de connexion et chaque minute pendant que l'application est visible. Aucun canal Realtime permanent. Les photos de fond restent sur chaque appareil afin de limiter les transferts. Les autres préférences et les données financières sont synchronisées. Le fichier HTML téléchargé conserve le mode local.
+
+## Limites restantes
+
+Le compteur de trois erreurs impose une pause d'une minute sur l'appareil. Il complète les limites de débit de Supabase et n'est pas un verrouillage global côté serveur. Le hook Password Verification Attempt nécessite actuellement une offre Teams ou Enterprise ; aucune offre payante n'est activée.
+
+Le service d'e-mail par défaut de Supabase est destiné aux essais et restreint les destinataires aux adresses autorisées de l'équipe. Un SMTP doit être configuré avant d'ouvrir les inscriptions au grand public. La réception des e-mails et les sessions de navigateur réelles restent à vérifier.
+
+## Dépendance
+
+`@supabase/supabase-js` 2.102.0 est intégré au HTML pour le démarrage hors ligne.
+Source : `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.102.0/dist/umd/supabase.js`.
+SHA-256 : `c45136a0ba5c7391646869a734db105ba607a9233fd6ec2e7e5bbab447bdc57a`.
+Licence dans LICENSE-supabase.txt.
+
+Pour les tests locaux : `node clair/accounts/test-cloud.cjs`, `node clair/accounts/test-account-ui.cjs`, `node clair/accounts/test-local.cjs`.
+
+
+## Récupération du mot de passe
+
+Le lien « Mot de passe oublié ? » conserve l'adresse saisie. Après la demande, un écran permanent indique de vérifier les e-mails et les indésirables, permet de corriger l'adresse et de renvoyer le lien après un délai de 60 secondes. La réponse reste neutre sur l'existence du compte. Le délai dans l'interface complète les limites côté Supabase.
+
+Un retour PASSWORD_RECOVERY validé par le SDK ouvre un écran consacré au nouveau mot de passe. Une session déjà ouverte pour un autre compte ne remplace pas la vérification du lien. Le formulaire propose l'affichage du mot de passe et indique les 12 caractères minimum. Ses valeurs restent présentes lors d'une synchronisation ou d'un retour dans l'onglet. L'accueil, le transfert et la configuration du budget attendent la fin de cette étape.
+
+Après enregistrement, une confirmation persistante permet d'accéder directement au budget. Un lien invalide, expiré ou déjà utilisé propose de demander un nouveau lien. Les erreurs de débit, de réseau, de mot de passe identique et de session expirée sont affichées dans le parcours actif.
+
+Tests complémentaires : node clair/accounts/test-recovery.cjs et node clair/accounts/test-recovery-sdk.cjs. Le second utilise le SDK officiel intégré et un transport simulé pour vérifier les événements de récupération, la consommation du retour URL et l'appel updateUser. Aucun e-mail n'est envoyé et aucun compte réel n'est modifié par ces tests. La réception en boîte mail doit toujours être confirmée ; le SMTP public reste à configurer si le projet utilise l'envoi de test.
+
+````
 
 ## clair/accounts/account-ui.js
 
-- SHA-256 : aae43cc84e13fc69cd8b6af96a8c851f9d8661f46ed9aaed546ff04c8a3e2161
-- Taille : 21099 octets.
+- SHA-256 : 97cdd0ae9365c4297582b140438c0a5acc093a37b26cf9bc9f1836962950e46b
+- Taille : 30209 octets.
 
 ````text
   /* ---------- Compte et synchronisation ---------- */
@@ -20,6 +159,7 @@
   let accountMode='login',accountBusy=false,accountRecovery=recoveryParams.get('type')==='recovery',accountStarted=false;
   let accountResetStep=accountRecovery?'checking':recoveryError?'expired':null;
   let accountResetEmail='',accountResetUntil=0,accountRecoveryUserId=null,accountDeferredSetup=false,accountResetTimer=null;
+  let accountSignupResult=null,accountChangeUserId=null,accountChangeNonceRequired=false,accountChangeResendUntil=0;
   const cloud=new window.ClairCloud(window.CLAIR_ACCOUNT_CONFIG,{
     normalize: value=>E.normalize(value),
     status:()=>{
@@ -66,11 +206,76 @@
   function accountGate(){
     if(!cloud.ready||cloud.status==='loading')return '<section class="card" id="account-loading"><h1>Ouverture de ton compte…</h1><p class="help">Ta copie locale est conservée.</p></section>';
     const signup=accountMode==='signup';
+    if(signup&&accountSignupResult)return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div>${mascot(1,'Retrouvons ton espace.')}<h1>${accountSignupResult==='exists'?'Tu as déjà un compte.':'Vérifie tes e-mails.'}</h1><p class="muted">${accountSignupResult==='exists'?'Cette adresse e-mail est déjà associée à un compte. Connecte-toi ou récupère ton mot de passe.':'Si cette adresse peut créer un compte, tu recevras un e-mail pour le confirmer. Si tu as déjà un compte, connecte-toi ou récupère ton mot de passe.'}</p><p class="recovery-email">${esc(accountResetEmail)}</p><p id="account-error" class="help negative" role="alert"></p><div class="recovery-actions"><button class="button primary" data-action="account-login">Me connecter</button><button class="button" data-action="account-forgot">Mot de passe oublié ?</button><button class="link" data-action="account-signup-edit">Corriger mon adresse</button></div></section>`;
     return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div>${mascot(signup?1:0,signup?"Préparons ton espace, à ton rythme.":"Heureuse de te retrouver.")}<h1>${signup?"Créons ton espace.":"Ton budget, partout."}</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}${signup?'<p class="help">12 caractères minimum. Ton adresse e-mail devra être confirmée.</p>':''}<p id="account-error" class="help negative" role="alert"></p><button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié ?</button>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
   }
   function accountCard(){
     if(!cloud.enabled||!cloud.user)return '';
-    return `<section class="card"><h2>Mon compte</h2><p>${esc(cloud.displayName||'Mon espace')}</p><p class="help">${esc(cloud.user.email)}</p><p class="help">${esc(accountStatus())}</p><div class="actions"><button class="button" data-action="account-sync" ${cloud.busy?'disabled':''}>Synchroniser</button><button class="link" data-action="account-logout">Me déconnecter</button></div><details class="settings-more"><summary>Ancien budget sur cet appareil</summary><p class="help">Le transfert demande confirmation et conserve une copie de secours.</p><button class="button" data-action="account-import">Transférer mon ancien budget</button></details></section>`;
+    return `<section class="card"><h2>Mon compte</h2><p>${esc(cloud.displayName||'Mon espace')}</p><p class="help">${esc(cloud.user.email)}</p><p class="help">${esc(accountStatus())}</p><div class="actions"><button class="button" data-action="account-change-password">Modifier mon mot de passe</button><button class="button" data-action="account-sync" ${cloud.busy?'disabled':''}>Synchroniser</button><button class="link" data-action="account-logout">Me déconnecter</button></div><details class="settings-more"><summary>Ancien budget sur cet appareil</summary><p class="help">Le transfert demande confirmation et conserve une copie de secours.</p><button class="button" data-action="account-import">Transférer mon ancien budget</button></details></section>`;
+  }
+  function changePasswordDialog(){
+    if(!cloud.user||!cloud.ready){notify('Connecte-toi à ton compte pour modifier ton mot de passe.');return;}
+    accountChangeUserId=cloud.user.id;accountChangeNonceRequired=false;accountChangeResendUntil=0;
+    dialog('Modifier mon mot de passe',`<p class="help">Pour ton compte ${esc(cloud.user.email)}.</p><form id="account-change-password-form">${field('Mot de passe actuel','currentPassword','','password','required maxlength="128" autocomplete="current-password"')}${field('Nouveau mot de passe','password','','password','required minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="account-change-help"')}${field('Confirmer le nouveau mot de passe','passwordConfirm','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}<button type="button" class="link password-toggle" data-action="account-change-toggle" aria-pressed="false">Afficher les mots de passe</button><p class="help" id="account-change-help">12 caractères minimum. Tu peux utiliser une phrase.</p><div id="account-change-verification" hidden><p class="help" id="account-change-code-help" role="status">Saisis le code de vérification reçu par e-mail.</p>${field('Code de vérification','nonce','','tel','autocomplete="one-time-code" inputmode="numeric" maxlength="16" aria-describedby="account-change-code-help"')}<button type="button" class="link" data-action="account-change-resend">Renvoyer le code</button></div>${formActions('Enregistrer mon mot de passe')}</form>`,'account-change-password');
+  }
+  function passwordChangeActive(){return modal?.kind==='account-change-password'&&accountChangeUserId===cloud.user?.id&&$('#dialog').open;}
+  async function sendPasswordVerification(){
+    if(!passwordChangeActive())return;
+    if(accountChangeResendUntil>Date.now())throw Error('Attends une minute avant de renvoyer le code.');
+    const {error}=await cloud.client.auth.reauthenticate();
+    if(!passwordChangeActive())return;
+    if(error){
+      if(error.status===429){accountChangeResendUntil=Date.now()+60000;throw Error('Trop de demandes. Attends un moment avant de réessayer.');}
+      throw Error('Le code n’a pas pu être envoyé. Vérifie ta connexion, puis réessaie.');
+    }
+    accountChangeResendUntil=Date.now()+60000;
+    $('#account-change-code-help').textContent='Un code de vérification a été envoyé par e-mail. Saisis-le pour enregistrer ton mot de passe.';
+    $('#account-change-password-form input[name="nonce"]')?.focus();
+  }
+  async function changePassword(form,f,password){
+    if(!passwordChangeActive())throw Error('Rouvre « Modifier mon mot de passe » depuis ton compte.');
+    const currentPassword=String(f.get('currentPassword')||''),confirmation=String(f.get('passwordConfirm')||''),nonce=String(f.get('nonce')||'').trim();
+    if(!currentPassword)throw Error('Indique ton mot de passe actuel.');
+    if(password.length<12||password.length>128)throw Error('Utilise entre 12 et 128 caractères pour le nouveau mot de passe.');
+    if(password!==confirmation)throw Error('Les deux nouveaux mots de passe ne correspondent pas.');
+    if(password===currentPassword)throw Error('Choisis un mot de passe différent du précédent.');
+    if(navigator.onLine===false)throw Error('Vérifie ta connexion Internet, puis réessaie.');
+    if(accountChangeNonceRequired&&!nonce)throw Error('Saisis le code de vérification reçu par e-mail.');
+    // Verify through a separate transient session: the project's current-password
+    // requirement may be disabled. Never replace or persist the budget session.
+    const verifier=supabase.createClient(window.CLAIR_ACCOUNT_CONFIG.url,window.CLAIR_ACCOUNT_CONFIG.key,{auth:{storageKey:'clair-password-check-'+crypto.randomUUID(),persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+    let temporarySession=false;
+    try{
+      const checked=await verifier.auth.signInWithPassword({email:cloud.user.email,password:currentPassword});
+      temporarySession=Boolean(checked.data?.session);
+      if(checked.error){
+        if(checked.error.code==='invalid_credentials')throw Error('Le mot de passe actuel est incorrect.');
+        if(checked.error.status===429)throw Error('Trop de tentatives. Attends un moment avant de réessayer.');
+        throw Error('Le mot de passe actuel n’a pas pu être vérifié. Vérifie ta connexion, puis réessaie.');
+      }
+      if(checked.data?.user?.id!==accountChangeUserId)throw Error('La vérification du compte n’a pas abouti. Rouvre les réglages.');
+    }finally{if(temporarySession)try{await verifier.auth.signOut({scope:'local'});}catch{}}
+    if(!passwordChangeActive())return;
+    // The vendored SDK forwards attributes unchanged: Auth expects current_password.
+    const {error}=await cloud.client.auth.updateUser({password,current_password:currentPassword,...(accountChangeNonceRequired?{nonce}:{})});
+    if(!passwordChangeActive())return;
+    if(error){
+      if(error.code==='reauthentication_needed'){
+        accountChangeNonceRequired=true;$('#account-change-verification').hidden=false;
+        $('#account-change-password-form input[name="nonce"]').required=true;
+        await sendPasswordVerification();return;
+      }
+      if(error.code==='reauthentication_not_valid')throw Error('Ce code est incorrect ou expiré. Vérifie-le ou demande un nouveau code.');
+      if(['invalid_credentials','current_password_mismatch'].includes(error.code))throw Error('Le mot de passe actuel est incorrect.');
+      if(error.code==='current_password_required')throw Error('Indique ton mot de passe actuel, puis réessaie.');
+      if(error.code==='same_password')throw Error('Choisis un mot de passe différent du précédent.');
+      if(error.code==='weak_password')throw Error('Ce mot de passe est trop facile à deviner. Choisis une phrase plus longue.');
+      if(['session_not_found','refresh_token_not_found','refresh_token_already_used','bad_jwt','user_not_found'].includes(error.code))throw Error('Ta session a expiré. Reconnecte-toi, puis réessaie.');
+      if(error.status===429)throw Error('Trop de demandes. Attends un moment avant de réessayer.');
+      throw Error('Le mot de passe n’a pas pu être enregistré. Vérifie ta connexion, puis réessaie.');
+    }
+    form.reset();accountChangeUserId=null;
+    dialog('Mot de passe modifié','<p role="status">Ton nouveau mot de passe est enregistré.</p><button class="button primary" data-action="close">Revenir à mes réglages</button>','account-change-done');
   }
   function accountStatus(){return {loading:'Connexion…','signed-out':'Connexion requise',synced:'Synchronisé',pending:'À synchroniser',offline:'Hors ligne · enregistré ici',error:'Synchronisation à reprendre',conflict:'Deux copies à départager'}[cloud.status]||'Sur cet appareil';}
   function renderAccountStatus(){
@@ -157,15 +362,17 @@
     if(accountBusy)return;accountBusy=true;const button=form.querySelector('button[type=submit]');if(button)button.disabled=true;
     accountMessage('');if(form.id==='account-forgot-form')resetCooldown();
     try{
-      const f=new FormData(form),email=String(f.get('email')||'').trim(),password=String(f.get('password')||'');
+      const f=new FormData(form),email=String(f.get('email')||'').trim().toLowerCase(),password=String(f.get('password')||'');
       if(form.id==='account-form'){
         const guard=attempts();if(guard.until>Date.now())throw Error('Attends une minute avant de réessayer.');
         const signup=form.dataset.mode==='signup';let response;
         if(signup){
           const name=String(f.get('displayName')||'').trim();if(!name||name.length>64||password.length<12)throw Error('Indique ton prénom et un mot de passe d’au moins 12 caractères.');
+          accountResetEmail=email;
           response=await cloud.client.auth.signUp({email,password,options:{data:{display_name:name},emailRedirectTo:location.origin+location.pathname}});
         }else response=await cloud.client.auth.signInWithPassword({email,password});
         if(response.error){
+          if(signup&&['user_already_exists','email_exists'].includes(response.error.code)){accountSignupResult='exists';render();return;}
           if(response.error.code==='invalid_credentials'){
             const count=(guard.until&&guard.until<=Date.now()?0:Number(guard.count)||0)+1;
             localStorage.setItem('clair-auth-attempts-v1',JSON.stringify({count,until:count>=3?Date.now()+60000:0}));
@@ -176,10 +383,11 @@
           throw Error('Connexion indisponible. Vérifie ta connexion Internet et réessaie.');
         }
         localStorage.removeItem('clair-auth-attempts-v1');
-        if(signup&&!response.data.session){form.reset();accountMessage('Vérifie tes e-mails pour confirmer ton compte, puis connecte-toi ici.');return;}
+        if(signup&&!response.data.session){accountSignupResult='confirmation';render();return;}
         await cloud.attach(response.data.user||response.data.session?.user);
       }
       if(form.id==='account-forgot-form')await sendRecovery(email);
+      if(form.id==='account-change-password-form')await changePassword(form,f,password);
       if(form.id==='account-password-form'){
         if(!accountRecoveryUserId||cloud.user?.id!==accountRecoveryUserId){accountResetStep='expired';render();focusRecovery();return;}
         if(password.length<12||password.length>128)throw Error('Utilise entre 12 et 128 caractères.');
@@ -216,7 +424,21 @@
     dialog('Deux copies de ton budget',`<p>Choisis celle à conserver pour tous tes appareils. Télécharge les deux copies avant de choisir si tu souhaites les comparer.</p><div class="actions"><button class="button" data-action="account-export-device">Sauvegarder cette copie</button>${cloud.conflict.remote?'<button class="button" data-action="account-export-online">Sauvegarder la copie en ligne</button>':''}</div><div class="actions"><button class="button primary" data-action="account-keep-device">Garder cet appareil</button>${cloud.conflict.remote?'<button class="button" data-action="account-keep-online">Garder la copie en ligne</button>':''}</div>`,'account-conflict');
   }
   async function accountAction(action){
-    if(action==='account-mode'){accountMode=accountMode==='login'?'signup':'login';render();}
+    if(action==='account-mode'||action==='account-login'||action==='account-signup-edit'){
+      if(accountBusy)return;
+      accountResetEmail=$('#account-form input[name="email"]')?.value?.trim().toLowerCase()||accountResetEmail;
+      accountMode=action==='account-login'?'login':action==='account-signup-edit'?'signup':accountMode==='login'?'signup':'login';
+      accountSignupResult=null;render();
+    }
+    if(action==='account-change-password'){if(!accountBusy)changePasswordDialog();}
+    if(action==='account-change-toggle'){
+      const inputs=$('#account-change-password-form')?.querySelectorAll('input[name="currentPassword"],input[name="password"],input[name="passwordConfirm"]');
+      if(inputs?.length){const show=inputs[0].type==='password';for(const input of inputs)input.type=show?'text':'password';const button=$('[data-action="account-change-toggle"]');button.textContent=show?'Masquer les mots de passe':'Afficher les mots de passe';button.setAttribute('aria-pressed',String(show));}
+    }
+    if(action==='account-change-resend'){
+      if(accountBusy)return;accountBusy=true;accountMessage('');
+      try{await sendPasswordVerification();}catch(error){accountMessage(error.message);}finally{accountBusy=false;}
+    }
     if(action==='account-forgot'||action==='account-reset-edit'){
       if(accountBusy)return;
       if(action==='account-forgot')accountResetEmail=$('#account-form input[name="email"]')?.value?.trim()||accountResetEmail;
@@ -392,108 +614,6 @@
 
 ````
 
-## clair/accounts/LICENSE-supabase.txt
-
-- SHA-256 : fdb243e5b2475ac0a6ecbf774e386a5dfa37d6072c295cdc88227b895d9c8537
-- Taille : 1066 octets.
-
-````text
-MIT License
-
-Copyright (c) 2020 Supabase
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-
-````
-
-## clair/accounts/README.md
-
-- SHA-256 : a3893a591d1dad5f1f05b056d16ea53075444114cebb539de7598b67f9c6560b
-- Taille : 6804 octets.
-
-````text
-# Clair — comptes et synchronisation
-
-Clair est relié au projet Supabase `hkssnbvktfscizojhftl`. La PR #1 a été fusionnée et la version avec comptes est publiée sur GitHub Pages.
-
-## État vérifié
-
-- Migration `clair_private_budgets_and_revision_sync` appliquée.
-- Tests SQL passés sur la base réelle : création du budget, rejeu idempotent d'une sauvegarde, refus d'une révision obsolète, isolation entre deux identités, refus de réaffecter le propriétaire et refus d'accès anonyme.
-- Les fixtures de vérification sont annulées par ROLLBACK. Aucun compte ni budget de test n'est resté dans le projet.
-- Advisors Supabase de sécurité et de performance : aucune alerte.
-- L'API REST refuse la lecture anonyme avec HTTP 401 / code `42501`.
-- Fournisseur e-mail actif et confirmation d'adresse obligatoire.
-- Tests Node passés : reprise hors ligne, conflits entre appareils, réponses perdues, modification pendant une sauvegarde, caches distincts, déconnexion, événements de session répétés et mises à jour automatiques identiques.
-- Tests de l'interface simulée passés : masquage du budget avant connexion, confirmation de l'e-mail, échappement du prénom, reprise explicite du budget local et pause locale après trois erreurs.
-- Vérifications du mode local passées : réglages, saisie guidée, paiements anticipés sans double débit, téléchargement et installation iPhone.
-- Moteur financier inchangé. Le HTML utilise une clé publishable et restreint la connexion à l'origine exacte du projet.
-
-## Vérification de l’activation
-
-La Site URL et les deux Redirect URLs sont enregistrées. Les retours réels d’Auth vers `/mon-djai/clair/` et `/mon-djai/clair/index.html` ont été vérifiés par HTTP 303, sans envoyer de message.
-
-Deux comptes temporaires ont été utilisés avec le SDK officiel sur les API réelles : connexion, sauvegarde et relecture, rejeu idempotent, refus de lecture et de modification du budget d’un autre compte, refus d’une sauvegarde issue d’une révision obsolète. Les comptes, sessions et budgets de test ont ensuite été supprimés.
-
-Pour reprendre le budget actuel, créer le compte depuis le navigateur qui le contient, confirmer l’adresse e-mail, puis choisir « Transférer mon budget ». Utiliser le même compte sur les autres appareils.
-
-La réception des e-mails et les appareils mobiles physiques ne sont pas vérifiés automatiquement. Le service d’e-mail de test Supabase est destiné aux adresses autorisées de l’équipe ; l’envoi à d’autres utilisateurs reste à finaliser pour une ouverture au grand public.
-
-## Fonctionnement
-
-Le prénom personnalise le compte. L'adresse e-mail et le mot de passe servent à la connexion. La propriété du budget est déterminée par `auth.uid()`, sans identifiant de propriétaire fourni à la fonction de sauvegarde par le client. RLS protège chaque ligne et les paramètres JSON ne sont pas concaténés dans une requête SQL.
-
-Le budget est conservé localement avec un numéro de révision, un indicateur de modification et un UUID d'opération dans une seule écriture. Une sauvegarde distante compare la révision et accepte le rejeu d'une même opération. En cas de conflit, un choix explicite est demandé ; la copie remplacée est téléchargée avant résolution.
-
-Le budget existant est transféré après confirmation. Les copies et les sauvegardes de comptes utilisent des clés distinctes par utilisateur. L'ancien budget local est associé au premier compte qui le transfère, et ne peut pas être repris dans l'interface par un autre compte. La déconnexion retire la copie locale du compte après sauvegarde de ses changements en attente.
-
-La synchronisation s'effectue à l'ouverture, au retour de connexion et chaque minute pendant que l'application est visible. Aucun canal Realtime permanent. Les photos de fond restent sur chaque appareil afin de limiter les transferts. Les autres préférences et les données financières sont synchronisées. Le fichier HTML téléchargé conserve le mode local.
-
-## Limites restantes
-
-Le compteur de trois erreurs impose une pause d'une minute sur l'appareil. Il complète les limites de débit de Supabase et n'est pas un verrouillage global côté serveur. Le hook Password Verification Attempt nécessite actuellement une offre Teams ou Enterprise ; aucune offre payante n'est activée.
-
-Le service d'e-mail par défaut de Supabase est destiné aux essais et restreint les destinataires aux adresses autorisées de l'équipe. Un SMTP doit être configuré avant d'ouvrir les inscriptions au grand public. La réception des e-mails et les sessions de navigateur réelles restent à vérifier.
-
-## Dépendance
-
-`@supabase/supabase-js` 2.102.0 est intégré au HTML pour le démarrage hors ligne.
-Source : `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.102.0/dist/umd/supabase.js`.
-SHA-256 : `c45136a0ba5c7391646869a734db105ba607a9233fd6ec2e7e5bbab447bdc57a`.
-Licence dans LICENSE-supabase.txt.
-
-Pour les tests locaux : `node clair/accounts/test-cloud.cjs`, `node clair/accounts/test-account-ui.cjs`, `node clair/accounts/test-local.cjs`.
-
-
-## Récupération du mot de passe
-
-Le lien « Mot de passe oublié ? » conserve l'adresse saisie. Après la demande, un écran permanent indique de vérifier les e-mails et les indésirables, permet de corriger l'adresse et de renvoyer le lien après un délai de 60 secondes. La réponse reste neutre sur l'existence du compte. Le délai dans l'interface complète les limites côté Supabase.
-
-Un retour PASSWORD_RECOVERY validé par le SDK ouvre un écran consacré au nouveau mot de passe. Une session déjà ouverte pour un autre compte ne remplace pas la vérification du lien. Le formulaire propose l'affichage du mot de passe et indique les 12 caractères minimum. Ses valeurs restent présentes lors d'une synchronisation ou d'un retour dans l'onglet. L'accueil, le transfert et la configuration du budget attendent la fin de cette étape.
-
-Après enregistrement, une confirmation persistante permet d'accéder directement au budget. Un lien invalide, expiré ou déjà utilisé propose de demander un nouveau lien. Les erreurs de débit, de réseau, de mot de passe identique et de session expirée sont affichées dans le parcours actif.
-
-Tests complémentaires : node clair/accounts/test-recovery.cjs et node clair/accounts/test-recovery-sdk.cjs. Le second utilise le SDK officiel intégré et un transport simulé pour vérifier les événements de récupération, la consommation du retour URL et l'appel updateUser. Aucun e-mail n'est envoyé et aucun compte réel n'est modifié par ces tests. La réception en boîte mail doit toujours être confirmée ; le SMTP public reste à configurer si le projet utilise l'envoi de test.
-
-````
-
 ## clair/accounts/schema.sql
 
 - SHA-256 : 7ee8e6f4d840bb0f81d6bb312a2079ead622a01daffae5497304189366ce170f
@@ -561,10 +681,104 @@ commit;
 
 ````
 
+## clair/accounts/test-account-security-sdk.cjs
+
+- SHA-256 : 426fca1cc1e12df570b9ee2f8523180237131af807e392e59372f412fa34dbf9
+- Taille : 5777 octets.
+
+````text
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto').webcrypto;
+const html=fs.readFileSync(__dirname+'/../index.html','utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+const uid='8450886d-891a-40e2-995e-ea46bb1409bc',user={id:uid,aud:'authenticated',role:'authenticated',email:'sdk-test@example.invalid',user_metadata:{display_name:'Test'},app_metadata:{provider:'email'},identities:[]};
+function token(sessionId){return [{alg:'HS256',typ:'JWT'},{sub:uid,aud:'authenticated',role:'authenticated',session_id:sessionId,exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000),iss:'https://hkssnbvktfscizojhftl.supabase.co/auth/v1'},'TEST-SIGNATURE'].map(x=>Buffer.from(typeof x==='string'?x:JSON.stringify(x)).toString('base64url')).join('.')}
+const originalToken=token('original'),temporaryToken=token('temporary'),storage=new Map(),nodes=new Map(),calls=[];
+storage.set('clair-account-session-v1',JSON.stringify({access_token:originalToken,refresh_token:'TEST-ORIGINAL-REFRESH',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,token_type:'bearer',user}));
+function node(key){if(!nodes.has(key))nodes.set(key,{innerHTML:'',textContent:'',style:{},dataset:{},open:false,reset(){},showModal(){this.open=true},close(){this.open=false},focus(){},scrollIntoView(){},addEventListener(){}});return nodes.get(key)}
+const s={Intl,Date,TextEncoder,TextDecoder,URL,URLSearchParams,Blob,Headers,Request,Response,structuredClone,crypto,console,AbortController,setTimeout,clearTimeout,setInterval,clearInterval,location:{origin:'https://example.test',pathname:'/clair/',protocol:'https:',search:'',hash:'',href:'https://example.test/clair/'},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{visibilityState:'visible',documentElement:{dataset:{}},body:{dataset:{}},querySelector:key=>['#account-form','#account-loading'].includes(key)?null:node(key),addEventListener(){},removeEventListener(){}},FormData:class{constructor(form){this.values=form.values}get(k){return this.values[k]??null}},fetch:async(url,options={})=>{
+ const target=new URL(url instanceof Request?url.url:url),method=options.method||'GET',body=options.body?JSON.parse(options.body):null,authorization=new Headers(options.headers).get('authorization');calls.push({path:target.pathname,method,body,authorization,query:target.search});
+ const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json','x-supabase-api-version':'2024-01-01'}});
+ if(target.pathname==='/auth/v1/token')return body.password==='correct current password'?response({access_token:temporaryToken,refresh_token:'TEST-TEMP-REFRESH',expires_in:3600,token_type:'bearer',user}):response({code:'invalid_credentials',msg:'Invalid login credentials'},400);
+ if(target.pathname==='/auth/v1/user')return response(user);if(target.pathname==='/auth/v1/logout')return response({});
+ if(target.pathname==='/rest/v1/clair_budgets'){const payload=s.ClairEngine.empty();payload.initialized=payload.setupDone=true;payload.openingCents=1700;return response({payload,revision:1,operation_id:'sdk-operation',display_name:'Test'})}throw Error('Unexpected API path '+target.pathname);
+}};
+s.window=s;s.globalThis=s;s.addEventListener=()=>{};s.removeEventListener=()=>{};vm.createContext(s);for(let i=0;i<3;i++)vm.runInContext(scripts[i],s);const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');vm.runInContext(scripts[3].slice(0,boot)+'window.test={cloud,accountAction,accountSubmit,getData:()=>data};})();',s);
+async function main(){
+ const t=s.test;await t.cloud.init();assert.equal(t.cloud.user.id,uid);const before=JSON.stringify(t.getData()),cache=storage.get(t.cloud.key()),reads=calls.filter(c=>c.path==='/rest/v1/clair_budgets').length;
+ await t.accountAction('account-change-password');const form={id:'account-change-password-form',values:{currentPassword:'wrong',password:'new long password phrase',passwordConfirm:'new long password phrase'},querySelector:()=>({disabled:false}),reset(){}};
+ await t.accountSubmit(form);assert.match(node('#form-error').textContent,/actuel est incorrect/);assert(!calls.some(c=>c.path==='/auth/v1/user'&&c.method==='PUT'));
+ form.values.currentPassword='correct current password';await t.accountSubmit(form);assert.match(node('#dialog').innerHTML,/Mot de passe modifié/);
+ const update=calls.find(c=>c.path==='/auth/v1/user'&&c.method==='PUT'),signout=calls.find(c=>c.path==='/auth/v1/logout');assert.equal(update.body.current_password,'correct current password');assert.equal(update.body.password,'new long password phrase');assert.equal(update.authorization,'Bearer '+originalToken);assert.equal(signout.authorization,'Bearer '+temporaryToken);assert.equal(signout.query,'?scope=local');
+ assert.equal(calls.filter(c=>c.path==='/rest/v1/clair_budgets').length,reads);assert.equal(JSON.stringify(t.getData()),before);assert.equal(storage.get(t.cloud.key()),cache);assert.equal(JSON.parse(storage.get('clair-account-session-v1')).access_token,originalToken);assert(![...storage.keys()].some(k=>k.startsWith('clair-password-check-')));assert(![...storage.values()].some(v=>v.includes('new long password phrase')||v.includes('correct current password')));
+ console.log('PASS official SDK: wrong password blocks update; transient verification/local logout; original token used; USER_UPDATED preserves budget and session; no persisted verification secrets');await t.cloud.client.auth.stopAutoRefresh();
+}
+main().then(()=>process.exit(0)).catch(error=>{console.error(error);process.exit(1)});
+
+````
+
+## clair/accounts/test-account-security.cjs
+
+- SHA-256 : 5c9f32201144e4d41f0494c953b4beeaecb806a7e2d12f268ba586f14e34a30b
+- Taille : 9894 octets.
+
+````text
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto').webcrypto;
+const html=fs.readFileSync(__dirname+'/../index.html','utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+function context(){
+ const nodes=new Map(),storage=new Map(),calls={signup:[],verify:[],update:[],signout:[],reauth:0,clients:[]};
+ let signupReply={data:{session:null,user:{identities:[]}}},verifyError=null,passwordError=null,clock=Date.now(),verifyWait=null;
+ const user={id:'account-a',email:'a@example.invalid'},date=class extends Date{static now(){return clock}};
+ const node=key=>{if(!nodes.has(key))nodes.set(key,{innerHTML:'',textContent:'',value:'',type:'password',style:{},dataset:{},open:false,hidden:false,resetCount:0,showModal(){this.open=true},close(){this.open=false},addEventListener(){},scrollIntoView(){},focus(){},setAttribute(k,v){this[k]=v},reset(){this.resetCount++;this.values={}},querySelector:()=>({disabled:false}),querySelectorAll:()=>['currentPassword','password','passwordConfirm'].map(name=>node('#change-'+name))});return nodes.get(key)};
+ function query(key){
+  if(key==='#account-form input[name="email"]')return node('#page').innerHTML.includes('id="account-form"')?node(key):null;
+  if(['#account-form','#account-loading','#account-forgot-form','#account-password-form'].includes(key)&&!node('#page').innerHTML.includes('id="'+key.slice(1)+'"'))return null;
+  return node(key);
+ }
+ const client={auth:{signUp:async args=>{calls.signup.push(args);return signupReply},updateUser:async args=>{calls.update.push(args);return {error:passwordError}},reauthenticate:async()=>{calls.reauth++;return {error:null}},resetPasswordForEmail:async()=>({error:null})}};
+ const verifier={auth:{signInWithPassword:async args=>{calls.verify.push(args);if(verifyWait)await verifyWait;return {data:verifyError?null:{user,session:{user}},error:verifyError}},signOut:async args=>{calls.signout.push(args);return {error:null}}}};
+ const s={Intl,Date:date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{origin:'https://example.test',protocol:'https:',pathname:'/clair/',href:'https://example.test/clair/',hash:'',search:''},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:query,addEventListener(){}},supabase:{createClient:(url,key,options)=>{calls.clients.push(options);return options.auth.persistSession===false?verifier:client}},CLAIR_ACCOUNT_CONFIG:{url:'https://test.supabase.co',key:'sb_publishable_test'},FormData:class{constructor(form){this.values=form.values}get(key){return this.values[key]??null}}};
+ s.window=s;s.addEventListener=()=>{};vm.createContext(s);vm.runInContext(scripts[0],s);vm.runInContext(scripts[2],s);
+ const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');
+ vm.runInContext(scripts[3].slice(0,boot)+'window.test={cloud,render,accountGate,accountCard,accountAction,accountSubmit,close,setData:d=>{data=d},getData:()=>data,state:()=>({mode:accountMode,email:accountResetEmail,step:accountResetStep})};})();',s);
+ const t=s.test;t.cloud.ready=true;t.cloud.status='signed-out';
+ return {s,t,node,calls,storage,user,connect(){t.cloud.user=user;t.cloud.status='synced';const d=s.ClairEngine.empty();d.initialized=d.setupDone=true;d.openingCents=1700;t.setData(d)},signupReply:x=>signupReply=x,verifyError:x=>verifyError=x,passwordError:x=>passwordError=x,advance:ms=>clock+=ms,delayVerify:p=>verifyWait=p};
+}
+const form=(id,values)=>({id,dataset:{mode:'signup'},values,reset(){this.resetCount=(this.resetCount||0)+1},querySelector:()=>({disabled:false})});
+const values={currentPassword:'current password phrase',password:'new long password phrase',passwordConfirm:'new long password phrase'};
+async function main(){
+ for(const reply of [{error:{code:'user_already_exists'}},{error:{code:'email_exists'}},{data:{session:null,user:{identities:[]}}},{data:{session:null,user:{identities:[{id:'new'}]}}}]){
+  const a=context();await a.t.accountAction('account-mode');a.signupReply(reply);await a.t.accountSubmit(form('account-form',{email:'  A@EXAMPLE.INVALID ',password:'long password phrase',displayName:'A'}));
+  const view=a.t.accountGate();assert.match(view,/data-action="account-login"/);assert.match(view,/data-action="account-forgot"/);assert.match(view,/a@example.invalid/);assert.doesNotMatch(view,/id="account-form"/);
+  if(reply.error)assert.match(view,/déjà associée/);else{assert.match(view,/Si cette adresse/);assert.doesNotMatch(view,/adresse e-mail est déjà associée/)}
+  assert.equal(a.calls.signup[0].email,'a@example.invalid');assert.equal(a.calls.update.length,0);
+  await a.t.accountAction('account-login');assert.equal(a.t.state().mode,'login');assert.match(a.t.accountGate(),/value="a@example.invalid"/);
+  await a.t.accountAction('account-forgot');assert.equal(a.t.state().email,'a@example.invalid');assert.equal(a.t.state().step,'email');
+ }
+ console.log('PASS duplicate, obscured and new signup responses: login/recovery options, normalized retained email, honest account-existence wording');
+ const a=context();a.connect();const before=JSON.stringify(a.t.getData());assert.match(a.t.accountCard(),/Modifier mon mot de passe/);await a.t.accountAction('account-change-password');const change=form('account-change-password-form',{...values});
+ for(const patch of [{password:'short',passwordConfirm:'short'},{passwordConfirm:'different long phrase'},{currentPassword:''},{password:values.currentPassword,passwordConfirm:values.currentPassword}]){change.values={...values,...patch};await a.t.accountSubmit(change);assert.equal(a.calls.verify.length,0);assert.equal(a.calls.update.length,0);assert(a.node('#form-error').textContent.length>0)}
+ change.values={...values};a.verifyError({code:'invalid_credentials'});await a.t.accountSubmit(change);assert.equal(a.calls.update.length,0);assert.match(a.node('#form-error').textContent,/actuel est incorrect/);assert.equal(a.node('#dialog').open,true);
+ a.verifyError(null);a.passwordError({code:'weak_password'});await a.t.accountSubmit(change);assert.equal(a.node('#dialog').open,true);assert.match(a.node('#form-error').textContent,/facile à deviner/);
+ const fields=a.node('#account-change-password-form').querySelectorAll();await a.t.accountAction('account-change-toggle');assert(fields.every(f=>f.type==='text'));await a.t.accountAction('account-change-toggle');assert(fields.every(f=>f.type==='password'));
+ a.node('#account-change-password-form input[name="password"]').value='still editing';a.t.cloud.hooks.status();a.t.cloud.hooks.apply(a.t.getData(),JSON.stringify(a.t.getData()));assert.equal(a.node('#account-change-password-form input[name="password"]').value,'still editing');assert.equal(a.node('#dialog').open,true);
+ a.passwordError(null);await a.t.accountSubmit(change);assert.match(a.node('#dialog').innerHTML,/Ton nouveau mot de passe est enregistré/);assert.equal(a.node('#dialog').open,true);assert.equal(change.resetCount,1);
+ assert.equal(a.calls.update.at(-1).current_password,values.currentPassword);assert(a.calls.signout.every(x=>x.scope==='local'));assert(a.calls.clients.slice(1).every(x=>x.auth.persistSession===false&&x.auth.autoRefreshToken===false&&x.auth.detectSessionInUrl===false));assert.equal(JSON.stringify(a.t.getData()),before);assert(![...a.storage.values()].some(x=>x.includes(values.password)||x.includes(values.currentPassword)));
+ console.log('PASS password validation, isolated server verification, errors/retry, visibility, unchanged budget, no stored secrets and persistent success');
+ const b=context();b.connect();await b.t.accountAction('account-change-password');const codeForm=form('account-change-password-form',{...values});b.passwordError({code:'reauthentication_needed'});await b.t.accountSubmit(codeForm);assert.equal(b.calls.reauth,1);assert.equal(b.node('#account-change-verification').hidden,false);assert.equal(b.node('#account-change-password-form input[name="nonce"]').required,true);
+ await b.t.accountSubmit(codeForm);assert.equal(b.calls.update.length,1);assert.match(b.node('#form-error').textContent,/code de vérification/);await b.t.accountAction('account-change-resend');assert.equal(b.calls.reauth,1);b.advance(61000);await b.t.accountAction('account-change-resend');assert.equal(b.calls.reauth,2);
+ codeForm.values.nonce='123456';b.passwordError({code:'reauthentication_not_valid'});await b.t.accountSubmit(codeForm);assert.match(b.node('#form-error').textContent,/incorrect ou expiré/);b.passwordError(null);await b.t.accountSubmit(codeForm);assert.equal(b.calls.update.at(-1).nonce,'123456');assert.match(b.node('#dialog').innerHTML,/Mot de passe modifié/);
+ console.log('PASS optional reauthentication, resend delay, invalid code and retry');
+ const c=context();c.connect();await c.t.accountAction('account-change-password');c.s.navigator.onLine=false;await c.t.accountSubmit(form('account-change-password-form',values));assert.equal(c.calls.verify.length,0);assert.equal(c.calls.update.length,0);
+ c.s.navigator.onLine=true;let resolve;c.delayVerify(new Promise(r=>resolve=r));const pending=c.t.accountSubmit(form('account-change-password-form',values));await Promise.resolve();c.t.close();resolve();await pending;assert.equal(c.calls.update.length,0);await c.t.accountAction('account-change-password');c.t.cloud.user={id:'account-b'};await c.t.accountSubmit(form('account-change-password-form',values));assert.equal(c.calls.update.length,0);
+ console.log('PASS offline, cancellation during verification and changed account block modification');
+}
+main().catch(error=>{console.error(error);process.exitCode=1});
+
+````
+
 ## clair/accounts/test-account-ui.cjs
 
-- SHA-256 : 97ba6a9be5ab9022d440901d23f52944a3dc9e37a6532085c263439ac9bb9c29
-- Taille : 3858 octets.
+- SHA-256 : ceeb5f0e528da4819a8ac217b0c2c24fe565d9271113c22379a04602936603ae
+- Taille : 3887 octets.
 
 ````text
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=require('crypto').webcrypto;
@@ -573,7 +787,7 @@ const nodes=new Map(),storage=new Map(),requests=[];let replies=[];
 const node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',style:{},dataset:{},open:false,showModal(){this.open=true},close(){this.open=false},addEventListener(){},scrollIntoView(){},focus(){}});return nodes.get(s)};
 const client={auth:{signInWithPassword:async p=>{requests.push(p);return replies.shift()},signUp:async p=>{requests.push(p);return replies.shift()},resetPasswordForEmail:async()=>({}),updateUser:async()=>({})}};
 const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{origin:'https://example.test',protocol:'https:',href:'https://example.test/clair/',pathname:'/clair/'},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener(){}},supabase:{createClient:()=>client},CLAIR_ACCOUNT_CONFIG:{url:'https://test.supabase.co',key:'sb_publishable_test'},FormData:class{constructor(form){this.values=form.values}get(k){return this.values[k]??null}}};sandbox.window=sandbox;sandbox.addEventListener=()=>{};
-vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);let ui=scripts[3];const boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);ui=ui.slice(0,boot)+'window.test={cloud,render,accountGate,accountCard,accountSubmit,accountStatus,legacyBudget,transferLegacy,setData(d){data=d},getData(){return data;}};})();';vm.runInContext(ui,sandbox);const t=sandbox.test;
+vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);let ui=scripts[3];const boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);ui=ui.slice(0,boot)+'window.test={cloud,render,accountGate,accountCard,accountSubmit,accountAction,accountStatus,legacyBudget,transferLegacy,setData(d){data=d},getData(){return data;}};})();';vm.runInContext(ui,sandbox);const t=sandbox.test;
 (async()=>{
  const legacy=sandbox.ClairEngine.empty();legacy.initialized=legacy.setupDone=true;legacy.openingCents=1700;storage.set('clair-github-money-v3',JSON.stringify(legacy));
  t.render();assert(!node('#page').innerHTML.includes('17,00'));t.cloud.ready=true;t.cloud.status='signed-out';t.render();assert(node('#page').innerHTML.includes('account-form'));assert(!node('#page').innerHTML.includes('17,00'));
@@ -581,7 +795,7 @@ vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(sc
  const form={id:'account-form',dataset:{mode:'login'},values:{email:'a@example.test',password:'wrong'},querySelector:()=>({disabled:false}),reset(){}};
  for(let n=0;n<3;n++){replies.push({error:{code:'invalid_credentials'}});await t.accountSubmit(form)}assert.equal(requests.length,3);await t.accountSubmit(form);assert.equal(requests.length,3);assert(node('#account-error').textContent.includes('minute'));
  console.log('PASS: three failed attempts cause a temporary device cooldown');
- storage.delete('clair-auth-attempts-v1');replies.push({data:{session:null,user:{}}});form.dataset.mode='signup';form.values={email:'a@example.test',password:'twelve-character-password',displayName:'  El-Hadj  '};await t.accountSubmit(form);assert.equal(requests.at(-1).options.data.display_name,'El-Hadj');assert(node('#account-error').textContent.includes('confirmer'));
+ storage.delete('clair-auth-attempts-v1');await t.accountAction('account-mode');replies.push({data:{session:null,user:{}}});form.dataset.mode='signup';form.values={email:'a@example.test',password:'twelve-character-password',displayName:'  El-Hadj  '};await t.accountSubmit(form);assert.equal(requests.at(-1).options.data.display_name,'El-Hadj');assert.match(t.accountGate(),/confirmer/);
  t.cloud.user={id:'user-a',email:'a@example.test'};t.cloud.displayName='<img src=x onerror=alert(1)>';assert(t.accountCard().includes('&lt;img'));assert(!t.accountCard().includes('<img src=x'));
  storage.set('clair-local-owner-v1','user-b');assert.equal(t.legacyBudget(),null);
  console.log('PASS: email confirmation, escaped profile text and prevention of another account claiming local budget');
@@ -661,8 +875,8 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
 
 ## clair/accounts/test-local.cjs
 
-- SHA-256 : 77aacd1b6b9ed72beb243471c85746c3cefd091a91dbe48390714eae5e44932c
-- Taille : 9506 octets.
+- SHA-256 : 152f33f99944326e98d111b1c7fe582302615292dd794ef90ded2a5f517c0b03
+- Taille : 9858 octets.
 
 ````text
 function runTests(){
@@ -674,7 +888,7 @@ const node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',style:{
 const flushClose=()=>{while(closeTasks.length)closeTasks.shift()();};
 const click=(action,extra={})=>events.click({target:{closest:()=>({dataset:{action,...extra}})}});
 let payloads=[],notifications=[],fetched=[];
-const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{protocol:'https:',href:'https://example.test/clair/'},navigator:{userAgent:'iPhone',platform:'iPhone',maxTouchPoints:5},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener:(type,fn)=>{events[type]=fn;}},fetch:async url=>{fetched.push(String(url));return {ok:true,text:async()=>html};}};
+const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{protocol:'https:',href:'https://example.test/clair/'},navigator:{userAgent:'iPhone',platform:'iPhone',maxTouchPoints:5},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener:(type,fn)=>{events[type]=fn;}},btoa:text=>Buffer.from(text,'binary').toString('base64'),fetch:async url=>{fetched.push(String(url));return {ok:true,text:async()=>html,arrayBuffer:async()=>new Uint8Array([1,2,3]).buffer};}};
 sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;
 vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
 let ui=scripts[3];const boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert.ok(boot>0);
@@ -754,7 +968,8 @@ const form=o=>({get:k=>o[k]??null});
  await t.downloadClair();assert.equal(payloads.length,1);assert.equal(payloads[0].name,'Clair.html');assert.ok(payloads[0].body.includes('root.ClairEngine ='));
  assert.ok(!payloads[0].body.includes('Netflix & famille'));assert.ok(!payloads[0].body.includes('<link rel="manifest"'));
  assert.equal(fetched[0],'https://example.test/clair/index.html');assert.equal(t.busy().downloadBusy,false);
- console.log('PASS download uses clean app source, excludes user ledger and fixes old broken link');
+ assert.equal(fetched.length,8);assert.equal(new Set(fetched).size,8);assert.match(payloads[0].body,/url\('data:image\/webp;base64,/);assert.match(payloads[0].body,/url\('data:image\/png;base64,/);assert.doesNotMatch(payloads[0].body,/url\('assets\/mascotte\//);
+ console.log('PASS download embeds seven visual assets without the user ledger');
  await t.installClair();assert.match(node('#dialog').innerHTML,/Safari/);
  let prompts=0;t.setPrompt({prompt:async()=>{prompts++;},userChoice:Promise.resolve({outcome:'dismissed'})});await t.installClair();assert.equal(prompts,1);assert.equal(t.busy().installBusy,false);
  console.log('PASS iPhone install guidance and native prompt dismissal');
@@ -764,13 +979,12 @@ const form=o=>({get:k=>o[k]??null});
 }
 runTests();
 
-
 ````
 
 ## clair/accounts/test-mascot-daily.cjs
 
-- SHA-256 : 5f21f52cf38a93b4096369caa00048508fe8eed66b03bc9a470e51967398481d
-- Taille : 6674 octets.
+- SHA-256 : 485cb41f9fd2aacaca18ac6b84afd2fe99e24a50f37f0cefa79f8b0372f3d186
+- Taille : 6840 octets.
 
 ````text
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto').webcrypto;
@@ -795,12 +1009,12 @@ const prepared=c=>{const d=c.E.empty();d.initialized=d.setupDone=true;d.openingB
 const rent={id:'rent',name:'Loyer',categoryId:'logement',kind:'monthly',amountCents:60000,amounts:[],start:'2026-10-16',end:null,pauses:[],day:20,month:1,reminderEnabled:true};
 async function main(){
  const a=context(),d=prepared(a);d.rules.push(rent);
- for(const [opening,state,pose]of [[50000,'shortfall',2],[60000,'committed',1],[100000,'covered',0]]){
+ for(const [opening,state,pose]of [[50000,'shortfall',1],[60000,'committed',2],[100000,'covered',3],[0,'zero',4],[-1,'negative',5]]){
   d.openingCents=opening;a.t.setData(structuredClone(d));const before=JSON.stringify(a.t.getData()),view=a.t.home();
   assert.match(view,new RegExp('data-mascot-state="'+state+'"'));assert.match(view,new RegExp('pose-'+pose+' balance-companion'));
   assert.equal(a.E.reserve(a.t.getData()).cents,60000);assert.equal(JSON.stringify(a.t.getData()),before);
  }
- d.openingCents=-1;a.t.setData(structuredClone(d));assert.match(a.t.home(),/data-mascot-state="shortfall"/);
+ d.setupDone=false;d.openingCents=-1;a.t.setData(structuredClone(d));assert.match(a.t.home(),/data-mascot-state="negative"/);d.openingCents=0;a.t.setData(structuredClone(d));assert.match(a.t.home(),/data-mascot-state="zero"/);d.setupDone=true;
  d.openingCents=100000;d.rules=[];a.t.setData(structuredClone(d));assert.match(a.t.home(),/data-mascot-state="unreserved"/);
  d.setupDone=false;a.t.setData(d);assert.match(a.t.home(),/data-mascot-state="setup"/);
  console.log('PASS: forecast deficit despite positive balance, exact coverage, margin, negative balance, no scheduled expenses and incomplete setup; render does not mutate the budget');
@@ -836,8 +1050,8 @@ main().catch(error=>{console.error(error);process.exitCode=1});
 
 ## clair/accounts/test-mascot.cjs
 
-- SHA-256 : 41ea02951f706cf4a837532c16d78c0855d2606f4830d3cf22e8db2c8ae4b2cb
-- Taille : 2694 octets.
+- SHA-256 : 28a84a6b6558e6f872d2960095b5b39dac258ab4ca0e9b41feedf07151405709
+- Taille : 4029 octets.
 
 ````text
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
@@ -845,18 +1059,18 @@ const html=fs.readFileSync(__dirname+'/../index.html','utf8');
 const ui=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][3][1];
 const code=ui.slice(ui.indexOf('  function welcome(){'),ui.indexOf('  welcome();'));
 function run({seen=false,user=false,local=false,recovery=false,reduced=false}={}){
- const handlers={},timers=[];let inits=0,renders=0,setups=0;
+ const handlers={},timers=[],motion={matches:reduced,addEventListener(type,fn){handlers['motion:'+type]=fn}};let inits=0,renders=0,setups=0;
  const nodes=new Map();
- function $(key){if(!nodes.has(key))nodes.set(key,{open:false,addEventListener(type,fn){handlers[key+':'+type]=fn},showModal(){this.open=true},close(){this.open=false;handlers[key+':close']?.()}});return nodes.get(key)}
+ function $(key){if(!nodes.has(key))nodes.set(key,{open:false,classList:{values:new Set(),add(c){this.values.add(c)},remove(c){this.values.delete(c)},contains(c){return this.values.has(c)}},addEventListener(type,fn){handlers[key+':'+type]=fn},showModal(){this.open=true},close(){this.open=false;handlers[key+':close']?.()}});return nodes.get(key)}
  const s={$,cloud:{enabled:!local,init:()=>{inits++;return Promise.resolve()}},data:{initialized:false},accountMode:'login',accountStarted:false,accountResetStep:recovery?'password':null,loadError:null,
- sessionStorage:{getItem:()=>seen?'1':null,setItem(){}},localStorage:{getItem:()=>user?'session':null},matchMedia:()=>({matches:reduced}),setTimeout:fn=>{timers.push(fn);return timers.length},clearTimeout(){},render(){renders++},beginSetup(){setups++}};
+ sessionStorage:{getItem:()=>seen?'1':null,setItem(){}},localStorage:{getItem:()=>user?'session':null},matchMedia:()=>motion,setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length},clearTimeout(){},render(){renders++},beginSetup(){setups++}};
  vm.createContext(s);vm.runInContext(code+'welcome();',s);
  return {s,nodes,handlers,timers,inits:()=>inits,renders:()=>renders,setups:()=>setups};
 }
-const signup=run();assert.equal(signup.nodes.get('#welcome').open,true);assert.equal(signup.timers.length,0);
+const signup=run();assert.equal(signup.nodes.get('#welcome').open,true);assert.equal(signup.timers.length,1);assert.equal(signup.timers[0].ms,2000);assert(signup.nodes.get('#welcome .mascot-pose').classList.contains('welcome-playing'));signup.timers[0].fn();assert.equal(signup.nodes.get('#welcome').open,true);assert(!signup.nodes.get('#welcome .mascot-pose').classList.contains('welcome-playing'));
 signup.handlers['#welcome-skip:click']();assert.equal(signup.s.accountMode,'signup');assert.equal(signup.inits(),1);assert.equal(signup.renders(),1);
 const login=run();login.handlers['#welcome-login:click']();assert.equal(login.s.accountMode,'login');assert.equal(login.inits(),1);
-const returning=run({user:true});assert.equal(returning.timers.length,1);assert.equal(returning.nodes.get('#welcome-login').hidden,true);returning.timers[0]();assert.equal(returning.inits(),1);
+const returning=run({user:true});assert.equal(returning.timers.length,1);assert.equal(returning.nodes.get('#welcome-login').hidden,true);assert.equal(returning.timers[0].ms,2000);returning.timers[0].fn();assert.equal(returning.inits(),1);
 for(const options of [{seen:true},{recovery:true},{reduced:true}]){const r=run(options);assert.equal(r.inits(),1);assert(!r.nodes.get('#welcome').open);}
 const local=run({local:true});local.handlers['#welcome-skip:click']();assert.equal(local.setups(),1);
 assert.match(html,/mascot\(\[2,1,2,3\]\[s\]/);assert.match(html,/mascot\(signup\?1:0/);
@@ -864,6 +1078,11 @@ assert.match(html,/:has\(input:focus,select:focus,textarea:focus\)/);
 const sw=fs.readFileSync(__dirname+'/../sw.js','utf8');assert.match(sw,/assets\/mascotte-poses.png/);assert.match(sw,/const HOME=new URL\('index.html',BASE\).href/);
 assert(fs.existsSync(__dirname+'/../assets/mascotte-poses.png'));
 console.log('PASS: explicit signup/login, returning session, recovery and reduced-motion bypass, local setup, four poses, compact input state and offline asset');
+
+const changed=run();changed.handlers['motion:change']({matches:true});assert(!changed.nodes.get('#welcome .mascot-pose').classList.contains('welcome-playing'));
+for(const name of ['01-bienvenue.png','01-bienvenue.webp','02-serenite.png','03-vigilance.png','04-prevision-tendue.png','05-solde-zero.png','06-solde-negatif-v2.webp']){assert(sw.includes('assets/mascotte/'+name));assert(fs.existsSync(__dirname+'/../assets/mascotte/'+name));}
+const css=html.slice(html.indexOf('<style>'),html.indexOf('</style>'));assert.doesNotMatch(css,/companion-greet|companion-celebrate/);assert.doesNotMatch(ui.slice(0,ui.indexOf('  function welcome(){')),/classList.add\('welcome-playing'\)/);
+console.log('PASS one two-second welcome, stop and static poster, fixed expressions elsewhere, offline assets');
 
 ````
 
@@ -1055,7 +1274,56 @@ rollback;
 - SHA-256 : 42501e6bddc02d382f0e6a39d0146d6d76e817ea4fca4a3fb47ab0d6b2e3a619
 - Taille : 1024787 octets.
 
-- Image à conserver avec le code.
+Ressource binaire : récupérer dans ce même commit.
+
+## clair/assets/mascotte/01-bienvenue.png
+
+- SHA-256 : 59b111ff77920951c78a5f1e0ffdb9de19a61e3e364a4d480effbeaa9b157977
+- Taille : 140750 octets.
+
+Ressource binaire : récupérer dans ce même commit.
+
+## clair/assets/mascotte/01-bienvenue.webp
+
+- SHA-256 : 4e6dbdd0d99fcd967bd8006b10faf3e01ff428ecd5ab2a6f1e14359cf6af4369
+- Taille : 778314 octets.
+
+Ressource binaire : récupérer dans ce même commit.
+
+## clair/assets/mascotte/02-serenite.png
+
+- SHA-256 : 9dd649f0bd6a1d09d88d4002fe39be28dea9aa0690794943c43a864cd346f5d5
+- Taille : 139467 octets.
+
+Ressource binaire : récupérer dans ce même commit.
+
+## clair/assets/mascotte/03-vigilance.png
+
+- SHA-256 : e9fcffdf82bef87a401ff527e2efa12af62c87252dbb474053df7af526bd167e
+- Taille : 128744 octets.
+
+Ressource binaire : récupérer dans ce même commit.
+
+## clair/assets/mascotte/04-prevision-tendue.png
+
+- SHA-256 : ad1d166aed075de8efb0a4eda5871d86e62223fe372624479557517100771362
+- Taille : 130527 octets.
+
+Ressource binaire : récupérer dans ce même commit.
+
+## clair/assets/mascotte/05-solde-zero.png
+
+- SHA-256 : c2fb4a5ad451fd02da10d5c030b7e759e91eabee389cc8f7b1dfcc0efc8c9314
+- Taille : 122339 octets.
+
+Ressource binaire : récupérer dans ce même commit.
+
+## clair/assets/mascotte/06-solde-negatif-v2.webp
+
+- SHA-256 : 756b2948983af2619d6bd124a18b1959bf76997082c94478046061098fd91579
+- Taille : 875274 octets.
+
+Ressource binaire : récupérer dans ce même commit.
 
 ## clair/icons/icon.svg
 
@@ -1069,8 +1337,8 @@ rollback;
 
 ## clair/index.html
 
-- SHA-256 : 9aec02ce307bd56eedec3f455b43f3bf7f4f8d7f0614a0805adb94dc9ef791fa
-- Taille : 361697 octets.
+- SHA-256 : 6a0a2497c4e537cc3012cb67a2a47f73f0c47a7ba51925be601c915e075c18a7
+- Taille : 372275 octets.
 
 ````text
 <!doctype html>
@@ -1348,8 +1616,9 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 .password-toggle{display:block;margin-top:8px;min-height:44px;text-align:left}
 
 /* Decorative companion; all guidance remains accessible as text. */
-.mascot-pose{display:block;width:126px;aspect-ratio:512/683;background-image:url('assets/mascotte-poses.png');background-size:400% 100%;background-repeat:no-repeat;flex:none}
-.pose-0{background-position:0% 0}.pose-1{background-position:33.3333% 0}.pose-2{background-position:66.6667% 0}.pose-3{background-position:100% 0}
+.mascot-pose{display:block;width:126px;aspect-ratio:3/4;background-size:contain;background-position:center bottom;background-repeat:no-repeat;flex:none}
+.pose-0{background-image:url('assets/mascotte/01-bienvenue.png')}.pose-1{background-image:url('assets/mascotte/04-prevision-tendue.png')}.pose-2{background-image:url('assets/mascotte/03-vigilance.png')}.pose-3{background-image:url('assets/mascotte/02-serenite.png')}.pose-4{background-image:url('assets/mascotte/05-solde-zero.png')}.pose-5{background-image:url('assets/mascotte/06-solde-negatif-v2.webp')}
+#welcome .welcome-playing{background-image:url('assets/mascotte/01-bienvenue.webp')}
 .mascot-guide{display:flex;align-items:center;gap:18px;margin:16px 0 22px;padding:10px 18px;border:1px solid var(--line);border-radius:24px;background:var(--soft)}
 .mascot-copy{margin:0;line-height:1.5;color:var(--accent-text);font-size:15px;font-weight:600}
 .account-card .mascot-guide{justify-content:center}.account-card .mascot-pose{width:108px}
@@ -1377,18 +1646,18 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 .journal-companion .help{margin:0;line-height:1.5}.journal-companion-content>div{min-width:0}
 @media(max-width:720px){.balance-companion-row{grid-template-columns:minmax(0,1fr) 82px;gap:10px;margin-bottom:14px}.balance-section .balance-companion{width:82px}.balance-companion-row .balance{font-size:clamp(30px,8.7vw,52px)}.balance-companion-copy{font-size:12px;margin-top:8px}.journal-companion{padding:6px 12px;margin-bottom:16px}.journal-companion-content{gap:12px}.journal-companion-title{font-size:15px}}
 @media(max-width:380px){.balance-companion-row{grid-template-columns:minmax(0,1fr) 64px}.balance-section .balance-companion{width:64px}.journal-companion .mascot-pose{width:54px}}
-/* Mascot feedback uses the existing forecast states. */
+/* Static expressions follow the actual balance first, then its forecast. */
 .balance-companion-row{--companion-glow:rgba(160,197,255,.65);--companion-dot:#c4dbff}
 .balance-companion-row[data-mascot-state="covered"]{--companion-glow:rgba(112,239,180,.68);--companion-dot:#89f0be}
 .balance-companion-row[data-mascot-state="committed"]{--companion-glow:rgba(255,211,110,.65);--companion-dot:#ffd778}
 .balance-companion-row[data-mascot-state="shortfall"]{--companion-glow:rgba(255,126,146,.7);--companion-dot:#ff9bac}
+.balance-companion-row[data-mascot-state="zero"]{--companion-glow:rgba(255,211,110,.65);--companion-dot:#ffd778}
+.balance-companion-row[data-mascot-state="negative"]{--companion-glow:rgba(255,126,146,.7);--companion-dot:#ff9bac}
 .balance-companion-copy::before{content:"";display:inline-block;width:7px;height:7px;margin:0 7px 1px 0;border-radius:50%;background:var(--companion-dot);box-shadow:0 0 8px var(--companion-glow)}
-.balance-section .balance-companion{filter:drop-shadow(0 0 12px var(--companion-glow)) drop-shadow(0 8px 10px rgba(22,6,25,.18));transform-origin:center bottom;animation:companion-greet 1.8s ease-in-out 1}
-.journal-companion-content[data-mascot-state="saved"] .mascot-pose{filter:drop-shadow(0 0 8px rgba(54,185,118,.4));animation:companion-celebrate .7s ease-out 1}
+.balance-section .balance-companion{filter:drop-shadow(0 0 12px var(--companion-glow)) drop-shadow(0 8px 10px rgba(22,6,25,.18))}
+.journal-companion-content[data-mascot-state="saved"] .mascot-pose{filter:drop-shadow(0 0 8px rgba(54,185,118,.4))}
 .journal-companion-content[data-mascot-state="saved"] .journal-companion-title{color:var(--ok)}
-@keyframes companion-greet{0%,100%{transform:translateY(0) rotate(0)}40%{transform:translateY(-5px) rotate(-2deg)}70%{transform:translateY(-2px) rotate(1deg)}}
-@keyframes companion-celebrate{0%,100%{transform:translateY(0)}40%{transform:translateY(-7px)}70%{transform:translateY(-2px)}}
-@media(prefers-reduced-motion:reduce){.balance-section .balance-companion,.journal-companion-content[data-mascot-state="saved"] .mascot-pose{animation:none}}
+@media(prefers-reduced-motion:reduce){#welcome .welcome-playing{background-image:url('assets/mascotte/01-bienvenue.png')}}
 </style>
 </head>
 <body data-wall="plain">
@@ -1837,6 +2106,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   let accountMode='login',accountBusy=false,accountRecovery=recoveryParams.get('type')==='recovery',accountStarted=false;
   let accountResetStep=accountRecovery?'checking':recoveryError?'expired':null;
   let accountResetEmail='',accountResetUntil=0,accountRecoveryUserId=null,accountDeferredSetup=false,accountResetTimer=null;
+  let accountSignupResult=null,accountChangeUserId=null,accountChangeNonceRequired=false,accountChangeResendUntil=0;
   const cloud=new window.ClairCloud(window.CLAIR_ACCOUNT_CONFIG,{
     normalize: value=>E.normalize(value),
     status:()=>{
@@ -1883,11 +2153,76 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function accountGate(){
     if(!cloud.ready||cloud.status==='loading')return '<section class="card" id="account-loading"><h1>Ouverture de ton compte…</h1><p class="help">Ta copie locale est conservée.</p></section>';
     const signup=accountMode==='signup';
+    if(signup&&accountSignupResult)return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div>${mascot(1,'Retrouvons ton espace.')}<h1>${accountSignupResult==='exists'?'Tu as déjà un compte.':'Vérifie tes e-mails.'}</h1><p class="muted">${accountSignupResult==='exists'?'Cette adresse e-mail est déjà associée à un compte. Connecte-toi ou récupère ton mot de passe.':'Si cette adresse peut créer un compte, tu recevras un e-mail pour le confirmer. Si tu as déjà un compte, connecte-toi ou récupère ton mot de passe.'}</p><p class="recovery-email">${esc(accountResetEmail)}</p><p id="account-error" class="help negative" role="alert"></p><div class="recovery-actions"><button class="button primary" data-action="account-login">Me connecter</button><button class="button" data-action="account-forgot">Mot de passe oublié ?</button><button class="link" data-action="account-signup-edit">Corriger mon adresse</button></div></section>`;
     return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div>${mascot(signup?1:0,signup?"Préparons ton espace, à ton rythme.":"Heureuse de te retrouver.")}<h1>${signup?"Créons ton espace.":"Ton budget, partout."}</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}${signup?'<p class="help">12 caractères minimum. Ton adresse e-mail devra être confirmée.</p>':''}<p id="account-error" class="help negative" role="alert"></p><button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié ?</button>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
   }
   function accountCard(){
     if(!cloud.enabled||!cloud.user)return '';
-    return `<section class="card"><h2>Mon compte</h2><p>${esc(cloud.displayName||'Mon espace')}</p><p class="help">${esc(cloud.user.email)}</p><p class="help">${esc(accountStatus())}</p><div class="actions"><button class="button" data-action="account-sync" ${cloud.busy?'disabled':''}>Synchroniser</button><button class="link" data-action="account-logout">Me déconnecter</button></div><details class="settings-more"><summary>Ancien budget sur cet appareil</summary><p class="help">Le transfert demande confirmation et conserve une copie de secours.</p><button class="button" data-action="account-import">Transférer mon ancien budget</button></details></section>`;
+    return `<section class="card"><h2>Mon compte</h2><p>${esc(cloud.displayName||'Mon espace')}</p><p class="help">${esc(cloud.user.email)}</p><p class="help">${esc(accountStatus())}</p><div class="actions"><button class="button" data-action="account-change-password">Modifier mon mot de passe</button><button class="button" data-action="account-sync" ${cloud.busy?'disabled':''}>Synchroniser</button><button class="link" data-action="account-logout">Me déconnecter</button></div><details class="settings-more"><summary>Ancien budget sur cet appareil</summary><p class="help">Le transfert demande confirmation et conserve une copie de secours.</p><button class="button" data-action="account-import">Transférer mon ancien budget</button></details></section>`;
+  }
+  function changePasswordDialog(){
+    if(!cloud.user||!cloud.ready){notify('Connecte-toi à ton compte pour modifier ton mot de passe.');return;}
+    accountChangeUserId=cloud.user.id;accountChangeNonceRequired=false;accountChangeResendUntil=0;
+    dialog('Modifier mon mot de passe',`<p class="help">Pour ton compte ${esc(cloud.user.email)}.</p><form id="account-change-password-form">${field('Mot de passe actuel','currentPassword','','password','required maxlength="128" autocomplete="current-password"')}${field('Nouveau mot de passe','password','','password','required minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="account-change-help"')}${field('Confirmer le nouveau mot de passe','passwordConfirm','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}<button type="button" class="link password-toggle" data-action="account-change-toggle" aria-pressed="false">Afficher les mots de passe</button><p class="help" id="account-change-help">12 caractères minimum. Tu peux utiliser une phrase.</p><div id="account-change-verification" hidden><p class="help" id="account-change-code-help" role="status">Saisis le code de vérification reçu par e-mail.</p>${field('Code de vérification','nonce','','tel','autocomplete="one-time-code" inputmode="numeric" maxlength="16" aria-describedby="account-change-code-help"')}<button type="button" class="link" data-action="account-change-resend">Renvoyer le code</button></div>${formActions('Enregistrer mon mot de passe')}</form>`,'account-change-password');
+  }
+  function passwordChangeActive(){return modal?.kind==='account-change-password'&&accountChangeUserId===cloud.user?.id&&$('#dialog').open;}
+  async function sendPasswordVerification(){
+    if(!passwordChangeActive())return;
+    if(accountChangeResendUntil>Date.now())throw Error('Attends une minute avant de renvoyer le code.');
+    const {error}=await cloud.client.auth.reauthenticate();
+    if(!passwordChangeActive())return;
+    if(error){
+      if(error.status===429){accountChangeResendUntil=Date.now()+60000;throw Error('Trop de demandes. Attends un moment avant de réessayer.');}
+      throw Error('Le code n’a pas pu être envoyé. Vérifie ta connexion, puis réessaie.');
+    }
+    accountChangeResendUntil=Date.now()+60000;
+    $('#account-change-code-help').textContent='Un code de vérification a été envoyé par e-mail. Saisis-le pour enregistrer ton mot de passe.';
+    $('#account-change-password-form input[name="nonce"]')?.focus();
+  }
+  async function changePassword(form,f,password){
+    if(!passwordChangeActive())throw Error('Rouvre « Modifier mon mot de passe » depuis ton compte.');
+    const currentPassword=String(f.get('currentPassword')||''),confirmation=String(f.get('passwordConfirm')||''),nonce=String(f.get('nonce')||'').trim();
+    if(!currentPassword)throw Error('Indique ton mot de passe actuel.');
+    if(password.length<12||password.length>128)throw Error('Utilise entre 12 et 128 caractères pour le nouveau mot de passe.');
+    if(password!==confirmation)throw Error('Les deux nouveaux mots de passe ne correspondent pas.');
+    if(password===currentPassword)throw Error('Choisis un mot de passe différent du précédent.');
+    if(navigator.onLine===false)throw Error('Vérifie ta connexion Internet, puis réessaie.');
+    if(accountChangeNonceRequired&&!nonce)throw Error('Saisis le code de vérification reçu par e-mail.');
+    // Verify through a separate transient session: the project's current-password
+    // requirement may be disabled. Never replace or persist the budget session.
+    const verifier=supabase.createClient(window.CLAIR_ACCOUNT_CONFIG.url,window.CLAIR_ACCOUNT_CONFIG.key,{auth:{storageKey:'clair-password-check-'+crypto.randomUUID(),persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+    let temporarySession=false;
+    try{
+      const checked=await verifier.auth.signInWithPassword({email:cloud.user.email,password:currentPassword});
+      temporarySession=Boolean(checked.data?.session);
+      if(checked.error){
+        if(checked.error.code==='invalid_credentials')throw Error('Le mot de passe actuel est incorrect.');
+        if(checked.error.status===429)throw Error('Trop de tentatives. Attends un moment avant de réessayer.');
+        throw Error('Le mot de passe actuel n’a pas pu être vérifié. Vérifie ta connexion, puis réessaie.');
+      }
+      if(checked.data?.user?.id!==accountChangeUserId)throw Error('La vérification du compte n’a pas abouti. Rouvre les réglages.');
+    }finally{if(temporarySession)try{await verifier.auth.signOut({scope:'local'});}catch{}}
+    if(!passwordChangeActive())return;
+    // The vendored SDK forwards attributes unchanged: Auth expects current_password.
+    const {error}=await cloud.client.auth.updateUser({password,current_password:currentPassword,...(accountChangeNonceRequired?{nonce}:{})});
+    if(!passwordChangeActive())return;
+    if(error){
+      if(error.code==='reauthentication_needed'){
+        accountChangeNonceRequired=true;$('#account-change-verification').hidden=false;
+        $('#account-change-password-form input[name="nonce"]').required=true;
+        await sendPasswordVerification();return;
+      }
+      if(error.code==='reauthentication_not_valid')throw Error('Ce code est incorrect ou expiré. Vérifie-le ou demande un nouveau code.');
+      if(['invalid_credentials','current_password_mismatch'].includes(error.code))throw Error('Le mot de passe actuel est incorrect.');
+      if(error.code==='current_password_required')throw Error('Indique ton mot de passe actuel, puis réessaie.');
+      if(error.code==='same_password')throw Error('Choisis un mot de passe différent du précédent.');
+      if(error.code==='weak_password')throw Error('Ce mot de passe est trop facile à deviner. Choisis une phrase plus longue.');
+      if(['session_not_found','refresh_token_not_found','refresh_token_already_used','bad_jwt','user_not_found'].includes(error.code))throw Error('Ta session a expiré. Reconnecte-toi, puis réessaie.');
+      if(error.status===429)throw Error('Trop de demandes. Attends un moment avant de réessayer.');
+      throw Error('Le mot de passe n’a pas pu être enregistré. Vérifie ta connexion, puis réessaie.');
+    }
+    form.reset();accountChangeUserId=null;
+    dialog('Mot de passe modifié','<p role="status">Ton nouveau mot de passe est enregistré.</p><button class="button primary" data-action="close">Revenir à mes réglages</button>','account-change-done');
   }
   function accountStatus(){return {loading:'Connexion…','signed-out':'Connexion requise',synced:'Synchronisé',pending:'À synchroniser',offline:'Hors ligne · enregistré ici',error:'Synchronisation à reprendre',conflict:'Deux copies à départager'}[cloud.status]||'Sur cet appareil';}
   function renderAccountStatus(){
@@ -1974,15 +2309,17 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if(accountBusy)return;accountBusy=true;const button=form.querySelector('button[type=submit]');if(button)button.disabled=true;
     accountMessage('');if(form.id==='account-forgot-form')resetCooldown();
     try{
-      const f=new FormData(form),email=String(f.get('email')||'').trim(),password=String(f.get('password')||'');
+      const f=new FormData(form),email=String(f.get('email')||'').trim().toLowerCase(),password=String(f.get('password')||'');
       if(form.id==='account-form'){
         const guard=attempts();if(guard.until>Date.now())throw Error('Attends une minute avant de réessayer.');
         const signup=form.dataset.mode==='signup';let response;
         if(signup){
           const name=String(f.get('displayName')||'').trim();if(!name||name.length>64||password.length<12)throw Error('Indique ton prénom et un mot de passe d’au moins 12 caractères.');
+          accountResetEmail=email;
           response=await cloud.client.auth.signUp({email,password,options:{data:{display_name:name},emailRedirectTo:location.origin+location.pathname}});
         }else response=await cloud.client.auth.signInWithPassword({email,password});
         if(response.error){
+          if(signup&&['user_already_exists','email_exists'].includes(response.error.code)){accountSignupResult='exists';render();return;}
           if(response.error.code==='invalid_credentials'){
             const count=(guard.until&&guard.until<=Date.now()?0:Number(guard.count)||0)+1;
             localStorage.setItem('clair-auth-attempts-v1',JSON.stringify({count,until:count>=3?Date.now()+60000:0}));
@@ -1993,10 +2330,11 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
           throw Error('Connexion indisponible. Vérifie ta connexion Internet et réessaie.');
         }
         localStorage.removeItem('clair-auth-attempts-v1');
-        if(signup&&!response.data.session){form.reset();accountMessage('Vérifie tes e-mails pour confirmer ton compte, puis connecte-toi ici.');return;}
+        if(signup&&!response.data.session){accountSignupResult='confirmation';render();return;}
         await cloud.attach(response.data.user||response.data.session?.user);
       }
       if(form.id==='account-forgot-form')await sendRecovery(email);
+      if(form.id==='account-change-password-form')await changePassword(form,f,password);
       if(form.id==='account-password-form'){
         if(!accountRecoveryUserId||cloud.user?.id!==accountRecoveryUserId){accountResetStep='expired';render();focusRecovery();return;}
         if(password.length<12||password.length>128)throw Error('Utilise entre 12 et 128 caractères.');
@@ -2033,7 +2371,21 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     dialog('Deux copies de ton budget',`<p>Choisis celle à conserver pour tous tes appareils. Télécharge les deux copies avant de choisir si tu souhaites les comparer.</p><div class="actions"><button class="button" data-action="account-export-device">Sauvegarder cette copie</button>${cloud.conflict.remote?'<button class="button" data-action="account-export-online">Sauvegarder la copie en ligne</button>':''}</div><div class="actions"><button class="button primary" data-action="account-keep-device">Garder cet appareil</button>${cloud.conflict.remote?'<button class="button" data-action="account-keep-online">Garder la copie en ligne</button>':''}</div>`,'account-conflict');
   }
   async function accountAction(action){
-    if(action==='account-mode'){accountMode=accountMode==='login'?'signup':'login';render();}
+    if(action==='account-mode'||action==='account-login'||action==='account-signup-edit'){
+      if(accountBusy)return;
+      accountResetEmail=$('#account-form input[name="email"]')?.value?.trim().toLowerCase()||accountResetEmail;
+      accountMode=action==='account-login'?'login':action==='account-signup-edit'?'signup':accountMode==='login'?'signup':'login';
+      accountSignupResult=null;render();
+    }
+    if(action==='account-change-password'){if(!accountBusy)changePasswordDialog();}
+    if(action==='account-change-toggle'){
+      const inputs=$('#account-change-password-form')?.querySelectorAll('input[name="currentPassword"],input[name="password"],input[name="passwordConfirm"]');
+      if(inputs?.length){const show=inputs[0].type==='password';for(const input of inputs)input.type=show?'text':'password';const button=$('[data-action="account-change-toggle"]');button.textContent=show?'Masquer les mots de passe':'Afficher les mots de passe';button.setAttribute('aria-pressed',String(show));}
+    }
+    if(action==='account-change-resend'){
+      if(accountBusy)return;accountBusy=true;accountMessage('');
+      try{await sendPasswordVerification();}catch(error){accountMessage(error.message);}finally{accountBusy=false;}
+    }
     if(action==='account-forgot'||action==='account-reset-edit'){
       if(accountBusy)return;
       if(action==='account-forgot')accountResetEmail=$('#account-form input[name="email"]')?.value?.trim()||accountResetEmail;
@@ -2156,7 +2508,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     modal={kind,...state};$('#dialog').innerHTML=`<div class="dialog-inner"><div class="dialog-head"><h2 id="dialog-title">${title}</h2><button class="close" data-action="close" aria-label="Fermer">×</button></div>${kind==='wizard'?'':'<div id="form-error" class="notice error" role="alert"></div>'}${body}</div>`;
     if(!$('#dialog').open)$('#dialog').showModal();
   }
-  function close(){ modal=null;if($('#dialog').open)$('#dialog').close(); }
+  function close(){if(modal?.kind==='account-change-password'){$('#account-change-password-form')?.reset();accountChangeUserId=null;}modal=null;if($('#dialog').open)$('#dialog').close();}
   const formActions = (save='Enregistrer') => `<div class="dialog-actions"><button type="button" class="button" data-action="close">Annuler</button><button class="button primary" type="submit">${save}</button></div>`;
   const monthNav = () => `<div class="month-nav"><button data-action="month-prev" aria-label="Mois précédent">‹</button><span>${esc(monthLabel(month))}</span><button data-action="month-next" aria-label="Mois suivant">›</button></div>`;
   function txRow(t, controls=true) {const c=cat(t.categoryId);return `<div class="row"><span class="row-icon" aria-hidden="true">${t.type==='income'?'+':esc(c.icon)}</span><div class="row-info"><div class="row-name">${esc(t.name || c.label)}${t.autoKey?'<span class="badge">Auto</span>':''}${t.paymentConfirmed?'<span class="badge ok">Payé (confirmé par toi)</span>':''}</div><div class="row-meta">${esc(dateLabel(t.date))} · ${t.type==='income'?'Argent reçu':esc(c.label)}${t.corrected?' · corrigée':''}${t.earlyPaid?' · payé en avance pour le '+esc(dateLabel(t.autoKey.slice(-10))):''}${t.date>E.today()?' · à venir':''}${t.note?' · '+esc(t.note):''}</div></div><span class="row-amount ${t.type==='income'?'income':''}">${t.type==='income'?'+':'−'}${euro(t.amountCents)}</span>${controls?`<button class="button small" data-action="edit-tx" data-id="${esc(t.id)}" aria-label="Modifier ${esc(t.name)}">Modifier</button>`:''}</div>`;}
@@ -2178,13 +2530,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       <div class="pay-controls"><p class="pay-date">${esc(shortDate(c.dueDate))}</p><p class="pay-reminder">${reminder?icon('bell')+'Rappel dans Clair à J−2':'Rappel désactivé'}</p></div>
     </article>`;
   }
-  // Display-only states use the same forecast as the balance card; no extra thresholds.
-  function balanceCompanion(free,reserved,complete){
+  // Actual zero and negative balances take priority; no arbitrary low-balance threshold.
+  function balanceCompanion(balance,free,reserved,complete){
+    if(balance<0)return {pose:5,state:'negative',message:'Ton solde est négatif. Regardons ensemble ce qui peut t’aider.'};
+    if(balance===0)return {pose:4,state:'zero',message:'Ton solde est à zéro. Faisons le point à ton rythme.'};
     if(!complete)return {pose:1,state:'setup',message:'Termine tes habitudes pour préciser la prévision.'};
-    if(free<0)return {pose:2,state:'shortfall',message:'Regardons les dépenses prévues : il reste un manque à couvrir.'};
-    if(free===0)return {pose:1,state:'committed',message:'Tes dépenses prévues sont couvertes, sans marge pour le moment.'};
-    if(!reserved)return {pose:0,state:'unreserved',message:'Aucune dépense prévue d’ici la fin du mois selon tes réglages.'};
-    return {pose:0,state:'covered',message:'Tes dépenses prévues sont couvertes. Tu gardes une marge.'};
+    if(free<0)return {pose:1,state:'shortfall',message:'Regardons les dépenses prévues : il reste un manque à couvrir.'};
+    if(free===0)return {pose:2,state:'committed',message:'Tes dépenses prévues sont couvertes, sans marge pour le moment.'};
+    if(!reserved)return {pose:3,state:'unreserved',message:'Aucune dépense prévue d’ici la fin du mois selon tes réglages.'};
+    return {pose:3,state:'covered',message:'Tes dépenses prévues sont couvertes. Tu gardes une marge.'};
   }
   let journalFeedback=null,journalFeedbackTimer=null;
   function rememberJournalEntry(id){
@@ -2203,7 +2557,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function home() {
     if(!data.initialized)return `<div class="big-empty"><div class="brand-mark">c</div><h1>Clair</h1><p class="muted">Ton argent, simplement.</p><button class="button primary" data-action="setup">Configurer mon suivi</button><p class="help">Déjà une sauvegarde ?</p><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label></div>`;
     const now=E.today(), balance=E.balance(data), reserve=E.reserve(data), free=balance-reserve.cents, cards=E.upcoming(data);
-    const end=now.slice(0,7)+'-'+E.lastDay(now.slice(0,7)),companion=balanceCompanion(free,reserve.cents,data.setupDone);
+    const end=now.slice(0,7)+'-'+E.lastDay(now.slice(0,7)),companion=balanceCompanion(balance,free,reserve.cents,data.setupDone);
     return `<section class="balance-section" aria-labelledby="balance-title"><div class="balance-top"><h1 id="balance-title">Mon solde</h1><button class="icon-button" data-action="notifications" aria-label="Notifications" title="Notifications">${icon('bell')}</button></div><div class="balance-companion-row" data-mascot-state="${companion.state}"><div class="balance-readout"><div class="balance ${balance<0?'negative':''}">${euro(balance)}</div><p class="balance-companion-copy">${esc(companion.message)}</p></div><span class="mascot-pose pose-${companion.pose} balance-companion" aria-hidden="true"></span></div><details class="balance-help"><summary aria-label="Comprendre le solde calculé">Comment est-il calculé ?</summary><p>Aujourd’hui · solde de départ, opérations saisies et dépenses automatiques déjà comptées. Ce n’est pas un relevé bancaire.</p></details><div class="balance-summary"><div><h2>Dépenses prévues d’ici le ${esc(dateLabel(end))}</h2><strong>${euro(reserve.cents)}</strong></div><div class="forecast-result"><h2>${free<0?'Il manque':'Il restera'}</h2><strong class="${free<0?'negative':''}">${euro(Math.abs(free))}</strong><p>${free<0?'pour couvrir les dépenses prévues':'après les dépenses prévues'}</p></div></div><details class="balance-help"><summary>Voir le calcul</summary><p>${euro(balance)} de solde − ${euro(reserve.cents)} de dépenses prévues = ${euro(free)}.</p><p>Les dépenses prévues ne sont pas encore déduites. Les revenus à venir ne sont pas inclus.</p></details><div class="quick"><button class="button primary" data-action="add">${icon('plus')}Ajouter</button></div></section>`+
       (!data.setupDone?'<div class="notice">Tes anciennes données sont conservées. <button class="link" data-action="setup">Terminer la configuration</button></div>':'')+
       `<section class="payments" aria-labelledby="up-title"><div class="section-head"><h2 id="up-title">Paiements à venir</h2><button class="link" data-nav="rules">Mes habitudes</button></div>${cards.length?`<div class="shelf" tabindex="0" role="region" aria-label="Échéances, de la plus urgente à la plus lointaine">${cards.map(payCard).join('')}</div>`:'<p class="help">Aucune échéance de loyer ou d’abonnement à afficher.</p>'}<details class="settings-more"><summary>À propos des échéances</summary><p class="help">Les prochains paiements et les opérations à confirmer sont classés par date. Les opérations passées sont déjà comptées : confirmer leur paiement ne les déduit pas de nouveau.</p></details><button class="link" data-nav="budget">Voir mon bilan du mois ${icon('arrow')}</button></section>`;
@@ -2239,7 +2593,9 @@ async function installClair(){
 }
 async function downloadClair(){
  if(downloadBusy)return;downloadBusy=true;if(page==='settings')render();
- try{const response=await fetch(new URL('index.html',location.href),{cache:'no-cache'});if(!response.ok)throw Error('Téléchargement indisponible. Réessaie avec une connexion Internet.');let source=await response.text();if(!source.includes('root.ClairEngine =')||!source.includes('<html'))throw Error('Le fichier reçu ne correspond pas à Clair.');source=source.replace(/<link rel="(?:manifest|icon|apple-touch-icon)"[^>]*>/g,'');download(source,'Clair.html','text/html;charset=utf-8');notify('Clair téléchargé. Pour transférer tes dépenses, sauvegarde aussi tes données.');}catch(error){notify(error.message||'Téléchargement impossible. Réessaie en ligne.');}finally{downloadBusy=false;if(page==='settings')render();}
+ try{const response=await fetch(new URL('index.html',location.href),{cache:'no-cache'});if(!response.ok)throw Error('Téléchargement indisponible. Réessaie avec une connexion Internet.');let source=await response.text();if(!source.includes('root.ClairEngine =')||!source.includes('<html'))throw Error('Le fichier reçu ne correspond pas à Clair.');const assets=[...new Set([...source.matchAll(/url\('(?<asset>assets\/mascotte\/[^']+)'\)/g)].map(m=>m.groups.asset))];
+ for(const asset of assets){const image=await fetch(new URL(asset,location.href));if(!image.ok)throw Error('Une image manque au téléchargement. Réessaie en ligne.');const bytes=new Uint8Array(await image.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));source=source.split("url('"+asset+"')").join("url('data:image/"+(asset.endsWith('.webp')?'webp':'png')+';base64,'+btoa(binary)+"')");}
+ source=source.replace(/<link rel="(?:manifest|icon|apple-touch-icon)"[^>]*>/g,'');download(source,'Clair.html','text/html;charset=utf-8');notify('Clair téléchargé. Pour transférer tes dépenses, sauvegarde aussi tes données.');}catch(error){notify(error.message||'Téléchargement impossible. Réessaie en ligne.');}finally{downloadBusy=false;if(page==='settings')render();}
 }
 function settings(){const p=data.preferences;return heading('Clair','Réglages')+accountCard()+
 `<div class="settings-links"><button class="settings-link" data-nav="rules"><span>Mes habitudes<small>Repas et abonnements</small></span>${icon('arrow')}</button><button class="settings-link" data-nav="budget"><span>Budget et épargne<small>Mes repères du mois</small></span>${icon('arrow')}</button></div><div class="settings-grid settings-simple">
@@ -2268,7 +2624,7 @@ function paymentDetails(key){
   function readDays(f){return dayNames.map((_,i)=>f.get('day-'+i)?num(f.get('price-'+i)):0);}
   function beginSetup(){if(data.setupDone){close();page='rules';render();notify('Tes habitudes sont déjà configurées. Tu peux les modifier ici.');return;}wizard={step:0,existing:data.initialized,balance:amount(data.openingCents),start:nextDay(),days:[0,300,300,300,300,300,0],meals:false,charges:data.fixedExpenses.map(x=>({...x,enabled:false})),name:'Repas habituels'};wizardView();}
   function chargeFields(c,i){return `<div class="wizard-charge"><label class="check"><input name="charge-on-${i}" type="checkbox" ${c.enabled?'checked':''}>Compter automatiquement cette charge</label><div class="form-grid">${field('Nom','charge-name-'+i,c.name,'text','maxlength="100"')}${field('Montant (€)','charge-amount-'+i,c.amount?String(c.amount):'','text','inputmode="decimal"')}<label class="field"><span>Catégorie</span><select name="charge-category-${i}">${options(c.categoryId||'abonnements')}</select></label>${field('Premier jour du suivi','charge-start-'+i,c.start||wizard.start,'date',`min="${data.initialized?data.openingBalanceDate:E.today()}"`)}<label class="field"><span>Échéance chaque mois</span><select name="charge-day-${i}"><option value="last" ${c.day==='last'?'selected':''}>Dernier jour du mois</option>${Array.from({length:31},(_,n)=>`<option value="${n+1}" ${Number(c.day)===n+1?'selected':''}>Le ${n+1}</option>`).join('')}</select></label></div><button type="button" class="link" data-action="wizard-remove-charge" data-index="${i}">Retirer cette ligne</button></div>`;}
-  // Approved artwork: four poses displayed directly, without altering the illustration.
+  // Static artwork throughout the app; only the entry screen plays an animation.
   function mascot(pose,message){return `<div class="mascot-guide"><span class="mascot-pose pose-${pose}" aria-hidden="true"></span><p class="mascot-copy">${esc(message)}</p></div>`;}
   function wizardView(){const s=wizard.step;let body='';if(s===0)body=wizard.existing?`<p class="muted">Tes ${data.transactions.length} opérations et ton solde initial sont conservés. Ajoutons les habitudes qui te feront gagner du temps.</p><div class="notice">Les charges existantes ne deviendront automatiques que si tu les sélectionnes. Les règles déjà actives ne sont pas modifiées.</div>`:`<p class="muted">Combien as-tu réellement de disponible aujourd’hui, après tes dépenses déjà payées ?</p>${field('Mon solde actuel (€)','balance',wizard.balance==='0,00'?'':wizard.balance,'text','inputmode="decimal" required placeholder="Ex. 250,00"')}<p class="help">Le suivi démarre aujourd’hui. Par défaut, les automatismes commencent demain pour ne pas recompter ce que tu as déjà payé.</p>`;
     if(s===1)body=`<p class="muted">Quels jours prends-tu ton repas habituel ? Tu peux fixer un montant différent pour chaque jour.</p><label class="check"><input name="meals" type="checkbox" ${wizard.meals?'checked':''}>Activer les repas automatiques</label>${dayFields(wizard.days)}${field('Commencer les repas le','start',wizard.start,'date',`min="${data.initialized?data.openingBalanceDate:E.today()}" required`)}<p class="help">Les jours décochés ne coûtent rien. Les jours cochés sont comptés automatiquement à partir de cette date.</p>`;
@@ -2408,7 +2764,7 @@ function submitCharge(f){
     if(el.id==='kind-filter')journalResults();if(el.id==='rule-kind'){const f=new FormData($('#rule-form')),r=data.rules.find(r=>r.id===modal.id),kind=el.value;openRule(r,kind,{name:String(f.get('name')),categoryId:String(f.get('categoryId')),kind,start:String(f.get('start')),amountCents:f.get('amount')?num(f.get('amount'),true):0,amounts:[0,300,300,300,300,300,0],day:f.get('day')||'last',month:f.get('month')||1});}
   }catch(e){if($('#form-error')&&$('#dialog').open)$('#form-error').textContent=e.message;else{notify(e.message);render();}}});
   // A previous native close event can arrive after this dialog has reopened.
-  $('#dialog').addEventListener('close',()=>{if(!$('#dialog').open)modal=null;});
+  $('#dialog').addEventListener('close',()=>{if(!$('#dialog').open){if(modal?.kind==='account-change-password'){$('#account-change-password-form')?.reset();accountChangeUserId=null;}modal=null;}});
   window.addEventListener('storage',event=>{if(event.key!==KEY)return;if(cloud.enabled&&cloud.user){try{cloud.record=cloud.decode(event.newValue,cloud.user.id);}catch(error){notify(error.message);return;}} try{snapshot=event.newValue;data=snapshot?E.normalize(JSON.parse(snapshot)):E.empty();loadError=null;close();render();notify('Données actualisées depuis un autre onglet.');}catch(e){loadError=e.message;rawRecovery=event.newValue||'';render();}});
   document.addEventListener('visibilitychange',async()=>{if(!document.hidden){if(cloud.enabled&&cloud.user)await cloud.sync();catchUp();render();}});
   window.addEventListener('online',()=>cloud.sync());
@@ -2425,14 +2781,18 @@ function submitCharge(f){
     const ready=()=>{if(cloud.enabled){if(!accountStarted){accountStarted=true;cloud.init().catch(()=>{cloud.ready=true;cloud.status='error';cloud.error='Connexion indisponible. Réessaie.';render();});}}else if(!loadError&&!data.initialized)beginSetup();};
     let seen=false;try{seen=sessionStorage.getItem('clair-welcome-v1')==='1';sessionStorage.setItem('clair-welcome-v1','1');}catch(_){}
     if(accountResetStep||seen||matchMedia('(prefers-reduced-motion: reduce)').matches){ready();return;}
-    let timer;intro.addEventListener('close',()=>{clearTimeout(timer);ready();},{once:true});
+    let timer;const pose=$('#welcome .mascot-pose');
+    const stop=()=>{clearTimeout(timer);pose.classList.remove('welcome-playing');};
+    intro.addEventListener('close',()=>{stop();ready();},{once:true});
     let newcomer=!data.initialized;
     try{if(localStorage.getItem('clair-account-session-v1'))newcomer=false;}catch(_){}
     $('#welcome-skip').textContent=newcomer&&cloud.enabled?'Créer mon compte':'Ouvrir Clair';
     $('#welcome-login').hidden=!newcomer||!cloud.enabled;
     $('#welcome-skip').addEventListener('click',()=>{if(newcomer&&cloud.enabled)accountMode='signup';intro.close();render();},{once:true});
     $('#welcome-login').addEventListener('click',()=>{accountMode='login';intro.close();render();},{once:true});
-    intro.showModal();if(!newcomer)timer=setTimeout(()=>{if(intro.open)intro.close();},1600);
+    pose.classList.add('welcome-playing');intro.showModal();
+    timer=setTimeout(()=>{stop();if(!newcomer&&intro.open)intro.close();},2000);
+    matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',event=>{if(event.matches)stop();});
   }
   welcome();
   if(!loadError&&data.initialized)syncPush();
@@ -2442,40 +2802,6 @@ function submitCharge(f){
 </body></html>
 
 
-
-````
-
-## clair/LISEZ-MOI.md
-
-- SHA-256 : afe4d33be6c0fe702b84fa8d5ae5a000cd69aa3ca609866d81d6570054270ee9
-- Taille : 2145 octets.
-
-````text
-# Clair — version autonome
-
-Application statique publiée dans le dossier clair du dépôt mon-djai.
-
-## Migrer son budget
-1. Dans Clair sur Lovable : Réglages → sauvegarde/export JSON.
-2. Ouvrir la nouvelle version GitHub : Réglages → import JSON, sélectionner la sauvegarde.
-3. Vérifier solde, historique et charges avant de supprimer l'ancienne sauvegarde.
-
-Le changement d'adresse ne transfère pas les données automatiquement. Les données sont propres au navigateur. Cette version utilise des clés distinctes afin de préserver l'application historique située à la racine du dépôt.
-
-## Utilisation
-Configurer le solde disponible, les jours de repas et les charges récurrentes. Ajouter manuellement revenus et dépenses exceptionnelles. Le solde est calculé, pas un relevé bancaire. Les dépenses automatiques rattrapent les dates écoulées à l'ouverture sans déduction en double.
-
-## Installation
-iPhone : Safari → Partager → Sur l'écran d'accueil. Android/PC : utiliser l'option d'installation proposée par le navigateur compatible. Les chemins du manifest et du service worker sont relatifs au dossier clair. Le cache ne couvre que les fichiers de cette application.
-
-## Notifications
-Les rappels visibles à l'ouverture et l'export calendrier sont disponibles. Les notifications push lorsque l'application est fermée ne sont pas connectées : aucun serveur de rappels n'est configuré. Aucune donnée de budget n'est envoyée à un serveur par cette version.
-
-## Vérifications de cette migration
-Syntaxe des deux scripts JavaScript vérifiée. Moteur comptable inchangé. Vérification de la déduction mensuelle et de son idempotence réussie. Manifest et cache isolés au sous-dossier ; le worker ne supprime pas les caches des autres applications. Le nouvel habillage et l'installation sur un vrai appareil restent à vérifier dans un navigateur.
-
-## Source
-Base : public/clair.html de Clair, révision Lovable 2bf0524fe80750ceb995eb16bd6f11dd1ecc0b59. Habillage des cartes, explications repliables, chemins PWA et stockage séparé adaptés pour GitHub Pages. Aucun secret ou budget personnel inclus.
 
 ````
 
@@ -2520,14 +2846,14 @@ Base : public/clair.html de Clair, révision Lovable 2bf0524fe80750ceb995eb16bd6
 
 ## clair/sw.js
 
-- SHA-256 : 4e4367a429aca0247b6b61ea35d047c1f857dd1e05f3a76db64a11044a84b745
-- Taille : 1896 octets.
+- SHA-256 : 7a16d3e47c681790ecfd31fb10a18d494291002dfb9a342585a4e97090cea50a
+- Taille : 2158 octets.
 
 ````text
 /* Offline shell scoped to Clair only; financial data is not cached. */
 const BASE=new URL('./',self.location.href);
-const CACHE='clair-github-'+BASE.pathname+'v9';
-const ASSETS=['assets/mascotte-poses.png','index.html','manifest.webmanifest','icons/icon.svg','icons/icon-180.png','icons/icon-192.png','icons/icon-512.png'].map(p=>new URL(p,BASE).href);
+const CACHE='clair-github-'+BASE.pathname+'v10';
+const ASSETS=['assets/mascotte-poses.png','assets/mascotte/01-bienvenue.png','assets/mascotte/01-bienvenue.webp','assets/mascotte/02-serenite.png','assets/mascotte/03-vigilance.png','assets/mascotte/04-prevision-tendue.png','assets/mascotte/05-solde-zero.png','assets/mascotte/06-solde-negatif-v2.webp','index.html','manifest.webmanifest','icons/icon.svg','icons/icon-180.png','icons/icon-192.png','icons/icon-512.png'].map(p=>new URL(p,BASE).href);
 const HOME=new URL('index.html',BASE).href;
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('clair-github-'+BASE.pathname)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
@@ -2550,15 +2876,3 @@ self.addEventListener('notificationclick',e=>{
 });
 
 ````
-
-## Autres images conservées sur le dépôt
-
-- clair/icons/icon-180.png
-- clair/icons/icon-192.png
-- clair/icons/icon-512.png
-- Ces trois icônes PWA ne changent pas pour cette évolution.
-
-## Retouche des réactions — 15 octobre 2026
-
-- Halos selon la prévision et animations courtes respectant la réduction des mouvements.
-- Les copies index.html, sw.js et test-mascot-daily.cjs ci-dessus correspondent à cette reprise. Les ressources binaires sont conservées dans le dépôt.
