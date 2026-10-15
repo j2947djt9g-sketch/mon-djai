@@ -1,8 +1,8 @@
 /* Offline shell scoped to Clair only; financial data is not cached. */
 const BASE=new URL('./',self.location.href);
-const CACHE='clair-github-'+BASE.pathname+'v6';
-const ASSETS=['index.html','manifest.webmanifest','icons/icon.svg','icons/icon-180.png','icons/icon-192.png','icons/icon-512.png'].map(p=>new URL(p,BASE).href);
-const HOME=ASSETS[0];
+const CACHE='clair-github-'+BASE.pathname+'v7';
+const ASSETS=['assets/mascotte-poses.png','index.html','manifest.webmanifest','icons/icon.svg','icons/icon-180.png','icons/icon-192.png','icons/icon-512.png'].map(p=>new URL(p,BASE).href);
+const HOME=new URL('index.html',BASE).href;
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('clair-github-'+BASE.pathname)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{

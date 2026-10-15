@@ -1,0 +1,2446 @@
+# Clair — sources brutes
+
+- Évolution mascotte du 15 octobre 2026, basée sur 1fde897568d24339e28db6a16f383760d13ab05e.
+- Ce document reproduit les fichiers texte de l’application, à l’exception des quatre documents eux-mêmes.
+- Les empreintes SHA-256 permettent de comparer les copies. Les ressources binaires sont à récupérer dans le même commit du dépôt.
+- Dépôt : https://github.com/j2947djt9g-sketch/mon-djai/tree/main/clair
+- Entrée : [CONTEXTE.md](CONTEXTE.md). Produit : [PRD.md](PRD.md). Construction : [CONSTRUCTION.md](CONSTRUCTION.md).
+
+## clair/accounts/account-ui.js
+
+- SHA-256 : aae43cc84e13fc69cd8b6af96a8c851f9d8661f46ed9aaed546ff04c8a3e2161
+- Taille : 21099 octets.
+
+````text
+  /* ---------- Compte et synchronisation ---------- */
+  window.CLAIR_ACCOUNT_CONFIG=location.protocol==='file:'?null:(window.CLAIR_ACCOUNT_CONFIG===undefined?{"url":"https://hkssnbvktfscizojhftl.supabase.co","key":"sb_publishable_qJeSyD7E0cbi8V--qyJJkw_8M4oOKr8"}:window.CLAIR_ACCOUNT_CONFIG);
+  const recoveryParams=new URLSearchParams((location.hash||'').slice(1));
+  const recoveryQuery=new URLSearchParams(location.search||'');
+  const recoveryError=recoveryParams.get('error_code')||recoveryQuery.get('error_code')||recoveryParams.get('error')||recoveryQuery.get('error');
+  let accountMode='login',accountBusy=false,accountRecovery=recoveryParams.get('type')==='recovery',accountStarted=false;
+  let accountResetStep=accountRecovery?'checking':recoveryError?'expired':null;
+  let accountResetEmail='',accountResetUntil=0,accountRecoveryUserId=null,accountDeferredSetup=false,accountResetTimer=null;
+  const cloud=new window.ClairCloud(window.CLAIR_ACCOUNT_CONFIG,{
+    normalize: value=>E.normalize(value),
+    status:()=>{
+      if(accountResetStep){
+        if(cloud.ready&&cloud.status!=='loading'&&
+          (accountResetStep==='checking'||(accountResetStep==='password'&&cloud.user?.id!==accountRecoveryUserId)))
+          accountResetStep=cloud.user?.id===accountRecoveryUserId&&accountRecoveryUserId?'password':'expired';
+        const editing=(accountResetStep==='email'&&$('#account-forgot-form'))||
+          (accountResetStep==='password'&&$('#account-password-form'));
+        if(!editing)render();
+        return;
+      }
+      if(!cloud.user||!cloud.ready||cloud.status==='loading'||$('#account-form')||$('#account-loading'))render();
+      else renderAccountStatus();
+    },
+    recovery:user=>{accountRecovery=true;accountRecoveryUserId=user?.id||null;accountResetStep='password';close();},
+    opened:()=>{if(!accountResetStep)catchUp();},
+    enter:(user,record)=>{
+      close();wizard=null;undo=null;recovery=null;page='home';
+      KEY=cloud.key(user.id);BACKUP=KEY+'-backup';REMINDED=KEY+'-reminded';PUSH_KEY=KEY+'-push';
+      data=record?record.payload:E.empty();snapshot=localStorage.getItem(KEY);loadError=null;rawRecovery='';
+    },
+    leave:()=>{close();wizard=null;undo=null;data=E.empty();snapshot=null;page='home';loadError=null;rawRecovery='';},
+    badCache:(error,raw)=>{loadError=error.message;rawRecovery=raw||'';render();},
+    apply:(next,raw)=>{
+      const changed=JSON.stringify(next)!==JSON.stringify(data);
+      if(changed){close();wizard=null;undo=null;}
+      data=next;snapshot=raw;loadError=null;if(accountResetStep)return;render();catchUp();
+      if(changed&&data.initialized)notify('Budget actualisé depuis ton compte.');
+    },
+    empty:()=>{
+      if(accountResetStep){accountDeferredSetup=true;return;}
+      const legacy=legacyBudget();
+      if(legacy?.initialized)dialog('Retrouver ton budget actuel',`<p>Ce navigateur contient déjà ${legacy.transactions.length} opérations. Tu peux les transférer vers ton compte.</p><p class="help">Le compte connecté : ${esc(cloud.user.email)}.</p><div class="actions"><button class="button primary" data-action="account-import">Transférer mon budget</button><button class="button" data-action="account-start-empty">Commencer un nouveau budget</button></div>`,'account-import');
+      else if(!data.initialized)beginSetup();
+    }
+  });
+  function legacyBudget(){
+    try{const owner=localStorage.getItem('clair-local-owner-v1');if(owner&&owner!==cloud.user?.id)return null;const raw=localStorage.getItem(LOCAL_KEY)||localStorage.getItem(OLD_KEY);return raw?E.normalize(JSON.parse(raw)):null;}catch{return null;}
+  }
+  function storedData(raw){const value=JSON.parse(raw);return E.normalize(value);}
+  function saveData(value){return cloud.enabled&&cloud.user?cloud.pack(value):JSON.stringify(value);}
+  function afterLocalSave(){if(cloud.enabled&&cloud.user)cloud.saved(snapshot);}
+  function accountGate(){
+    if(!cloud.ready||cloud.status==='loading')return '<section class="card" id="account-loading"><h1>Ouverture de ton compte…</h1><p class="help">Ta copie locale est conservée.</p></section>';
+    const signup=accountMode==='signup';
+    return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div>${mascot(signup?1:0,signup?"Préparons ton espace, à ton rythme.":"Heureuse de te retrouver.")}<h1>${signup?"Créons ton espace.":"Ton budget, partout."}</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}${signup?'<p class="help">12 caractères minimum. Ton adresse e-mail devra être confirmée.</p>':''}<p id="account-error" class="help negative" role="alert"></p><button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié ?</button>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
+  }
+  function accountCard(){
+    if(!cloud.enabled||!cloud.user)return '';
+    return `<section class="card"><h2>Mon compte</h2><p>${esc(cloud.displayName||'Mon espace')}</p><p class="help">${esc(cloud.user.email)}</p><p class="help">${esc(accountStatus())}</p><div class="actions"><button class="button" data-action="account-sync" ${cloud.busy?'disabled':''}>Synchroniser</button><button class="link" data-action="account-logout">Me déconnecter</button></div><details class="settings-more"><summary>Ancien budget sur cet appareil</summary><p class="help">Le transfert demande confirmation et conserve une copie de secours.</p><button class="button" data-action="account-import">Transférer mon ancien budget</button></details></section>`;
+  }
+  function accountStatus(){return {loading:'Connexion…','signed-out':'Connexion requise',synced:'Synchronisé',pending:'À synchroniser',offline:'Hors ligne · enregistré ici',error:'Synchronisation à reprendre',conflict:'Deux copies à départager'}[cloud.status]||'Sur cet appareil';}
+  function renderAccountStatus(){
+    if(!cloud.enabled)return;
+    const target=$('#sync-alert');
+    if(!cloud.user){target.innerHTML='';return;}
+    $('#status-label').textContent=accountStatus();
+    target.innerHTML=cloud.conflict?'<div class="notice"><p>Deux appareils ont modifié ton budget. Les deux copies sont conservées.</p><button class="button" data-action="account-conflict">Choisir une copie</button></div>':cloud.error?`<div class="notice">${esc(cloud.error)} <button class="link" data-action="account-sync">Réessayer</button></div>`:'';
+  }
+  function recoveryView(){
+    let body='';
+    const error='<p id="account-error" class="help negative" role="alert"></p>';
+    const back='<button class="link" data-action="account-reset-back">Retour à la connexion</button>';
+    if(accountResetStep==='checking'||(accountResetStep==='password'&&(!cloud.ready||!cloud.user))){
+      body='<h1>Vérification du lien…</h1><p class="muted" role="status">Un instant, nous ouvrons la récupération de ton compte.</p>';
+    }else if(accountResetStep==='email'){
+      const wait=Math.max(0,Math.ceil((accountResetUntil-Date.now())/1000));
+      body='<h1>Retrouver mon compte</h1><p class="muted">Reçois un lien pour choisir un nouveau mot de passe.</p>'+
+        '<form id="account-forgot-form">'+field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="email" autocapitalize="none" spellcheck="false"')+error+
+        '<button class="button primary" id="account-reset-send" type="submit" '+(wait?'disabled':'')+'>'+(wait?'Réessayer dans '+wait+' s':'Envoyer le lien')+'</button></form>'+back;
+    }else if(accountResetStep==='sent'){
+      const wait=Math.max(0,Math.ceil((accountResetUntil-Date.now())/1000));
+      body='<h1>Vérifie tes e-mails</h1><p class="muted">Si un compte utilise cette adresse, tu recevras un lien pour changer ton mot de passe.</p>'+
+        '<p class="recovery-email">'+esc(accountResetEmail)+'</p><p class="help">Ouvre le lien reçu. Pense à vérifier les indésirables.</p>'+error+
+        '<div class="recovery-actions"><button class="button primary" id="account-reset-resend" data-action="account-reset-resend" '+(wait?'disabled':'')+'>'+(wait?'Renvoyer dans '+wait+' s':'Renvoyer le lien')+'</button>'+
+        '<button class="link" data-action="account-reset-edit">Corriger mon adresse</button>'+back+'</div>';
+    }else if(accountResetStep==='password'){
+      body='<h1>Nouveau mot de passe</h1><p class="muted">Choisis le mot de passe de ton compte Clair.</p>'+
+        '<form id="account-password-form"><label class="field"><span>Nouveau mot de passe</span><input id="account-new-password" name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="account-password-help"></label>'+
+        '<button type="button" class="link password-toggle" data-action="account-password-toggle" aria-controls="account-new-password" aria-pressed="false">Afficher le mot de passe</button>'+
+        '<p class="help" id="account-password-help">12 caractères minimum. Tu peux utiliser une phrase.</p>'+error+
+        '<button class="button primary" type="submit">Enregistrer mon mot de passe</button></form>';
+    }else if(accountResetStep==='done'){
+      body='<h1>Mot de passe modifié</h1><p class="muted" role="status">Ton nouveau mot de passe est enregistré.</p>'+
+        '<button class="button primary" data-action="account-reset-finish">Accéder à mon budget</button>';
+    }else{
+      body='<h1>Ce lien ne fonctionne plus</h1><p class="muted">Il a expiré, a déjà été utilisé ou est incomplet. Demande un nouveau lien pour récupérer ton compte.</p>'+
+        '<button class="button primary" data-action="account-reset-edit">Demander un nouveau lien</button>'+back;
+    }
+    return '<section class="card account-card account-recovery" aria-labelledby="recovery-title"><div class="brand-mark" aria-hidden="true">c</div>'+
+      body.replace('<h1>','<h1 id="recovery-title" tabindex="-1">')+'</section>';
+  }
+  function focusRecovery(){setTimeout(()=>$('#recovery-title')?.focus({preventScroll:true}),0);}
+  function resetCooldown(){
+    clearTimeout(accountResetTimer);
+    const wait=Math.max(0,Math.ceil((accountResetUntil-Date.now())/1000));
+    const button=$('#account-reset-resend')||$('#account-reset-send');
+    if(button){button.disabled=accountBusy||wait>0;button.textContent=accountBusy?'Envoi en cours…':wait?(accountResetStep==='sent'?'Renvoyer dans ':'Réessayer dans ')+wait+' s':accountResetStep==='sent'?'Renvoyer le lien':'Envoyer le lien';}
+    if(wait&&['email','sent'].includes(accountResetStep))accountResetTimer=setTimeout(resetCooldown,1000);
+  }
+  function clearRecoveryAddress(){
+    if(!accountRecovery&&!recoveryError)return;
+    // The SDK has already consumed the return from Auth. Never store its URL tokens.
+    try{const search=new URLSearchParams(location.search||'');for(const key of ['error','error_code','error_description'])search.delete(key);history.replaceState(null,'',location.pathname+(search.size?'?'+search.toString():''));}catch{}
+  }
+  function finishRecovery(){
+    if(accountBusy)return;
+    clearRecoveryAddress();accountResetStep=null;accountRecovery=false;accountRecoveryUserId=null;clearTimeout(accountResetTimer);
+    close();render();
+    if(cloud.user){catchUp();if(accountDeferredSetup){accountDeferredSetup=false;cloud.hooks.empty();}}
+  }
+  function accountMessage(message){
+    const target=($('#dialog').open?$('#form-error'):null)||$('#account-error');
+    if(target){target.textContent=message;if(message)target.scrollIntoView({block:'nearest'});}else notify(message);
+  }
+  async function sendRecovery(email){
+    if(accountResetUntil>Date.now())throw Error('Attends la fin du délai avant de demander un autre lien.');
+    if(!email)throw Error('Indique l’adresse e-mail de ton compte.');
+    accountResetEmail=email;
+    const {error}=await cloud.client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    if(error){
+      if(error.status===429||['over_email_send_rate_limit','over_request_rate_limit'].includes(error.code)){
+        accountResetUntil=Date.now()+60000;resetCooldown();
+        throw Error('L’envoi est temporairement limité. Réessaie plus tard.');
+      }
+      if(navigator.onLine===false||error.name==='AuthRetryableFetchError')
+        throw Error('Vérifie ta connexion Internet, puis réessaie.');
+      throw Error('Le lien ne peut pas être envoyé pour le moment. Réessaie plus tard.');
+    }
+    accountResetUntil=Date.now()+60000;accountResetStep='sent';render();focusRecovery();
+  }
+  function attempts(){try{return JSON.parse(localStorage.getItem('clair-auth-attempts-v1')||'{"count":0,"until":0}');}catch{return {count:0,until:0};}}
+  async function accountSubmit(form){
+    if(accountBusy)return;accountBusy=true;const button=form.querySelector('button[type=submit]');if(button)button.disabled=true;
+    accountMessage('');if(form.id==='account-forgot-form')resetCooldown();
+    try{
+      const f=new FormData(form),email=String(f.get('email')||'').trim(),password=String(f.get('password')||'');
+      if(form.id==='account-form'){
+        const guard=attempts();if(guard.until>Date.now())throw Error('Attends une minute avant de réessayer.');
+        const signup=form.dataset.mode==='signup';let response;
+        if(signup){
+          const name=String(f.get('displayName')||'').trim();if(!name||name.length>64||password.length<12)throw Error('Indique ton prénom et un mot de passe d’au moins 12 caractères.');
+          response=await cloud.client.auth.signUp({email,password,options:{data:{display_name:name},emailRedirectTo:location.origin+location.pathname}});
+        }else response=await cloud.client.auth.signInWithPassword({email,password});
+        if(response.error){
+          if(response.error.code==='invalid_credentials'){
+            const count=(guard.until&&guard.until<=Date.now()?0:Number(guard.count)||0)+1;
+            localStorage.setItem('clair-auth-attempts-v1',JSON.stringify({count,until:count>=3?Date.now()+60000:0}));
+            throw Error(count>=3?'Trois essais incorrects. Réessaie dans une minute.':'Adresse e-mail ou mot de passe incorrect.');
+          }
+          if(response.error.status===429)throw Error('Trop de tentatives. Attends un moment avant de réessayer.');
+          if(response.error.code==='email_not_confirmed')throw Error('Confirme ton adresse e-mail avant de te connecter.');
+          throw Error('Connexion indisponible. Vérifie ta connexion Internet et réessaie.');
+        }
+        localStorage.removeItem('clair-auth-attempts-v1');
+        if(signup&&!response.data.session){form.reset();accountMessage('Vérifie tes e-mails pour confirmer ton compte, puis connecte-toi ici.');return;}
+        await cloud.attach(response.data.user||response.data.session?.user);
+      }
+      if(form.id==='account-forgot-form')await sendRecovery(email);
+      if(form.id==='account-password-form'){
+        if(!accountRecoveryUserId||cloud.user?.id!==accountRecoveryUserId){accountResetStep='expired';render();focusRecovery();return;}
+        if(password.length<12||password.length>128)throw Error('Utilise entre 12 et 128 caractères.');
+        const {error}=await cloud.client.auth.updateUser({password});
+        if(error){
+          if(error.status===401||['session_not_found','refresh_token_not_found','refresh_token_already_used','bad_jwt','user_not_found'].includes(error.code)){
+            accountResetStep='expired';render();focusRecovery();return;
+          }
+          if(error.code==='same_password')throw Error('Choisis un mot de passe différent du précédent.');
+          if(error.code==='weak_password')throw Error('Ce mot de passe est trop facile à deviner. Choisis une phrase plus longue.');
+          if(error.status===429)throw Error('Trop de demandes. Attends un moment avant de réessayer.');
+          throw Error(navigator.onLine===false?'Vérifie ta connexion Internet, puis réessaie.':'Le mot de passe n’a pas pu être enregistré. Réessaie.');
+        }
+        accountResetStep='done';accountRecovery=false;accountRecoveryUserId=null;render();focusRecovery();
+      }
+    }catch(error){accountMessage(error.message||'La connexion n’a pas abouti.');}
+    finally{accountBusy=false;if(button)button.disabled=false;resetCooldown();}
+  }
+  function transferLegacy(){
+    const legacy=legacyBudget();if(!legacy){notify('Aucun ancien budget à transférer sur cet appareil.');return;}
+    if(cloud.conflict){notify('Résous d’abord le conflit entre les appareils.');return;}
+    confirm('Transférer ce budget vers ton compte ?',`${legacy.transactions.length} opérations et ${legacy.rules.length} habitudes remplaceront le budget de ${cloud.user.email}. Une copie de secours sera conservée.`,()=>{
+      try{
+        localStorage.setItem(BACKUP,JSON.stringify(data));
+        const owner=localStorage.getItem('clair-local-owner-v1');
+        if(owner&&owner!==cloud.user.id)throw Error('Cet ancien budget est déjà associé à un autre compte.');
+        const success=commit(d=>{for(const key of Object.keys(d))delete d[key];Object.assign(d,legacy);},'Budget transféré. Synchronisation en cours.');
+        if(success){localStorage.setItem('clair-local-owner-v1',cloud.user.id);close();}
+      }catch(error){notify(error.message);}
+    });
+  }
+  function conflictDialog(){
+    if(!cloud.conflict)return;
+    dialog('Deux copies de ton budget',`<p>Choisis celle à conserver pour tous tes appareils. Télécharge les deux copies avant de choisir si tu souhaites les comparer.</p><div class="actions"><button class="button" data-action="account-export-device">Sauvegarder cette copie</button>${cloud.conflict.remote?'<button class="button" data-action="account-export-online">Sauvegarder la copie en ligne</button>':''}</div><div class="actions"><button class="button primary" data-action="account-keep-device">Garder cet appareil</button>${cloud.conflict.remote?'<button class="button" data-action="account-keep-online">Garder la copie en ligne</button>':''}</div>`,'account-conflict');
+  }
+  async function accountAction(action){
+    if(action==='account-mode'){accountMode=accountMode==='login'?'signup':'login';render();}
+    if(action==='account-forgot'||action==='account-reset-edit'){
+      if(accountBusy)return;
+      if(action==='account-forgot')accountResetEmail=$('#account-form input[name="email"]')?.value?.trim()||accountResetEmail;
+      accountResetStep='email';close();clearRecoveryAddress();render();resetCooldown();focusRecovery();
+    }
+    if(action==='account-reset-back'||action==='account-reset-finish'){
+      if(action==='account-reset-back')accountMode='login';
+      finishRecovery();
+    }
+    if(action==='account-reset-resend'){
+      if(accountBusy)return;
+      accountBusy=true;accountMessage('');resetCooldown();
+      try{await sendRecovery(accountResetEmail);}catch(error){accountMessage(error.message);}
+      finally{accountBusy=false;resetCooldown();}
+    }
+    if(action==='account-password-toggle'){
+      const input=$('#account-new-password'),button=$('[data-action="account-password-toggle"]');
+      if(input&&button){const show=input.type==='password';input.type=show?'text':'password';button.textContent=show?'Masquer le mot de passe':'Afficher le mot de passe';button.setAttribute('aria-pressed',String(show));}
+    }
+    if(action==='account-import')transferLegacy();
+    if(action==='account-start-empty'){close();beginSetup();}
+    if(action==='account-sync')await cloud.sync();
+    if(action==='account-logout')try{await cloud.logout();}catch(error){notify(error.message);}
+    if(action==='account-conflict')conflictDialog();
+    if(action==='account-export-device')download(JSON.stringify(data,null,2),'Clair-copie-appareil.json');
+    if(action==='account-export-online'&&cloud.conflict?.remote)download(JSON.stringify(cloud.conflict.remote.payload,null,2),'Clair-copie-en-ligne.json');
+    if(action==='account-keep-device'||action==='account-keep-online'){
+      const useRemote=action==='account-keep-online';confirm('Conserver cette copie ?', 'L’autre copie sera téléchargée en sauvegarde avant le remplacement.',()=>{
+        const other=useRemote?data:cloud.conflict?.remote?.payload;if(other)download(JSON.stringify(other,null,2),'Clair-avant-resolution.json');
+        localStorage.setItem(BACKUP,JSON.stringify(other||data));cloud.resolve(useRemote);close();
+      });
+    }
+  }
+
+````
+
+## clair/accounts/cloud.js
+
+- SHA-256 : 78edc40d23edfe83ba9fc5c313c1d82814af934eec5b11f40c2c8085477fff7e
+- Taille : 8950 octets.
+
+````text
+/* Clair account sync. Supabase JS 2.102.0. No service-role key belongs here. */
+(function(root){
+  'use strict';
+  class ClairCloud {
+    constructor(config, hooks, sdk=root.supabase){
+      this.config=config;this.hooks=hooks;this.enabled=!!config;this.user=null;
+      this.client=null;this.ready=!this.enabled;this.status=this.enabled?'loading':'local';
+      this.record=null;this.conflict=null;this.busy=false;this.timer=null;this.epoch=0;
+      this.displayName='';this.error='';this.disposed=false;
+      if(this.enabled){
+        if(!/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(config.url)||!/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.key))throw Error('Configuration des comptes invalide.');
+        this.client=sdk.createClient(config.url,config.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'clair-account-session-v1'}});
+      }
+    }
+    key(uid=this.user?.id){return uid?'clair-account-budget-v1-'+uid:null;}
+    emit(){this.hooks.status?.(this);}
+    decode(raw,uid){
+      if(!raw)return null;const value=JSON.parse(raw),m=value._cloud;
+      if(!m||m.userId!==uid||!Number.isSafeInteger(m.revision)||m.revision<0||typeof m.dirty!=='boolean'||typeof m.operationId!=='string')throw Error('La copie locale du compte est invalide. Elle est conservée.');
+      const payload={...value};delete payload._cloud;
+      return {payload:this.hooks.normalize(payload),meta:m};
+    }
+    pack(payload){
+      if(!this.user)throw Error('Connecte-toi pour enregistrer dans ton compte.');
+      const meta={userId:this.user.id,revision:this.record?.meta.revision||0,dirty:true,operationId:crypto.randomUUID()};
+      return JSON.stringify({...payload,_cloud:meta});
+    }
+    saved(raw){this.record=this.decode(raw,this.user.id);this.status='pending';this.emit();this.schedule();}
+    schedule(){clearTimeout(this.timer);if(this.user&&!this.conflict&&!this.disposed)this.timer=setTimeout(()=>this.sync(),900);}
+    async init(){
+      if(!this.enabled)return;
+      this.client.auth.onAuthStateChange((event,session)=>{
+        if(event==='PASSWORD_RECOVERY'){
+          this.hooks.recovery?.(session?.user);
+          if(session?.user.id&&session.user.id!==this.user?.id){this.ready=false;this.status='loading';}
+          this.emit();
+        }
+        if(event==='SIGNED_OUT'||(session?.user.id&&session.user.id!==this.user?.id))setTimeout(()=>this.attach(session?.user||null),0);
+      });
+      const {data,error}=await this.client.auth.getSession();
+      if(error){this.error='La session n’a pas pu être restaurée.';this.ready=true;this.status='signed-out';this.emit();return;}
+      await this.attach(data.session?.user||null);
+    }
+    async attach(user){
+      if(user?.id===this.user?.id&&(this.ready||(this.user&&this.status==='loading')))return;
+      const epoch=++this.epoch;clearTimeout(this.timer);this.record=null;this.conflict=null;this.error='';this.ready=false;this.user=user;
+      if(!user){this.status='signed-out';this.ready=true;this.hooks.leave?.();this.emit();return;}
+      this.displayName=String(user.user_metadata?.display_name||'').slice(0,64);
+      this.status='loading';this.emit();
+      try{
+        this.hooks.enter?.(user,null);
+        this.record=this.decode(localStorage.getItem(this.key()),user.id);
+        this.hooks.enter?.(user,this.record);
+        this.ready=true;
+        await this.sync(epoch);
+        if(epoch!==this.epoch)return;
+        this.hooks.opened?.();
+        if(!this.record&&!this.conflict&&this.status==='synced')this.hooks.empty?.(user);
+      }catch(error){if(epoch!==this.epoch)return;this.hooks.badCache?.(error,localStorage.getItem(this.key()));this.error=error.message;this.status='error';this.ready=true;this.emit();}
+    }
+    async read(){
+      const {data,error}=await this.client.from('clair_budgets').select('payload,revision,operation_id,display_name,updated_at').eq('user_id',this.user.id).maybeSingle();
+      if(error)throw error;return data;
+    }
+    wire(payload){
+      const clean=structuredClone(payload);delete clean._cloud;
+      // Keep large wallpaper photos on each device instead of retransmitting them with each purchase.
+      if(clean.preferences){clean.preferences.photo=null;if(clean.preferences.wallpaper==='photo')clean.preferences.wallpaper='plain';}
+      return clean;
+    }
+    adopt(row, expectedEpoch=this.epoch){
+      if(expectedEpoch!==this.epoch)return;
+      const payload=this.hooks.normalize(row.payload);
+      if(this.record?.payload.preferences?.photo){payload.preferences.photo=this.record.payload.preferences.photo;if(this.record.payload.preferences.wallpaper==='photo')payload.preferences.wallpaper='photo';}
+      const meta={userId:this.user.id,revision:row.revision,dirty:false,operationId:row.operation_id};
+      const raw=JSON.stringify({...payload,_cloud:meta});
+      localStorage.setItem(this.key(),raw);this.record={payload,meta};this.displayName=row.display_name||this.displayName;this.conflict=null;
+      this.status='synced';this.error='';this.hooks.apply?.(payload,raw);this.emit();
+    }
+    async sync(expectedEpoch=this.epoch){
+      if(!this.enabled||!this.user||this.busy||this.conflict||this.disposed)return;
+      this.busy=true;const userId=this.user.id;
+      try{
+        if(navigator.onLine===false)throw Error('offline');
+        const remote=await this.read();if(expectedEpoch!==this.epoch)return;
+        const raw=localStorage.getItem(this.key(userId));this.record=this.decode(raw,userId);
+        if(this.record?.meta.dirty){
+          const pending=this.record;
+          if(remote&&JSON.stringify(this.wire(pending.payload))===JSON.stringify(this.wire(this.hooks.normalize(remote.payload)))){this.adopt(remote,expectedEpoch);return;}
+          if((remote?.revision||0)!==pending.meta.revision&&remote?.operation_id!==pending.meta.operationId){this.setConflict(remote);return;}
+          const {data,error}=await this.client.rpc('save_clair_budget',{p_payload:this.wire(pending.payload),p_expected_revision:pending.meta.revision,p_operation_id:pending.meta.operationId,p_display_name:this.displayName});
+          if(expectedEpoch!==this.epoch)return;if(error)throw error;
+          if(!data?.saved){this.setConflict(data?.row||null);return;}
+          const latest=this.decode(localStorage.getItem(this.key(userId)),userId);
+          if(latest?.meta.operationId!==pending.meta.operationId){
+            // A new edit arrived while saving. Advance its base revision without replacing the edit.
+            if(latest){latest.meta.revision=data.row.revision;localStorage.setItem(this.key(userId),JSON.stringify({...latest.payload,_cloud:latest.meta}));this.record=latest;this.hooks.apply?.(latest.payload,JSON.stringify({...latest.payload,_cloud:latest.meta}));this.status='pending';this.schedule();}
+          }else this.adopt(data.row,expectedEpoch);
+        }else if(remote){
+          if(!this.record||remote.revision!==this.record.meta.revision)this.adopt(remote,expectedEpoch);
+          else{this.status='synced';this.error='';this.emit();}
+        }else if(this.record?.meta.revision){this.setConflict(null);}
+        else{this.status='synced';this.error='';this.emit();}
+      }catch(error){
+        if(expectedEpoch!==this.epoch)return;
+        this.status=navigator.onLine===false?'offline':'error';
+        this.error=this.status==='offline'?'Tes modifications restent sur cet appareil.':'Synchronisation indisponible. Tes modifications restent sur cet appareil.';this.emit();
+      }finally{this.busy=false;if(expectedEpoch!==this.epoch&&this.user)this.schedule();}
+    }
+    setConflict(remote){
+      this.conflict={remote};this.status='conflict';this.error='Deux appareils ont modifié ton budget. Choisis la copie à conserver.';this.emit();
+    }
+    resolve(useRemote){
+      if(!this.conflict)return;
+      if(useRemote){
+        if(!this.conflict.remote)throw Error('Aucune copie en ligne n’est disponible.');
+        this.adopt(this.conflict.remote);return;
+      }
+      // The conflict UI exports the device copy before asking the user to choose.
+      this.record.meta.revision=this.conflict.remote?.revision||0;this.record.meta.operationId=crypto.randomUUID();this.record.meta.dirty=true;
+      const raw=JSON.stringify({...this.record.payload,_cloud:this.record.meta});localStorage.setItem(this.key(),raw);this.conflict=null;this.hooks.apply?.(this.record.payload,raw);this.status='pending';this.emit();this.schedule();
+    }
+    async logout(){
+      if(this.record?.meta.dirty){await this.sync();if(this.record?.meta.dirty)throw Error('Enregistre les modifications en ligne avant de te déconnecter, ou exporte une sauvegarde.');}
+      const uid=this.user?.id;const {error}=await this.client.auth.signOut({scope:'local'});if(error)throw Error('Déconnexion indisponible. Réessaie.');
+      if(uid)localStorage.removeItem(this.key(uid));await this.attach(null);
+    }
+  }
+  root.ClairCloud=ClairCloud;
+})(window);
+
+````
+
+## clair/accounts/LICENSE-supabase.txt
+
+- SHA-256 : fdb243e5b2475ac0a6ecbf774e386a5dfa37d6072c295cdc88227b895d9c8537
+- Taille : 1066 octets.
+
+````text
+MIT License
+
+Copyright (c) 2020 Supabase
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+````
+
+## clair/accounts/README.md
+
+- SHA-256 : a3893a591d1dad5f1f05b056d16ea53075444114cebb539de7598b67f9c6560b
+- Taille : 6804 octets.
+
+````text
+# Clair — comptes et synchronisation
+
+Clair est relié au projet Supabase `hkssnbvktfscizojhftl`. La PR #1 a été fusionnée et la version avec comptes est publiée sur GitHub Pages.
+
+## État vérifié
+
+- Migration `clair_private_budgets_and_revision_sync` appliquée.
+- Tests SQL passés sur la base réelle : création du budget, rejeu idempotent d'une sauvegarde, refus d'une révision obsolète, isolation entre deux identités, refus de réaffecter le propriétaire et refus d'accès anonyme.
+- Les fixtures de vérification sont annulées par ROLLBACK. Aucun compte ni budget de test n'est resté dans le projet.
+- Advisors Supabase de sécurité et de performance : aucune alerte.
+- L'API REST refuse la lecture anonyme avec HTTP 401 / code `42501`.
+- Fournisseur e-mail actif et confirmation d'adresse obligatoire.
+- Tests Node passés : reprise hors ligne, conflits entre appareils, réponses perdues, modification pendant une sauvegarde, caches distincts, déconnexion, événements de session répétés et mises à jour automatiques identiques.
+- Tests de l'interface simulée passés : masquage du budget avant connexion, confirmation de l'e-mail, échappement du prénom, reprise explicite du budget local et pause locale après trois erreurs.
+- Vérifications du mode local passées : réglages, saisie guidée, paiements anticipés sans double débit, téléchargement et installation iPhone.
+- Moteur financier inchangé. Le HTML utilise une clé publishable et restreint la connexion à l'origine exacte du projet.
+
+## Vérification de l’activation
+
+La Site URL et les deux Redirect URLs sont enregistrées. Les retours réels d’Auth vers `/mon-djai/clair/` et `/mon-djai/clair/index.html` ont été vérifiés par HTTP 303, sans envoyer de message.
+
+Deux comptes temporaires ont été utilisés avec le SDK officiel sur les API réelles : connexion, sauvegarde et relecture, rejeu idempotent, refus de lecture et de modification du budget d’un autre compte, refus d’une sauvegarde issue d’une révision obsolète. Les comptes, sessions et budgets de test ont ensuite été supprimés.
+
+Pour reprendre le budget actuel, créer le compte depuis le navigateur qui le contient, confirmer l’adresse e-mail, puis choisir « Transférer mon budget ». Utiliser le même compte sur les autres appareils.
+
+La réception des e-mails et les appareils mobiles physiques ne sont pas vérifiés automatiquement. Le service d’e-mail de test Supabase est destiné aux adresses autorisées de l’équipe ; l’envoi à d’autres utilisateurs reste à finaliser pour une ouverture au grand public.
+
+## Fonctionnement
+
+Le prénom personnalise le compte. L'adresse e-mail et le mot de passe servent à la connexion. La propriété du budget est déterminée par `auth.uid()`, sans identifiant de propriétaire fourni à la fonction de sauvegarde par le client. RLS protège chaque ligne et les paramètres JSON ne sont pas concaténés dans une requête SQL.
+
+Le budget est conservé localement avec un numéro de révision, un indicateur de modification et un UUID d'opération dans une seule écriture. Une sauvegarde distante compare la révision et accepte le rejeu d'une même opération. En cas de conflit, un choix explicite est demandé ; la copie remplacée est téléchargée avant résolution.
+
+Le budget existant est transféré après confirmation. Les copies et les sauvegardes de comptes utilisent des clés distinctes par utilisateur. L'ancien budget local est associé au premier compte qui le transfère, et ne peut pas être repris dans l'interface par un autre compte. La déconnexion retire la copie locale du compte après sauvegarde de ses changements en attente.
+
+La synchronisation s'effectue à l'ouverture, au retour de connexion et chaque minute pendant que l'application est visible. Aucun canal Realtime permanent. Les photos de fond restent sur chaque appareil afin de limiter les transferts. Les autres préférences et les données financières sont synchronisées. Le fichier HTML téléchargé conserve le mode local.
+
+## Limites restantes
+
+Le compteur de trois erreurs impose une pause d'une minute sur l'appareil. Il complète les limites de débit de Supabase et n'est pas un verrouillage global côté serveur. Le hook Password Verification Attempt nécessite actuellement une offre Teams ou Enterprise ; aucune offre payante n'est activée.
+
+Le service d'e-mail par défaut de Supabase est destiné aux essais et restreint les destinataires aux adresses autorisées de l'équipe. Un SMTP doit être configuré avant d'ouvrir les inscriptions au grand public. La réception des e-mails et les sessions de navigateur réelles restent à vérifier.
+
+## Dépendance
+
+`@supabase/supabase-js` 2.102.0 est intégré au HTML pour le démarrage hors ligne.
+Source : `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.102.0/dist/umd/supabase.js`.
+SHA-256 : `c45136a0ba5c7391646869a734db105ba607a9233fd6ec2e7e5bbab447bdc57a`.
+Licence dans LICENSE-supabase.txt.
+
+Pour les tests locaux : `node clair/accounts/test-cloud.cjs`, `node clair/accounts/test-account-ui.cjs`, `node clair/accounts/test-local.cjs`.
+
+
+## Récupération du mot de passe
+
+Le lien « Mot de passe oublié ? » conserve l'adresse saisie. Après la demande, un écran permanent indique de vérifier les e-mails et les indésirables, permet de corriger l'adresse et de renvoyer le lien après un délai de 60 secondes. La réponse reste neutre sur l'existence du compte. Le délai dans l'interface complète les limites côté Supabase.
+
+Un retour PASSWORD_RECOVERY validé par le SDK ouvre un écran consacré au nouveau mot de passe. Une session déjà ouverte pour un autre compte ne remplace pas la vérification du lien. Le formulaire propose l'affichage du mot de passe et indique les 12 caractères minimum. Ses valeurs restent présentes lors d'une synchronisation ou d'un retour dans l'onglet. L'accueil, le transfert et la configuration du budget attendent la fin de cette étape.
+
+Après enregistrement, une confirmation persistante permet d'accéder directement au budget. Un lien invalide, expiré ou déjà utilisé propose de demander un nouveau lien. Les erreurs de débit, de réseau, de mot de passe identique et de session expirée sont affichées dans le parcours actif.
+
+Tests complémentaires : node clair/accounts/test-recovery.cjs et node clair/accounts/test-recovery-sdk.cjs. Le second utilise le SDK officiel intégré et un transport simulé pour vérifier les événements de récupération, la consommation du retour URL et l'appel updateUser. Aucun e-mail n'est envoyé et aucun compte réel n'est modifié par ces tests. La réception en boîte mail doit toujours être confirmée ; le SMTP public reste à configurer si le projet utilise l'envoi de test.
+
+````
+
+## clair/accounts/schema.sql
+
+- SHA-256 : 7ee8e6f4d840bb0f81d6bb312a2079ead622a01daffae5497304189366ce170f
+- Taille : 3408 octets.
+
+````text
+-- Apply to the Clair project. No credentials are stored in this file.
+begin;
+create table if not exists public.clair_budgets (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  payload jsonb not null,
+  revision bigint not null check (revision > 0),
+  operation_id uuid not null,
+  display_name text not null default '' check (length(display_name) <= 64),
+  updated_at timestamptz not null default now(),
+  constraint clair_payload_shape check (
+    jsonb_typeof(payload) = 'object' and payload ?& array['version','transactions','rules','preferences'] and payload->>'version' = '3'
+    and jsonb_typeof(payload->'transactions') = 'array'
+    and jsonb_typeof(payload->'rules') = 'array'
+    and jsonb_typeof(payload->'preferences') = 'object'
+    and octet_length(payload::text) <= 8388608
+  )
+);
+alter table public.clair_budgets enable row level security;
+revoke all on public.clair_budgets from public, anon;
+grant select, insert, update on public.clair_budgets to authenticated;
+create policy clair_select_own on public.clair_budgets for select to authenticated using ((select auth.uid()) = user_id);
+create policy clair_insert_own on public.clair_budgets for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy clair_update_own on public.clair_budgets for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+
+create or replace function public.save_clair_budget(
+  p_payload jsonb, p_expected_revision bigint, p_operation_id uuid, p_display_name text
+) returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare
+  owner_id uuid := auth.uid();
+  current_row public.clair_budgets%rowtype;
+begin
+  if owner_id is null then raise exception 'Authentication required' using errcode = '42501'; end if;
+  if p_expected_revision is null or p_expected_revision < 0 or p_operation_id is null or p_display_name is null then
+    raise exception 'Invalid save parameters' using errcode = '22023';
+  end if;
+  select * into current_row from public.clair_budgets where user_id = owner_id for update;
+  if not found then
+    if p_expected_revision <> 0 then return jsonb_build_object('saved',false,'row',null); end if;
+    insert into public.clair_budgets(user_id,payload,revision,operation_id,display_name)
+      values (owner_id,p_payload,1,p_operation_id,p_display_name)
+      on conflict (user_id) do nothing returning * into current_row;
+    if found then return jsonb_build_object('saved',true,'row',to_jsonb(current_row)); end if;
+    select * into current_row from public.clair_budgets where user_id = owner_id for update;
+  end if;
+  if current_row.operation_id = p_operation_id then
+    return jsonb_build_object('saved',true,'row',to_jsonb(current_row));
+  end if;
+  if current_row.revision <> p_expected_revision then
+    return jsonb_build_object('saved',false,'row',to_jsonb(current_row));
+  end if;
+  update public.clair_budgets set payload=p_payload,revision=revision+1,operation_id=p_operation_id,
+    display_name=p_display_name,updated_at=now() where user_id=owner_id returning * into current_row;
+  return jsonb_build_object('saved',true,'row',to_jsonb(current_row));
+end;
+$$;
+revoke all on function public.save_clair_budget(jsonb,bigint,uuid,text) from public, anon;
+grant execute on function public.save_clair_budget(jsonb,bigint,uuid,text) to authenticated;
+commit;
+
+````
+
+## clair/accounts/test-account-ui.cjs
+
+- SHA-256 : 97ba6a9be5ab9022d440901d23f52944a3dc9e37a6532085c263439ac9bb9c29
+- Taille : 3858 octets.
+
+````text
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=require('crypto').webcrypto;
+const html=fs.readFileSync(__dirname+'/../index.html','utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
+const nodes=new Map(),storage=new Map(),requests=[];let replies=[];
+const node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',style:{},dataset:{},open:false,showModal(){this.open=true},close(){this.open=false},addEventListener(){},scrollIntoView(){},focus(){}});return nodes.get(s)};
+const client={auth:{signInWithPassword:async p=>{requests.push(p);return replies.shift()},signUp:async p=>{requests.push(p);return replies.shift()},resetPasswordForEmail:async()=>({}),updateUser:async()=>({})}};
+const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{origin:'https://example.test',protocol:'https:',href:'https://example.test/clair/',pathname:'/clair/'},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener(){}},supabase:{createClient:()=>client},CLAIR_ACCOUNT_CONFIG:{url:'https://test.supabase.co',key:'sb_publishable_test'},FormData:class{constructor(form){this.values=form.values}get(k){return this.values[k]??null}}};sandbox.window=sandbox;sandbox.addEventListener=()=>{};
+vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);let ui=scripts[3];const boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);ui=ui.slice(0,boot)+'window.test={cloud,render,accountGate,accountCard,accountSubmit,accountStatus,legacyBudget,transferLegacy,setData(d){data=d},getData(){return data;}};})();';vm.runInContext(ui,sandbox);const t=sandbox.test;
+(async()=>{
+ const legacy=sandbox.ClairEngine.empty();legacy.initialized=legacy.setupDone=true;legacy.openingCents=1700;storage.set('clair-github-money-v3',JSON.stringify(legacy));
+ t.render();assert(!node('#page').innerHTML.includes('17,00'));t.cloud.ready=true;t.cloud.status='signed-out';t.render();assert(node('#page').innerHTML.includes('account-form'));assert(!node('#page').innerHTML.includes('17,00'));
+ console.log('PASS: login gate hides existing budget until account authentication');
+ const form={id:'account-form',dataset:{mode:'login'},values:{email:'a@example.test',password:'wrong'},querySelector:()=>({disabled:false}),reset(){}};
+ for(let n=0;n<3;n++){replies.push({error:{code:'invalid_credentials'}});await t.accountSubmit(form)}assert.equal(requests.length,3);await t.accountSubmit(form);assert.equal(requests.length,3);assert(node('#account-error').textContent.includes('minute'));
+ console.log('PASS: three failed attempts cause a temporary device cooldown');
+ storage.delete('clair-auth-attempts-v1');replies.push({data:{session:null,user:{}}});form.dataset.mode='signup';form.values={email:'a@example.test',password:'twelve-character-password',displayName:'  El-Hadj  '};await t.accountSubmit(form);assert.equal(requests.at(-1).options.data.display_name,'El-Hadj');assert(node('#account-error').textContent.includes('confirmer'));
+ t.cloud.user={id:'user-a',email:'a@example.test'};t.cloud.displayName='<img src=x onerror=alert(1)>';assert(t.accountCard().includes('&lt;img'));assert(!t.accountCard().includes('<img src=x'));
+ storage.set('clair-local-owner-v1','user-b');assert.equal(t.legacyBudget(),null);
+ console.log('PASS: email confirmation, escaped profile text and prevention of another account claiming local budget');
+ console.log('ALL ACCOUNT UI CHECKS PASSED');
+})().catch(e=>{console.error(e);process.exitCode=1});
+
+````
+
+## clair/accounts/test-cloud.cjs
+
+- SHA-256 : 7d5f4cac058bc1ac5b131d9d8ee06d639200aa249d5cb24c7d5e26147c561b7a
+- Taille : 7775 octets.
+
+````text
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=require('crypto').webcrypto;
+const source=fs.readFileSync(__dirname+'/cloud.js','utf8'),html=fs.readFileSync(__dirname+'/../index.html','utf8');
+const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);scripts.forEach(s=>new vm.Script(s));
+const ectx={window:{},Date,Intl};vm.createContext(ectx);vm.runInContext(scripts[0],ectx);const E=ectx.window.ClairEngine;
+assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'d6c1a581119b4d636cf98f3fe20d5823d0f592e48ed9c2856409f34ecb8fa39c');
+let rows=new Map(),saveDelay=null,readDelay=null,loseResponse=false;
+function device(uid,storage=new Map()){
+ let currentUser={id:uid,email:uid+'@example.test',user_metadata:{display_name:uid}};
+ const writes=[],applications=[],navigator={onLine:true};let callback;
+ const client={auth:{onAuthStateChange:f=>callback=f,getSession:async()=>({data:{session:{user:currentUser}}}),signOut:async()=>({})},
+ from:()=>({select(){return this},eq(_field,value){this.uid=value;return this},async maybeSingle(){if(readDelay)await readDelay;return {data:structuredClone(rows.get(this.uid)||null)}}}),
+ async rpc(name,params){const id=currentUser.id;if(saveDelay)await saveDelay;const row=rows.get(id);
+ if(row?.operation_id===params.p_operation_id)return {data:{saved:true,row:structuredClone(row)}};
+ if((row?.revision||0)!==params.p_expected_revision)return {data:{saved:false,row:structuredClone(row||null)}};
+ const next={payload:params.p_payload,revision:(row?.revision||0)+1,operation_id:params.p_operation_id,display_name:params.p_display_name};rows.set(id,structuredClone(next));writes.push(params);
+ if(loseResponse){loseResponse=false;throw Error('response lost')};return {data:{saved:true,row:structuredClone(next)}};
+ }};
+ const context={window:{},crypto,structuredClone,JSON,Error,Number,String,Date,navigator,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},setTimeout:()=>1,clearTimeout(){}};
+ vm.createContext(context);vm.runInContext(source,context);
+ const hooks={normalize:d=>E.normalize(d),enter(){},apply:(p,r)=>applications.push({p,r}),status(){},leave(){},empty(){}};
+ const cloud=new context.window.ClairCloud({url:'https://testproject.supabase.co',key:'sb_publishable_test'},hooks,{createClient:()=>client});
+ return {cloud,storage,writes,applications,navigator,client,authEvent:(event,session)=>callback(event,session),setUser:u=>{currentUser=u},edit:d=>{const raw=cloud.pack(d);storage.set(cloud.key(),raw);cloud.saved(raw)},async init(){await cloud.init()}};
+}
+const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents=n;return d};
+(async()=>{
+ const a=device('a');a.storage.set('clair-github-money-v3',JSON.stringify(budget(1700)));await a.init();
+ assert.equal(a.cloud.record,null);assert(a.storage.has('clair-github-money-v3'));assert.equal(rows.size,0);
+ a.edit(budget(1700));await a.cloud.sync();assert.equal(rows.get('a').revision,1);
+ const b=device('a');await b.init();assert.equal(b.cloud.record.payload.openingCents,1700);
+ a.edit(budget(1800));b.edit(budget(1900));await a.cloud.sync();await b.cloud.sync();
+ assert.equal(rows.get('a').payload.openingCents,1800);assert.equal(b.cloud.status,'conflict');assert.equal(b.cloud.record.payload.openingCents,1900);
+ b.cloud.resolve(false);await b.cloud.sync();assert.equal(rows.get('a').revision,3);assert.equal(rows.get('a').payload.openingCents,1900);
+ console.log('PASS: first transfer is explicit; two-device conflict preserves both budgets; explicit resolution');
+ const other=device('b',a.storage);await other.init();assert.equal(other.cloud.record,null);other.edit(budget(9900));await other.cloud.sync();assert.equal(rows.get('a').payload.openingCents,1900);assert.equal(rows.get('b').payload.openingCents,9900);
+ console.log('PASS: account caches, pending writes and remote records remain separate');
+ b.edit(budget(2000));loseResponse=true;await b.cloud.sync();assert(b.cloud.record.meta.dirty);const revision=rows.get('a').revision;await b.cloud.sync();assert.equal(rows.get('a').revision,revision);assert.equal(b.cloud.status,'synced');
+ console.log('PASS: lost server response retries idempotently without double saving');
+ b.edit(budget(2100));let resolve;saveDelay=new Promise(r=>resolve=r);const pending=b.cloud.sync();await new Promise(r=>setImmediate(r));b.edit(budget(2200));resolve();await pending;saveDelay=null;
+ assert.equal(b.cloud.record.payload.openingCents,2200);assert(b.cloud.record.meta.dirty);await b.cloud.sync();assert.equal(rows.get('a').payload.openingCents,2200);
+ console.log('PASS: a new purchase during an in-flight save is retained');
+ b.navigator.onLine=false;b.edit(budget(2300));await b.cloud.sync();assert.equal(b.cloud.status,'offline');assert(b.cloud.record.meta.dirty);const restored=device('a',b.storage);restored.navigator.onLine=false;await restored.init();assert.equal(restored.cloud.record.payload.openingCents,2300);restored.navigator.onLine=true;await restored.cloud.sync();assert.equal(rows.get('a').payload.openingCents,2300);
+ console.log('PASS: offline writes survive reload and reconnect');
+ const photos=budget(2400);photos.preferences.photo='data:image/jpeg;base64,abc';photos.preferences.wallpaper='photo';assert.equal(b.cloud.wire(photos).preferences.photo,null);assert.equal(photos.preferences.photo,'data:image/jpeg;base64,abc');
+ await restored.cloud.logout();assert(!restored.storage.has(restored.cloud.key('a')));assert(a.storage.has('clair-github-money-v3'));
+ console.log('PASS: sign-out removes account cache; original local budget remains; photos are not transmitted');
+ const bad=device('c');bad.storage.set(bad.cloud.key('c'),'{broken');await bad.init();assert.equal(bad.cloud.status,'error');assert.equal(bad.cloud.record,null);assert.equal(bad.storage.get(bad.cloud.key('c')),'{broken');
+ console.log('PASS: corrupt cache is retained; no previous account data is displayed');
+ const duplicate=device('duplicate');let unlock;readDelay=new Promise(r=>unlock=r);const opening=duplicate.init();await new Promise(r=>setImmediate(r));const epoch=duplicate.cloud.epoch;await duplicate.cloud.attach({id:'duplicate',email:'duplicate@example.test'});assert.equal(duplicate.cloud.epoch,epoch);unlock();await opening;readDelay=null;assert.equal(duplicate.cloud.status,'synced');
+ console.log('PASS: duplicate SDK session events do not restart or block opening');
+ const sameA=device('same'),sameB=device('same');await sameA.init();sameA.edit(budget(100));await sameA.cloud.sync();await sameB.init();sameA.edit(budget(200));sameB.edit(budget(200));await sameA.cloud.sync();await sameB.cloud.sync();assert.equal(sameB.cloud.status,'synced');assert.equal(sameB.cloud.conflict,null);
+ console.log('PASS: identical automatic updates from two devices do not create a false conflict');
+ const recovered=device('recovery-original');await recovered.init();let recoveryUser;
+ recovered.cloud.hooks.recovery=user=>{recoveryUser=user.id};
+ const recoveryTarget={id:'recovery-target',email:'target@example.test',user_metadata:{}};
+ recovered.setUser(recoveryTarget);recovered.authEvent('PASSWORD_RECOVERY',{user:recoveryTarget});
+ assert.equal(recoveryUser,'recovery-target');assert.equal(recovered.cloud.ready,false);assert.equal(recovered.cloud.status,'loading');
+ await recovered.cloud.attach(recoveryTarget);assert.equal(recovered.cloud.user.id,'recovery-target');assert.equal(recovered.cloud.record,null);
+ console.log('PASS: recovery for another account waits for its session and never uses the previous budget');
+ console.log('PASS: all scripts parse; original financial engine unchanged');
+})().catch(e=>{console.error(e);process.exitCode=1});
+
+````
+
+## clair/accounts/test-local.cjs
+
+- SHA-256 : 77aacd1b6b9ed72beb243471c85746c3cefd091a91dbe48390714eae5e44932c
+- Taille : 9506 octets.
+
+````text
+function runTests(){
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto').webcrypto;
+const html=fs.readFileSync(__dirname+'/../index.html','utf8'),scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+const nodes=new Map(),storage=new Map(),events={},closeTasks=[];
+// Native dialog.close() removes open now, then dispatches close in a later task.
+const node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',style:{},dataset:{},open:false,content:'',listeners:{},showCount:0,showModal(){this.open=true;this.showCount++;},close(){if(this.open){this.open=false;closeTasks.push(()=>this.listeners.close?.());}},addEventListener(type,fn){this.listeners[type]=fn;},scrollIntoView(){},focus(){}});return nodes.get(s);};
+const flushClose=()=>{while(closeTasks.length)closeTasks.shift()();};
+const click=(action,extra={})=>events.click({target:{closest:()=>({dataset:{action,...extra}})}});
+let payloads=[],notifications=[],fetched=[];
+const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{protocol:'https:',href:'https://example.test/clair/'},navigator:{userAgent:'iPhone',platform:'iPhone',maxTouchPoints:5},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener:(type,fn)=>{events[type]=fn;}},fetch:async url=>{fetched.push(String(url));return {ok:true,text:async()=>html};}};
+sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;
+vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
+let ui=scripts[3];const boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert.ok(boot>0);
+ui=ui.slice(0,boot)+`
+download=(body,name,mime)=>window.captureDownload(body,name,mime);
+notify=message=>window.captureNotify(message);
+window.test={settings,startCharge,chargeView,collectCharge,submitCharge,payCard,paymentDetails,pay,installClair,downloadClair,
+ setData(d){data=d;snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot);},
+ getData(){return data;},draft(){return chargeDraft;},setDraft(d){chargeDraft=d;},modal(){return modal;},
+ setPrompt(p){installPrompt=p;},busy(){return {installBusy,downloadBusy};}};
+})();`;
+sandbox.captureDownload=(body,name,mime)=>payloads.push({body,name,mime});sandbox.captureNotify=message=>notifications.push(message);
+vm.runInContext(ui,sandbox);
+const E=sandbox.ClairEngine,t=sandbox.test,d=E.empty(),today=E.today();d.initialized=true;d.setupDone=true;d.openingCents=100000;d.openingBalanceDate=today;t.setData(d);
+const form=o=>({get:k=>o[k]??null});
+(async()=>{
+ let settings=t.settings();
+ assert.match(settings,/Installer Clair/);assert.match(settings,/Télécharger le fichier/);assert.match(settings,/<details class="card settings-advanced">/);assert.doesNotMatch(settings,/href="clair.html"/);
+ assert.match(settings,/Notifications app fermée : pas encore disponibles/);assert.match(settings,/data-import/);assert.match(settings,/data-action="export"/);
+ console.log('PASS settings: installation, separate backup/import, collapsed advanced actions, honest reminder status');
+ t.startCharge();assert.match(node('#dialog').innerHTML,/Netflix/);
+ t.setDraft({step:1,name:'Netflix',amount:'',categoryId:'abonnements',day:'last',start:E.addDays(today,1)});
+ assert.throws(()=>t.submitCharge(form({name:'Netflix',amount:'-1'})),/supérieur/);
+ t.submitCharge(form({name:'Netflix & famille',amount:'9,99',categoryId:'abonnements'}));
+ assert.equal(t.draft().step,2);assert.match(node('#dialog').innerHTML,/date-grid/);assert.match(node('#dialog').innerHTML,/Netflix &amp; famille/);
+ const day=Number(E.addDays(today,2).slice(-2));
+ t.submitCharge(form({day:String(day),start:E.addDays(today,1)}));
+ assert.equal(t.getData().rules.length,1);assert.equal(t.getData().rules[0].amountCents,999);assert.equal(E.balance(t.getData()),100000);
+ console.log('PASS guided charge: bad amount blocked, French decimal saved, future rule does not debit early');
+ flushClose();
+ const unpaid=structuredClone(t.getData()),occurrence=E.upcoming(t.getData(),today)[0],card=t.payCard(occurrence);
+ assert.match(card,/data-action="payment-detail"/);assert.doesNotMatch(card,/data-action="pay"/);
+ for(let attempt=0;attempt<3;attempt++){
+   t.setData(structuredClone(unpaid));
+   await click('payment-detail',{key:occurrence.autoKey});assert.match(node('#dialog').innerHTML,/Noter un paiement anticipé/);
+   const shown=node('#dialog').showCount;
+   await click('pay',{key:occurrence.autoKey});flushClose();
+   assert.match(node('#dialog').innerHTML,/ne sera pas comptée une deuxième fois/);
+   assert.equal(t.modal()?.kind,'confirm','The confirmation must survive delayed native close events');
+   assert.equal(node('#dialog').open,true);assert.equal(node('#dialog').showCount,shown,'Replace the open payment sheet without closing and reopening it');
+   assert.equal(E.balance(t.getData()),100000);
+   await click('confirm');await click('confirm');flushClose();
+   assert.equal(node('#dialog').open,false);assert.equal(t.modal(),null);
+   assert.equal(E.balance(t.getData()),99001);
+   assert.equal(t.getData().transactions.filter(x=>x.autoKey===occurrence.autoKey).length,1);
+   for(let repeat=0;repeat<10;repeat++)E.sync(t.getData(),occurrence.dueDate);
+   assert.equal(E.balance(t.getData(),occurrence.dueDate),99001);
+ }
+ console.log('PASS full early-payment click path repeated 3 times, double confirmation, and 10 due-date syncs without duplicate debit');
+ t.setData(structuredClone(unpaid));
+ await click('payment-detail',{key:occurrence.autoKey});await click('pay',{key:occurrence.autoKey});await click('close');
+ assert.equal(E.balance(t.getData()),100000);assert.equal(t.getData().transactions.length,0);
+ // Reopen before the preceding close event has run, as rapid taps can do.
+ await click('payment-detail',{key:occurrence.autoKey});await click('pay',{key:occurrence.autoKey});flushClose();
+ assert.equal(t.modal().kind,'confirm');await click('confirm');flushClose();assert.equal(E.balance(t.getData()),99001);
+ console.log('PASS cancel has no debit; immediate reopen survives the preceding delayed close event');
+ await click('new-rule');await click('close');await click('edit-rule',{id:unpaid.rules[0].id});flushClose();
+ assert.equal(node('#dialog').open,true);assert.equal(t.modal().kind,'rule');assert.equal(t.modal().id,unpaid.rules[0].id);
+ // Escape/browser-native close must still clear the state when it stays closed.
+ node('#dialog').close();flushClose();assert.equal(t.modal(),null);
+ console.log('PASS shared rule form keeps its state after reopening, and native close clears it');
+ const due=structuredClone(unpaid);due.rules[0].start=today;due.rules[0].day=Number(today.slice(-2));E.sync(due,today);
+ t.setData(due);const dueKey=E.upcoming(t.getData(),today).find(x=>x.status==='today').autoKey,alreadyCounted=E.balance(t.getData());
+ await click('payment-detail',{key:dueKey});await click('pay',{key:dueKey});flushClose();
+ assert.equal(node('#dialog').open,false);assert.equal(t.getData().transactions[0].paymentConfirmed,true);
+ assert.equal(E.balance(t.getData()),alreadyCounted);assert.equal(t.getData().transactions.length,1);
+ console.log('PASS confirming an already counted payment closes the sheet without another debit');
+ t.setData(structuredClone(unpaid));await click('payment-detail',{key:occurrence.autoKey});await click('pay',{key:occurrence.autoKey});
+ const normalSave=sandbox.localStorage.setItem;
+ sandbox.localStorage.setItem=()=>{const error=new Error('Storage quota exceeded');error.name='QuotaExceededError';throw error;};
+ await click('confirm');flushClose();sandbox.localStorage.setItem=normalSave;
+ assert.equal(E.balance(t.getData()),100000);assert.equal(t.getData().transactions.length,0);
+ assert.match(node('#alert').innerHTML,/La modification n’a pas été enregistrée/);
+ await click('payment-detail',{key:occurrence.autoKey});await click('pay',{key:occurrence.autoKey});await click('confirm');flushClose();
+ assert.equal(E.balance(t.getData()),99001);assert.equal(t.getData().transactions.length,1);
+ console.log('PASS storage failure rolls back the payment, reports the error, and a new attempt records it once');
+ await t.downloadClair();assert.equal(payloads.length,1);assert.equal(payloads[0].name,'Clair.html');assert.ok(payloads[0].body.includes('root.ClairEngine ='));
+ assert.ok(!payloads[0].body.includes('Netflix & famille'));assert.ok(!payloads[0].body.includes('<link rel="manifest"'));
+ assert.equal(fetched[0],'https://example.test/clair/index.html');assert.equal(t.busy().downloadBusy,false);
+ console.log('PASS download uses clean app source, excludes user ledger and fixes old broken link');
+ await t.installClair();assert.match(node('#dialog').innerHTML,/Safari/);
+ let prompts=0;t.setPrompt({prompt:async()=>{prompts++;},userChoice:Promise.resolve({outcome:'dismissed'})});await t.installClair();assert.equal(prompts,1);assert.equal(t.busy().installBusy,false);
+ console.log('PASS iPhone install guidance and native prompt dismissal');
+ for(const script of scripts)new Function(script);
+ console.log('ALL CHECKS PASSED');
+})().catch(e=>{console.error(e);process.exitCode=1;});
+}
+runTests();
+
+
+````
+
+## clair/accounts/test-mascot.cjs
+
+- SHA-256 : 41ea02951f706cf4a837532c16d78c0855d2606f4830d3cf22e8db2c8ae4b2cb
+- Taille : 2694 octets.
+
+````text
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(__dirname+'/../index.html','utf8');
+const ui=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][3][1];
+const code=ui.slice(ui.indexOf('  function welcome(){'),ui.indexOf('  welcome();'));
+function run({seen=false,user=false,local=false,recovery=false,reduced=false}={}){
+ const handlers={},timers=[];let inits=0,renders=0,setups=0;
+ const nodes=new Map();
+ function $(key){if(!nodes.has(key))nodes.set(key,{open:false,addEventListener(type,fn){handlers[key+':'+type]=fn},showModal(){this.open=true},close(){this.open=false;handlers[key+':close']?.()}});return nodes.get(key)}
+ const s={$,cloud:{enabled:!local,init:()=>{inits++;return Promise.resolve()}},data:{initialized:false},accountMode:'login',accountStarted:false,accountResetStep:recovery?'password':null,loadError:null,
+ sessionStorage:{getItem:()=>seen?'1':null,setItem(){}},localStorage:{getItem:()=>user?'session':null},matchMedia:()=>({matches:reduced}),setTimeout:fn=>{timers.push(fn);return timers.length},clearTimeout(){},render(){renders++},beginSetup(){setups++}};
+ vm.createContext(s);vm.runInContext(code+'welcome();',s);
+ return {s,nodes,handlers,timers,inits:()=>inits,renders:()=>renders,setups:()=>setups};
+}
+const signup=run();assert.equal(signup.nodes.get('#welcome').open,true);assert.equal(signup.timers.length,0);
+signup.handlers['#welcome-skip:click']();assert.equal(signup.s.accountMode,'signup');assert.equal(signup.inits(),1);assert.equal(signup.renders(),1);
+const login=run();login.handlers['#welcome-login:click']();assert.equal(login.s.accountMode,'login');assert.equal(login.inits(),1);
+const returning=run({user:true});assert.equal(returning.timers.length,1);assert.equal(returning.nodes.get('#welcome-login').hidden,true);returning.timers[0]();assert.equal(returning.inits(),1);
+for(const options of [{seen:true},{recovery:true},{reduced:true}]){const r=run(options);assert.equal(r.inits(),1);assert(!r.nodes.get('#welcome').open);}
+const local=run({local:true});local.handlers['#welcome-skip:click']();assert.equal(local.setups(),1);
+assert.match(html,/mascot\(\[2,1,2,3\]\[s\]/);assert.match(html,/mascot\(signup\?1:0/);
+assert.match(html,/:has\(input:focus,select:focus,textarea:focus\)/);
+const sw=fs.readFileSync(__dirname+'/../sw.js','utf8');assert.match(sw,/assets\/mascotte-poses.png/);assert.match(sw,/const HOME=new URL\('index.html',BASE\).href/);
+assert(fs.existsSync(__dirname+'/../assets/mascotte-poses.png'));
+console.log('PASS: explicit signup/login, returning session, recovery and reduced-motion bypass, local setup, four poses, compact input state and offline asset');
+
+````
+
+## clair/accounts/test-recovery-sdk.cjs
+
+- SHA-256 : 705323fddb4ab2602c11770a1f74bcc478385306a10a283479887dc48eb19dca
+- Taille : 4566 octets.
+
+````text
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto').webcrypto;
+const html=fs.readFileSync(__dirname+'/../index.html','utf8');
+const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+const uid='8450886d-891a-40e2-995e-ea46bb1409bc';
+const user={id:uid,aud:'authenticated',role:'authenticated',email:'sdk-test@example.invalid',user_metadata:{display_name:'Test'},app_metadata:{provider:'email'},identities:[]};
+const jwt=[{alg:'HS256',typ:'JWT'},{sub:uid,aud:'authenticated',role:'authenticated',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000),iss:'https://hkssnbvktfscizojhftl.supabase.co/auth/v1'},'TEST-SIGNATURE'].map(x=>Buffer.from(typeof x==='string'?x:JSON.stringify(x)).toString('base64url')).join('.');
+const initial=new URL('https://example.test/clair/#access_token='+jwt+'&refresh_token=TEST-REFRESH&expires_in=3600&expires_at='+String(Math.floor(Date.now()/1000)+3600)+'&token_type=bearer&type=recovery');
+const storage=new Map(),nodes=new Map(),calls=[];
+function node(s){if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',style:{},dataset:{},open:false,showModal(){this.open=true},close(){this.open=false},focus(){},scrollIntoView(){},addEventListener(){}});return nodes.get(s)}
+const controls=new Set(['#account-forgot-form','#account-password-form','#account-reset-send','#account-reset-resend']);
+const s={Intl,Date,TextEncoder,TextDecoder,URL,URLSearchParams,Blob,Headers,Request,Response,structuredClone,crypto,console,AbortController,setTimeout,clearTimeout,setInterval,clearInterval,
+ location:{origin:initial.origin,pathname:initial.pathname,protocol:initial.protocol,search:initial.search,hash:initial.hash,href:initial.href},
+ history:{replaceState(_state,_title,url){const next=new URL(url,initial);Object.assign(s.location,{hash:next.hash,href:next.href,search:next.search})}},
+ navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),
+ localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
+ document:{visibilityState:'visible',documentElement:{dataset:{}},body:{dataset:{}},querySelector:selector=>controls.has(selector)&&!node('#page').innerHTML.includes('id="'+selector.slice(1)+'"')?null:node(selector),addEventListener(){},removeEventListener(){}},
+ FormData:class{constructor(form){this.values=form.values}get(k){return this.values[k]??null}},
+ fetch:async(url,options={})=>{
+   const target=new URL(url instanceof Request?url.url:url),method=options.method||'GET';calls.push({path:target.pathname,method});
+   if(target.pathname==='/auth/v1/user')return new Response(JSON.stringify(user),{status:200,headers:{'content-type':'application/json'}});
+   if(target.pathname==='/auth/v1/logout')return new Response('{}',{status:200});
+   if(target.pathname==='/rest/v1/clair_budgets'){const payload=s.ClairEngine.empty();payload.initialized=payload.setupDone=true;payload.openingCents=1700;return new Response(JSON.stringify({payload,revision:1,operation_id:'sdk-operation',display_name:'Test'}),{status:200,headers:{'content-type':'application/json'}})}
+   throw Error('Unexpected API path '+target.pathname);
+ }};
+s.window=s;s.globalThis=s;s.addEventListener=()=>{};s.removeEventListener=()=>{};
+vm.createContext(s);for(let i=0;i<3;i++)vm.runInContext(scripts[i],s);
+const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');
+vm.runInContext(scripts[3].slice(0,boot)+'window.test={cloud,render,accountSubmit,accountAction,state:()=>accountResetStep};})();',s);
+async function main(){
+ const t=s.test;await t.cloud.init();
+ for(let n=0;n<50&&t.state()!=='password';n++)await new Promise(r=>setTimeout(r,10));
+ assert.equal(t.cloud.user.id,uid);assert.equal(t.state(),'password');assert(node('#page').innerHTML.includes('account-password-form'));assert.equal(s.location.hash,'');
+ await t.accountSubmit({id:'account-password-form',values:{password:'test recovery long phrase'},querySelector:()=>({disabled:false})});
+ assert.equal(t.state(),'done');assert(calls.some(c=>c.path==='/auth/v1/user'&&c.method==='PUT'));
+ await t.accountAction('account-reset-finish');assert.equal(t.state(),null);assert.match(node('#page').innerHTML,/17,00/);
+ console.log('PASS official Supabase JS 2.102.0: URL consumed, PASSWORD_RECOVERY session validated, updateUser, direct original budget return (mock transport)');
+ await t.cloud.client.auth.stopAutoRefresh();
+}
+main().then(()=>process.exit(0)).catch(e=>{console.error(e);process.exit(1)});
+
+
+````
+
+## clair/accounts/test-recovery.cjs
+
+- SHA-256 : ac041af58e6c7bf150dc7f042ebb979b2e113b6c70f683f18f726a4bba08c7ee
+- Taille : 8183 octets.
+
+````text
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto').webcrypto;
+const html=fs.readFileSync(__dirname+'/../index.html','utf8');
+const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+function context(hash=''){
+ const nodes=new Map(),storage=new Map(),calls={mail:[],password:[]};let mailError=null,passwordError=null,clock=Date.now();
+ const DateMock=class extends Date{static now(){return clock}};
+ function node(s){if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',value:'',type:'password',style:{},dataset:{},open:false,showModal(){this.open=true},close(){this.open=false},addEventListener(){},scrollIntoView(){},focus(){},setAttribute(k,v){this[k]=v}});return nodes.get(s)}
+ function query(s){
+   const p=node('#page').innerHTML;
+   if(s==='#account-form input[name="email"]')return p.includes('id="account-form"')?node(s):null;
+   const ids=['account-form','account-forgot-form','account-password-form','account-reset-send','account-reset-resend','account-new-password','recovery-title'];
+   if(s.startsWith('#')&&ids.includes(s.slice(1))&&!p.includes('id="'+s.slice(1)+'"'))return null;
+   if(s==='[data-action="account-password-toggle"]'&&!p.includes('data-action="account-password-toggle"'))return null;
+   return node(s);
+ }
+ const client={auth:{resetPasswordForEmail:async(email,options)=>{calls.mail.push({email,options});return {error:mailError}},updateUser:async p=>{calls.password.push(p);return {error:passwordError}}}};
+ const s={Intl,Date:DateMock,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,
+   setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{origin:'https://example.test',protocol:'https:',pathname:'/clair/',href:'https://example.test/clair/'+hash,hash,search:''},
+   navigator:{onLine:true},history:{replaceState(){s.location.hash=''}},matchMedia:()=>({matches:false,addEventListener(){}}),
+   localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
+   document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:query,addEventListener(){}},
+   supabase:{createClient:()=>client},CLAIR_ACCOUNT_CONFIG:{url:'https://test.supabase.co',key:'sb_publishable_test'},
+   FormData:class{constructor(f){this.values=f.values}get(k){return this.values[k]??null}}};
+ s.window=s;s.addEventListener=()=>{};vm.createContext(s);vm.runInContext(scripts[0],s);vm.runInContext(scripts[2],s);
+ const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);
+ vm.runInContext(scripts[3].slice(0,boot)+'window.test={cloud,render,recoveryView,accountAction,accountSubmit,accountMessage,resetCooldown,state:()=>({step:accountResetStep,email:accountResetEmail}),setData:d=>{data=d;}};})();',s);
+ const t=s.test;t.cloud.ready=true;t.cloud.status='signed-out';
+ return {s,t,node,query,calls,mailError:e=>mailError=e,passwordError:e=>passwordError=e,advance:ms=>clock+=ms};
+}
+const form=(id,values)=>({id,values,querySelector:()=>({disabled:false})});
+async function main(){
+ const a=context(),{t,s,node,calls}=a;t.render();node('#account-form input[name="email"]').value='elhadj@example.invalid';
+ await t.accountAction('account-forgot');assert.equal(t.state().email,'elhadj@example.invalid');assert.match(t.recoveryView(),/elhadj@example.invalid/);
+ await t.accountSubmit(form('account-forgot-form',{email:'elhadj@example.invalid'}));assert.equal(t.state().step,'sent');
+ assert.match(t.recoveryView(),/Si un compte utilise cette adresse/);assert.match(t.recoveryView(),/indésirables/);
+ assert.equal(calls.mail[0].options.redirectTo,'https://example.test/clair/');
+ await t.accountAction('account-reset-resend');assert.equal(calls.mail.length,1);
+ await t.accountAction('account-reset-edit');assert.equal(t.state().email,'elhadj@example.invalid');assert.equal(node('#account-reset-send').disabled,true);
+ a.advance(61000);await t.accountSubmit(form('account-forgot-form',{email:'corrected@example.invalid'}));assert.equal(calls.mail.length,2);assert.equal(t.state().email,'corrected@example.invalid');
+ a.advance(61000);await t.accountAction('account-reset-resend');assert.equal(calls.mail.length,3);
+ await t.accountAction('account-reset-back');assert.equal(t.state().step,null);assert.match(node('#page').innerHTML,/corrected@example.invalid/);
+ console.log('PASS: retained/corrected e-mail, neutral persistent confirmation, cooldown, resend, return');
+ const limited=context();limited.t.render();await limited.t.accountAction('account-forgot');limited.mailError({status:429});await limited.t.accountSubmit(form('account-forgot-form',{email:'test@example.invalid'}));
+ assert.match(limited.node('#account-error').textContent,/limité/);assert.equal(limited.node('#account-reset-send').disabled,true);
+ const offline=context();offline.t.render();await offline.t.accountAction('account-forgot');offline.s.navigator.onLine=false;offline.mailError({name:'AuthRetryableFetchError'});await offline.t.accountSubmit(form('account-forgot-form',{email:'test@example.invalid'}));assert.match(offline.node('#account-error').textContent,/Internet/);
+ console.log('PASS: rate limit/network failure shown on the active screen');
+ const expired=context('#error=access_denied&error_code=otp_expired');expired.t.render();assert.match(expired.node('#page').innerHTML,/Ce lien ne fonctionne plus/);await expired.t.accountAction('account-reset-edit');assert.equal(expired.s.location.hash,'');
+ const invalid=context('#type=recovery');invalid.t.cloud.user={id:'unrelated-user'};invalid.t.cloud.hooks.status();assert.equal(invalid.t.state().step,'expired');await invalid.t.accountSubmit(form('account-password-form',{password:'long enough password'}));assert.equal(invalid.calls.password.length,0);
+ console.log('PASS: expired/incomplete links and unrelated sessions do not change a password');
+ const valid=context('#type=recovery'),v=valid.t,user={id:'valid-user',email:'test@example.invalid'};v.cloud.user=user;v.cloud.hooks.recovery(user);v.cloud.status='synced';v.cloud.hooks.status();
+ assert.equal(v.state().step,'password');assert.match(v.recoveryView(),/12 caractères/);
+ await v.accountSubmit(form('account-password-form',{password:'short'}));assert.equal(valid.calls.password.length,0);assert.match(valid.node('#account-error').textContent,/12/);
+ valid.passwordError({code:'same_password'});await v.accountSubmit(form('account-password-form',{password:'a longer password phrase'}));assert.match(valid.node('#account-error').textContent,/différent/);assert.equal(v.state().step,'password');
+ const data=valid.s.ClairEngine.empty();data.initialized=data.setupDone=true;data.openingCents=1700;v.setData(data);
+ v.cloud.hooks.apply(data,JSON.stringify(data));assert.equal(v.state().step,'password');
+ valid.passwordError(null);await v.accountSubmit(form('account-password-form',{password:'a longer password phrase'}));assert.equal(v.state().step,'done');assert.match(v.recoveryView(),/Accéder à mon budget/);
+ await v.accountAction('account-reset-finish');assert.equal(v.state().step,null);assert.match(valid.node('#page').innerHTML,/17,00/);
+ console.log('PASS: verified recovery, password rules, error retry, sync does not dismiss recovery, direct budget return');
+ const lost=context('#type=recovery');lost.t.cloud.user=user;lost.t.cloud.hooks.recovery(user);lost.t.cloud.status='synced';lost.t.cloud.hooks.status();lost.passwordError({status:401,code:'session_not_found'});await lost.t.accountSubmit(form('account-password-form',{password:'a longer password phrase'}));assert.equal(lost.t.state().step,'expired');
+ const modal=context();modal.node('#dialog').open=true;modal.t.accountMessage('Visible error');assert.equal(modal.node('#form-error').textContent,'Visible error');
+ assert(html.includes(fs.readFileSync(__dirname+'/account-ui.js','utf8').trimEnd()));
+ assert(html.includes(fs.readFileSync(__dirname+'/cloud.js','utf8').trimEnd()));
+ console.log('PASS: expired session, modal error placement, embedded source matches standalone files');
+ console.log('ALL RECOVERY CHECKS PASSED');
+}
+main().catch(e=>{console.error(e);process.exitCode=1});
+
+````
+
+## clair/accounts/verify-database.sql
+
+- SHA-256 : d772056bbefd66b7f4bf6807a1c68caec67e1511b9d626bb60b17768389c9594
+- Taille : 2356 octets.
+
+````text
+-- Run AFTER schema.sql on the dedicated Clair project. Fixtures are rolled back.
+begin;
+select set_config('clair.test_a',gen_random_uuid()::text,true),set_config('clair.test_b',gen_random_uuid()::text,true);
+insert into auth.users(id) values(current_setting('clair.test_a')::uuid),(current_setting('clair.test_b')::uuid);
+select set_config('request.jwt.claim.sub',current_setting('clair.test_a'),true);
+set local role authenticated;
+do $$
+declare result jsonb; first_op uuid := gen_random_uuid();
+begin
+  result := public.save_clair_budget('{"version":3,"openingCents":1700,"transactions":[],"rules":[],"preferences":{}}',0,first_op,'Clair test');
+  if not (result->>'saved')::boolean or (result->'row'->>'revision')::bigint <> 1 then raise exception 'Initial save failed'; end if;
+  result := public.save_clair_budget('{"version":3,"openingCents":1700,"transactions":[],"rules":[],"preferences":{}}',0,first_op,'Clair test');
+  if not (result->>'saved')::boolean or (result->'row'->>'revision')::bigint <> 1 then raise exception 'Idempotency failed'; end if;
+  result := public.save_clair_budget('{"version":3,"openingCents":1900,"transactions":[],"rules":[],"preferences":{}}',0,gen_random_uuid(),'Clair test');
+  if (result->>'saved')::boolean then raise exception 'Stale revision overwrote data'; end if;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',current_setting('clair.test_b'),true);
+set local role authenticated;
+do $$
+declare modified integer;
+begin
+  if exists(select 1 from public.clair_budgets) then raise exception 'Account B can read account A'; end if;
+  update public.clair_budgets set display_name='unexpected';
+  get diagnostics modified = row_count;
+  if modified > 0 then raise exception 'Account B can update account A'; end if;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',current_setting('clair.test_a'),true);
+set local role authenticated;
+do $$
+begin
+  begin
+    update public.clair_budgets set user_id=current_setting('clair.test_b')::uuid;
+    raise exception 'Ownership reassignment succeeded';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+set local role anon;
+do $$
+begin
+  begin
+    perform * from public.clair_budgets;
+    raise exception 'Anonymous read succeeded';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+rollback;
+
+````
+
+## clair/assets/mascotte-poses.png
+
+- SHA-256 : 42501e6bddc02d382f0e6a39d0146d6d76e817ea4fca4a3fb47ab0d6b2e3a619
+- Taille : 1024787 octets.
+
+- Image à conserver avec le code.
+
+## clair/icons/icon.svg
+
+- SHA-256 : 1b05f52d298455467b7928a7dcab051583377ac8212901da56091393b6900c37
+- Taille : 430 octets.
+
+````text
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fa2d58"/><stop offset="1" stop-color="#fa69b2"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#g)"/><text x="256" y="330" text-anchor="middle" font-family="-apple-system,system-ui,sans-serif" font-weight="700" font-size="320" fill="#fff">c</text></svg>
+
+````
+
+## clair/index.html
+
+- SHA-256 : eda4aeee4dcdab26ac653f76804dd1dce6a41c16d12cbfc790aa4a99d0d80324
+- Taille : 355699 octets.
+
+````text
+<!doctype html>
+<html lang="fr" data-theme="auto">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#fa2d58">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://hkssnbvktfscizojhftl.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Clair"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icons/icon-180.png">
+<title>Clair — Mon argent, simplement</title>
+<meta name="description" content="Budget personnel, charges récurrentes et synchronisation entre tes appareils."><meta property="og:title" content="Clair — Mon argent, simplement"><meta property="og:description" content="Ton budget personnel et tes habitudes, accessibles avec ton compte."><meta property="og:type" content="website"><meta name="twitter:card" content="summary">
+<style>
+:root{--font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',system-ui,'Segoe UI',Roboto,sans-serif;--accent:#fa2d58;--accent-strong:#d4183f;--accent-text:#c8143c;--accent-ink:#fff;--bg:#f2f2f7;--paper:rgba(255,255,255,.74);--paper-solid:#fff;--ink:#1d1d1f;--muted:#5f5f66;--line:rgba(0,0,0,.09);--soft:rgba(250,45,88,.10);--field:#fff;--red:#c4161c;--ok:#1f7a3a;--side:rgba(246,246,250,.72);--shadow:0 10px 40px rgba(0,0,0,.08);--blur:saturate(180%) blur(22px);color-scheme:light}
+html[data-theme=dark]{--bg:#0b0b0d;--paper:rgba(30,30,34,.72);--paper-solid:#1c1c1e;--ink:#f5f5f7;--muted:#a8a8b0;--line:rgba(255,255,255,.11);--soft:rgba(255,55,95,.18);--field:#2a2a2e;--accent-text:#ff6b89;--red:#ff6961;--ok:#5fd17e;--side:rgba(22,22,26,.72);--shadow:0 10px 40px rgba(0,0,0,.4);color-scheme:dark}
+@media(prefers-color-scheme:dark){html[data-theme=auto]{--bg:#0b0b0d;--paper:rgba(30,30,34,.72);--paper-solid:#1c1c1e;--ink:#f5f5f7;--muted:#a8a8b0;--line:rgba(255,255,255,.11);--soft:rgba(255,55,95,.18);--field:#2a2a2e;--accent-text:#ff6b89;--red:#ff6961;--ok:#5fd17e;--side:rgba(22,22,26,.72);--shadow:0 10px 40px rgba(0,0,0,.4);color-scheme:dark}}
+html{font-family:var(--font);color:var(--ink);background:var(--bg);font-size:15px;-webkit-font-smoothing:antialiased}*{box-sizing:border-box}body{margin:0;min-height:100vh}
+.wall{position:fixed;inset:0;z-index:-1;background:var(--bg);background-size:cover;background-position:center}
+body[data-wall=aurora] .wall{background:radial-gradient(60% 50% at 15% 10%,rgba(250,45,88,.35),transparent 70%),radial-gradient(50% 50% at 85% 20%,rgba(170,110,255,.32),transparent 70%),radial-gradient(60% 60% at 50% 100%,rgba(255,140,190,.28),transparent 70%),var(--bg)}
+body[data-wall=ocean] .wall{background:radial-gradient(60% 50% at 10% 0%,rgba(0,122,255,.35),transparent 70%),radial-gradient(60% 60% at 90% 90%,rgba(0,200,220,.3),transparent 70%),var(--bg)}
+body[data-wall=sunset] .wall{background:radial-gradient(60% 50% at 20% 0%,rgba(255,149,0,.35),transparent 70%),radial-gradient(60% 60% at 90% 80%,rgba(250,45,88,.32),transparent 70%),var(--bg)}
+body[data-wall=forest] .wall{background:radial-gradient(60% 50% at 10% 10%,rgba(52,199,89,.3),transparent 70%),radial-gradient(60% 60% at 90% 90%,rgba(0,110,80,.3),transparent 70%),var(--bg)}
+body[data-wall=photo] .wall::after{content:'';position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 55%,transparent)}
+button,input,select{font:inherit}button{cursor:pointer;border:0;background:none;color:inherit}button:disabled{opacity:.5;cursor:default}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+h1,h2,h3,p{margin-top:0}h1{font-size:clamp(32px,4.4vw,46px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:10px}h2{font-size:22px;font-weight:750;letter-spacing:-.02em;margin-bottom:14px}h3{font-size:16px;font-weight:700;margin-bottom:6px}p{line-height:1.55}
+.muted,.help{color:var(--muted)}.help{font-size:13px;line-height:1.55}.eyebrow{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent-text);margin-bottom:8px}
+.shell{max-width:1440px;margin:auto}
+.sidebar{position:fixed;inset:0 auto 0 max(0px,calc((100vw - 1440px)/2));width:240px;background:var(--side);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-right:1px solid var(--line);padding:30px 16px;display:flex;flex-direction:column;z-index:4}
+.brand{font-size:26px;font-weight:800;letter-spacing:-.03em;display:flex;gap:10px;align-items:center;padding:0 8px}
+.brand-mark{background:linear-gradient(160deg,#fa2d58,#fa69b2);color:#fff;border-radius:9px;display:grid;place-items:center;width:32px;height:32px;font-size:22px;font-weight:800}
+.tagline{font-size:12px;color:var(--muted);margin:10px 8px 30px}.nav{display:grid;gap:2px}
+.nav button{padding:10px 12px;text-align:left;border-radius:9px;font-weight:600;font-size:14px;display:flex;gap:10px;align-items:center}.nav button span{color:var(--accent);width:18px;text-align:center}
+.nav button:hover{background:var(--soft)}.nav button.active{background:var(--soft);color:var(--accent-text)}
+.sidebar-foot{margin-top:auto;font-size:12px;line-height:1.6;color:var(--muted);padding:0 8px}
+main{margin-left:240px;padding:26px 48px 70px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;font-size:12px;color:var(--muted);gap:12px}.status{display:flex;gap:7px;align-items:center}.dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}.mobile-brand{display:none}
+.page-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:24px}.page-heading p{margin-bottom:0}
+.button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);background:var(--paper-solid);color:var(--ink);padding:11px 18px;border-radius:999px;font-size:14px;font-weight:650;text-decoration:none;min-height:42px}
+.button.primary{background:var(--accent-strong);color:var(--accent-ink);border-color:transparent}.button.primary:hover{filter:brightness(1.07)}
+.button.soft{background:var(--soft);border-color:transparent;color:var(--accent-text)}.button.danger{color:var(--red);background:transparent;border-color:color-mix(in srgb,var(--red) 40%,transparent)}
+.button.small{padding:7px 13px;font-size:12.5px;min-height:34px}
+.link{font-weight:650;color:var(--accent-text);font-size:13px;text-decoration:none;padding:6px 0}.link:hover{text-decoration:underline}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.hero{display:grid;grid-template-columns:1.45fr 1fr;border-radius:22px;background:linear-gradient(135deg,#fa2d58 0%,#c2185b 45%,#5e2bff 100%);color:#fff;overflow:hidden;box-shadow:var(--shadow)}
+.hero-main{padding:32px}.hero .eyebrow{color:rgba(255,255,255,.85)}.balance{font-size:clamp(40px,5vw,62px);font-weight:800;letter-spacing:-.04em;margin:8px 0 18px;line-height:1}.hero .help{color:rgba(255,255,255,.88)}
+.hero-side{padding:28px;background:rgba(0,0,0,.18);display:grid;gap:18px;align-content:center}.hero-side small{color:rgba(255,255,255,.85);display:block;font-size:12px;margin-bottom:4px}.hero-side strong{font-size:24px;font-weight:750;letter-spacing:-.02em}.hero-side p{color:rgba(255,255,255,.85);font-size:12px;margin-bottom:0;line-height:1.5}
+.negative{color:var(--red)!important}.hero .negative{color:#ffe1e6!important;text-decoration:underline wavy}
+.quick{display:flex;gap:12px;margin:16px 0 28px}.quick .button{flex:1;min-height:50px}
+.grid{display:grid;grid-template-columns:1.3fr 1fr;gap:20px}
+.card{border:1px solid var(--line);background:var(--paper);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-radius:20px;padding:24px;margin-bottom:20px}.card.soft{background:var(--paper)}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.section-head h2{margin:0}
+.row{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding:13px 0}.row:last-child{border-bottom:0}
+.row-icon{width:38px;height:38px;display:grid;place-items:center;background:var(--soft);color:var(--accent-text);border-radius:10px;flex-shrink:0;font-size:16px}
+.row-info{flex:1;min-width:0}.row-name{font-weight:650;font-size:14px;overflow-wrap:anywhere}.row-meta{font-size:12px;line-height:1.6;color:var(--muted);margin-top:2px}.row-amount{font-weight:700;white-space:nowrap;font-size:14px}.row-amount.income{color:var(--ok)}
+.badge{display:inline-block;font-size:10px;letter-spacing:.03em;background:var(--soft);color:var(--accent-text);border-radius:6px;padding:2px 6px;font-weight:700;margin-left:6px;vertical-align:1px}.badge.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.empty{padding:22px 0;color:var(--muted);font-size:14px;line-height:1.6}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}.stat{border:1px solid var(--line);border-radius:18px;background:var(--paper);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);padding:20px}.stat small{display:block;color:var(--muted);font-size:12px;margin-bottom:8px}.stat strong{font-size:24px;font-weight:750;letter-spacing:-.02em}
+.rule-card{border:1px solid var(--line);border-radius:18px;padding:20px;background:var(--paper);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);margin-bottom:12px}
+.rule-head{display:flex;gap:12px;align-items:flex-start}.rule-head h3{margin:0 0 4px}.rule-head .row-info p{margin:0}.rule-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.rule-card.archived{opacity:.78}
+.rule-switches{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:14px}
+.schedule{font-size:13px;line-height:1.65;color:var(--muted);margin:10px 0 0}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.toolbar input{flex:1;min-width:140px}
+.field{display:grid;gap:7px;margin-bottom:16px;font-size:13px;font-weight:650}
+.field input,.field select,.toolbar input,.toolbar select{width:100%;border:1px solid var(--line);background:var(--field);color:var(--ink);border-radius:11px;padding:11px 12px;min-height:44px}
+.field .help{font-weight:400}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.form-grid .field{margin-bottom:14px}
+.check{display:flex;align-items:center;gap:9px;font-size:13px;line-height:1.5;margin:10px 0}.check input{accent-color:var(--accent);width:18px;height:18px}
+.switch{display:inline-flex;align-items:center;gap:10px;font-size:13px;font-weight:600;cursor:pointer;position:relative}
+.switch input{appearance:none;-webkit-appearance:none;width:44px;height:26px;border-radius:999px;background:color-mix(in srgb,var(--muted) 45%,transparent);position:relative;margin:0;cursor:pointer;transition:background .2s;flex-shrink:0}
+.switch input::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+.switch input:checked{background:var(--accent-strong)}.switch input:checked::after{transform:translateX(18px)}
+.days{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:12px 0 20px}.day{border:1px solid var(--line);background:var(--paper);border-radius:12px;padding:11px}
+.day label{display:flex;gap:5px;align-items:center;font-size:12px;font-weight:650;margin-bottom:9px}.day input[type=text]{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--field);color:var(--ink)}.day input[type=checkbox]{accent-color:var(--accent)}
+.notice{border:1px solid var(--line);background:var(--paper);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-radius:14px;padding:13px 16px;font-size:13px;line-height:1.55;margin-bottom:18px}
+.notice.error{border-color:color-mix(in srgb,var(--red) 45%,transparent);color:var(--red)}.notice.remind{border-color:color-mix(in srgb,var(--accent) 50%,transparent)}.notice:empty{display:none}
+.progress{height:6px;border-radius:6px;background:var(--soft);overflow:hidden;margin-top:9px}.progress span{display:block;height:100%;background:var(--accent)}.progress.over span{background:var(--red)}
+.budget-row{padding:15px 0;border-bottom:1px solid var(--line)}.budget-row:last-child{border-bottom:0}.budget-row-top{display:flex;justify-content:space-between;gap:10px;font-size:14px}.budget-row p{font-size:12px;color:var(--muted);margin:8px 0 0}
+.month-nav{display:flex;align-items:center;gap:12px;white-space:nowrap;font-size:14px;font-weight:600}.month-nav button{border:1px solid var(--line);border-radius:50%;background:var(--paper-solid);width:34px;height:34px}
+.bottom-nav{display:none}
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+.pay-card{border-radius:18px;background:var(--paper);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column}
+.art{aspect-ratio:1.6;display:flex;align-items:flex-end;justify-content:space-between;padding:12px 14px;color:#fff;font-weight:800}.art .initial{font-size:38px;line-height:1;letter-spacing:-.04em;text-shadow:0 2px 12px rgba(0,0,0,.25)}.art .when{font-size:12px;background:rgba(0,0,0,.28);padding:4px 9px;border-radius:999px;font-weight:700}
+.art-0{background:linear-gradient(135deg,#fa2d58,#ff9f0a)}.art-1{background:linear-gradient(135deg,#5e2bff,#fa2d58)}.art-2{background:linear-gradient(135deg,#0a84ff,#64d2ff)}.art-3{background:linear-gradient(135deg,#30a46c,#0a7c66)}.art-4{background:linear-gradient(135deg,#bf5af2,#ff6482)}.art-5{background:linear-gradient(135deg,#ff375f,#7a1037)}
+.pay-body{padding:14px;display:grid;gap:6px}.pay-body h3{margin:0;font-size:15px;overflow-wrap:anywhere}.pay-amount{font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0}.pay-date{font-size:12px;color:var(--muted);margin:0}.pay-date.late{color:var(--red);font-weight:700}
+.pay-body .check{margin:4px 0;font-size:12px}
+.seg{display:inline-flex;background:var(--soft);border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap}.seg label{position:relative}.seg input{position:absolute;opacity:0;inset:0;cursor:pointer}.seg span{display:block;padding:8px 14px;border-radius:999px;font-size:13px;font-weight:650}.seg input:checked+span{background:var(--paper-solid);box-shadow:0 1px 4px rgba(0,0,0,.15)}.seg input:focus-visible+span{outline:3px solid var(--accent)}
+.walls{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.walls label{position:relative;border-radius:14px;overflow:hidden;border:2px solid var(--line);cursor:pointer}.walls input{position:absolute;opacity:0}.walls input:checked+.sw{outline:3px solid var(--accent);outline-offset:-3px}.walls input:focus-visible+.sw{outline:3px dashed var(--accent)}
+.sw{display:flex;align-items:flex-end;height:64px;padding:7px 9px;font-size:12px;font-weight:700;color:var(--ink);background:var(--bg)}
+.sw-aurora{background:linear-gradient(135deg,#ffb3c6,#c9a7ff)}.sw-ocean{background:linear-gradient(135deg,#7cc4ff,#6be3e8)}.sw-sunset{background:linear-gradient(135deg,#ffc070,#ff7a93)}.sw-forest{background:linear-gradient(135deg,#8fe0a6,#4fae8c)}.sw-photo{background:repeating-linear-gradient(45deg,var(--soft) 0 8px,transparent 8px 16px)}
+.sw-aurora,.sw-ocean,.sw-sunset,.sw-forest{color:#1d1d1f}
+dialog{border:0;padding:0;background:var(--paper-solid);color:var(--ink);border-radius:24px;width:min(600px,calc(100vw - 24px));max-height:90vh;box-shadow:0 30px 90px rgba(0,0,0,.35)}dialog::backdrop{background:rgba(0,0,0,.4);backdrop-filter:blur(6px)}
+.dialog-inner{padding:28px}.dialog-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}.dialog-head h2{font-size:26px;margin:0}
+.close{border:1px solid var(--line);border-radius:50%;width:32px;height:32px;flex-shrink:0;font-size:20px;line-height:1}
+.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;flex-wrap:wrap}
+.wizard-step{font-size:11px;letter-spacing:.08em;font-weight:750;color:var(--muted);margin-bottom:14px}.wizard-progress{display:flex;gap:5px;margin:0 0 22px}.wizard-progress span{height:4px;flex:1;background:var(--line);border-radius:3px}.wizard-progress span.on{background:var(--accent)}
+.wizard-charge{border:1px solid var(--line);padding:14px;border-radius:14px;margin-bottom:12px}.wizard-charge .form-grid{gap:8px}.wizard-charge input,.wizard-charge select{padding:9px}.wizard-charge .field{margin-bottom:0}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:13px 20px;border-radius:14px;font-size:13px;box-shadow:0 10px 35px rgba(0,0,0,.3);z-index:10;max-width:calc(100vw - 30px);width:max-content;line-height:1.5}.toast button{color:#ff8fa8;margin-left:10px;text-decoration:underline;font-weight:700}
+.file{position:relative;overflow:hidden}.file input{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer}
+.big-empty{max-width:620px;margin:50px auto;text-align:center}.big-empty h1{font-size:46px}.big-empty .brand-mark{margin:0 auto 26px;width:64px;height:64px;font-size:42px;border-radius:16px}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.settings-grid .card{margin:0}
+.tab-note{font-size:12px;color:var(--muted);margin:18px 0 0}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+hr.sep{border:0;border-top:1px solid var(--line);margin:20px 0}
+@media(max-width:1100px){main{padding:24px 30px;margin-left:210px}.sidebar{width:210px}.grid{grid-template-columns:1fr}.hero{grid-template-columns:1.2fr 1fr}.hero-main{padding:26px}.hero-side{padding:24px}}
+@media(max-width:720px){.sidebar{display:none}main{margin-left:0;padding:calc(18px + env(safe-area-inset-top)) 18px 110px}.topbar{margin-bottom:22px}
+.mobile-brand{display:flex;font-size:22px;font-weight:800;gap:8px;align-items:center;letter-spacing:-.03em}.mobile-brand .brand-mark{width:28px;height:28px;font-size:19px;border-radius:8px}.top-date{display:none}
+.page-heading{display:block}.page-heading h1{font-size:34px}.page-heading .actions,.page-heading .month-nav{margin-top:16px}
+.hero{grid-template-columns:1fr;border-radius:20px}.hero-main{padding:24px 22px 12px}.balance{font-size:48px}.hero-side{grid-template-columns:1fr 1fr;gap:14px;padding:18px 22px}.hero-side>p{grid-column:1/-1}.hero-side strong{font-size:21px}
+.quick{gap:8px}.quick .button{padding:10px 9px;font-size:12.5px}.card{padding:18px}.stat-grid{gap:8px}.stat{padding:14px 11px}.stat strong{font-size:18px}.stat small{font-size:11px}
+.row{gap:8px}.row-icon{width:32px;height:32px}.row-amount{font-size:13px}.row .button.small{padding:6px 9px;font-size:11px}
+.shelf{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:0 -18px 24px;padding:2px 18px 8px;scrollbar-width:none}.shelf::-webkit-scrollbar{display:none}.pay-card{flex:0 0 72%;max-width:250px;scroll-snap-align:start}
+.bottom-nav{position:fixed;inset:auto 0 0;background:var(--side);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:7px 4px max(10px,env(safe-area-inset-bottom));z-index:5}
+.bottom-nav button{font-size:10px;font-weight:600;display:grid;justify-items:center;gap:4px;color:var(--muted);padding:6px;border-radius:9px;min-width:56px}.bottom-nav button span{font-size:19px;line-height:1}.bottom-nav button.active{color:var(--accent-text)}
+.dialog-inner{padding:22px}.dialog-head h2{font-size:24px}.days{grid-template-columns:repeat(3,1fr)}.settings-grid{grid-template-columns:1fr}.toast{bottom:92px}.form-grid{gap:10px}.toolbar select{flex:1}.rule-card{padding:16px}.rule-actions .button{font-size:11.5px;padding:7px 11px}
+.wizard-charge .form-grid{grid-template-columns:1fr 1fr}.wizard-charge .field:first-child{grid-column:1/-1}.walls{grid-template-columns:repeat(2,1fr)}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+/* Clair: quiet hierarchy, shared controls and compact payment rows. */
+h1,h2,h3,.balance,.brand,.eyebrow,.badge,.wizard-step,.mobile-brand,.stat strong{letter-spacing:0}
+h1{font-size:36px}.ui-icon{width:24px;height:24px;flex-shrink:0;vertical-align:middle}.nav button{min-height:48px;gap:14px}.nav button span{width:24px}.icon-button{width:48px;height:48px;display:grid;place-items:center;border-radius:50%;color:var(--muted)}.icon-button:hover{background:var(--soft)}
+.balance-section{padding:12px 0 28px;border-bottom:1px solid var(--line)}.balance-top{display:flex;align-items:center;justify-content:space-between;gap:12px}.balance-top h1{font-size:24px;font-weight:650;margin:0}.balance{font-size:64px;line-height:1.15;font-weight:750;margin:16px 0;overflow-wrap:anywhere}.balance-summary{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:20px 0 14px}.balance-summary h2{font-size:14px;color:var(--muted);font-weight:500;line-height:1.5;margin:0 0 6px}.balance-summary strong{font-size:26px;font-weight:650;overflow-wrap:anywhere}.balance-section>.help{max-width:690px;margin-bottom:0}.quick{margin:24px 0 0}.quick .button{flex:none;min-width:160px;min-height:48px;font-size:15px}.payments{padding:28px 0}.shelf{display:grid;grid-template-columns:1fr;gap:10px;margin:0 0 16px;overflow:visible;padding:0}.pay-card{border-radius:8px;max-width:none;flex:none;display:block;background:var(--paper-solid)}.payment-detail{display:flex;align-items:center;gap:12px;text-align:left;padding:16px;width:100%;min-height:72px}.payment-detail:hover,.rule-title:hover{background:var(--soft)}.payment-detail .row-info strong{display:block;overflow-wrap:anywhere}.payment-detail .pay-date{display:block;margin-top:5px;line-height:1.5}.pay-amount{font-size:18px;white-space:nowrap}.pay-controls{padding:0 16px 12px 66px}.pay-controls .button{min-height:44px}.card,.rule-card,.stat{border-radius:8px}.settings-links{display:grid;border-block:1px solid var(--line);margin-bottom:28px}.settings-link{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:18px 0;min-height:64px;font-weight:650;border-bottom:1px solid var(--line)}.settings-link:last-child{border:0}.settings-link small{display:block;color:var(--muted);font-weight:400;font-size:13px;margin-top:6px}.rule-title{padding:0;text-align:left;font-weight:700;min-height:44px}.add-options{display:grid;gap:12px}.add-options .button{min-height:52px}.button,.link,.close,.month-nav button{min-height:44px}.close{width:44px}.seg span{min-height:44px}.check,.day label{min-height:44px}.row{flex-wrap:wrap}.row-info{min-width:100px}.row .button{margin-left:auto}.settings-grid .card{overflow-wrap:anywhere}main,#page,.form-grid>*{min-width:0}body[data-wall=photo] main{background:color-mix(in srgb,var(--bg) 94%,transparent)}body[data-wall=photo] .sidebar,body[data-wall=photo] .bottom-nav{background:var(--paper-solid)}
+@media(min-width:721px){.pay-card{display:flex;flex-direction:row;align-items:center}.payment-detail{flex:1;min-width:0}.pay-controls{padding:12px 16px 12px 0;flex-shrink:0}.balance-section{padding-top:24px}}
+@media(max-width:720px){.balance{font-size:48px}.balance-summary{gap:16px}.balance-summary strong{font-size:22px}.balance-summary h2{font-size:13px}.bottom-nav button{flex:1;min-height:54px;min-width:64px;font-size:12px}.bottom-nav button span{font-size:inherit}.bottom-nav{background:var(--paper-solid)}.page-heading h1{font-size:30px}.topbar{margin-bottom:16px}.stat-grid{grid-template-columns:1fr}.dialog-inner{padding:20px}.form-grid{grid-template-columns:1fr}.wizard-charge .form-grid{grid-template-columns:1fr}.wizard-charge .field:first-child{grid-column:auto}.pay-controls{padding-left:16px}.payment-detail{gap:10px}.pay-amount{font-size:16px}.payment-detail .row-icon{display:none}.toast{bottom:calc(90px + env(safe-area-inset-bottom))}main{padding-bottom:calc(110px + env(safe-area-inset-bottom))}.balance-top h1{font-size:22px}.days{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:360px){main{padding-inline:14px}.balance{font-size:42px}.balance-summary{gap:12px}.balance-summary strong{font-size:20px}.payment-detail{flex-wrap:wrap}.payment-detail .row-info{min-width:120px}.dialog-head h2{font-size:22px}.dialog-actions .button{flex:1}.balance-summary h2{min-height:40px}}
+
+/* Clair cards — independent surfaces above a soft album-like backdrop. */
+body{isolation:isolate}
+body[data-wall=plain] .wall{background:radial-gradient(ellipse at 8% 2%,rgba(242,96,145,.26),transparent 58%),radial-gradient(ellipse at 95% 25%,rgba(145,109,221,.24),transparent 60%),radial-gradient(ellipse at 35% 95%,rgba(253,178,143,.20),transparent 65%),var(--bg)}
+body[data-wall=aurora] .wall{background:radial-gradient(ellipse at 5% 0%,rgba(240,62,119,.36),transparent 60%),radial-gradient(ellipse at 95% 22%,rgba(139,92,221,.34),transparent 62%),radial-gradient(ellipse at 40% 100%,rgba(251,164,162,.27),transparent 60%),var(--bg)}
+.balance-section{position:relative;overflow:hidden;padding:28px;border:1px solid rgba(255,255,255,.24);border-radius:28px;background:radial-gradient(ellipse at 100% 0%,rgba(255,135,175,.20),transparent 58%),linear-gradient(135deg,#8d1745,#59235f 72%,#3f285e);box-shadow:0 18px 46px rgba(86,24,64,.19),inset 0 1px 0 rgba(255,255,255,.14);color:#fff}
+.balance-top h1{font-size:17px;font-weight:650;color:#fff}
+.balance-section .balance{font-size:clamp(40px,7vw,68px);font-weight:750;letter-spacing:-.035em;margin:18px 0 12px;line-height:1.12}
+.balance-section .balance.negative,.balance-summary .negative{color:inherit}
+.balance-section .icon-button{color:#fff;background:rgba(255,255,255,.09)}
+.balance-section .icon-button:hover{background:rgba(255,255,255,.17)}
+.balance-section .balance-summary{gap:12px;padding:18px 0 12px}
+.balance-summary>div{padding:16px;border:1px solid rgba(255,255,255,.15);border-radius:18px;background:rgba(0,0,0,.14)}
+.balance-summary h2{color:#f0e5ec;font-size:12px;font-weight:500}
+.balance-summary strong{font-size:clamp(18px,3vw,26px);font-variant-numeric:tabular-nums}
+.balance-section .quick{margin-top:18px}
+.balance-section .quick .button.primary{background:#fff;color:#7f1a43;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.balance-section .help,.balance-section .balance-help{color:#f0e5ec;font-size:12px;line-height:1.55}
+.balance-help summary{display:inline-flex;align-items:center;gap:6px;cursor:pointer;min-height:44px;list-style:none;font-size:12px;color:#f0e5ec}
+.balance-help summary::after{content:'＋';font-size:15px}
+.balance-help[open] summary::after{content:'−'}
+.balance-help p{margin:0 0 10px;max-width:60ch}
+.reserve-horizon{margin:0;color:#f0e5ec;font-size:12px}
+.balance-section :focus-visible{outline-color:#fff}
+.pay-card{border:1px solid var(--line);border-radius:22px;overflow:hidden;background:var(--paper-solid);box-shadow:0 6px 24px rgba(52,24,66,.06)}
+.payment-detail{padding:18px;min-height:88px}
+.payment-detail:hover{background:var(--soft)}
+.pay-controls{padding:0 18px 16px 18px}
+.pay-controls .button{font-size:12px}
+.pay-date{font-size:12px;color:var(--muted)}
+.pay-amount{font-variant-numeric:tabular-nums;font-size:18px}
+.card,.rule-card,.stat{border-radius:20px}
+.payments{padding-top:30px}
+.payments .section-head h2{font-size:23px;font-weight:750}
+.shelf{gap:14px}
+.bottom-nav{box-shadow:0 -5px 24px rgba(30,20,40,.05)}
+.sw-plain{background:linear-gradient(135deg,#f4d8e2,#e3dbf5)}
+body[data-wall=photo] main{background:transparent}
+body[data-wall=photo] .pay-card,body[data-wall=photo] .card{background:var(--paper-solid)}
+@media(min-width:721px){.pay-controls{padding:12px 18px 12px 0}.balance-section{padding:32px}.payments .shelf{grid-template-columns:1fr}}
+@media(max-width:720px){.balance-section{padding:22px 18px;border-radius:25px}.balance-section .balance{font-size:clamp(38px,11vw,56px)}.balance-summary>div{padding:13px 11px;border-radius:16px}.balance-section .balance-summary{gap:9px}.balance-summary h2{font-size:11px}.balance-summary strong{font-size:clamp(17px,5.4vw,23px)}.payment-detail{gap:10px;padding:16px}.pay-amount{font-size:16px}.balance-section .quick .button{width:100%}.pay-controls{padding:0 16px 16px}.payments{padding-top:26px}}
+
+/* Paiements : petites fiches illustrées, par ordre d'échéance. */
+.payments .shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(218px,250px));gap:14px;align-items:stretch;margin-bottom:16px}
+.payments .pay-card{display:flex;flex-direction:column;align-items:stretch;min-width:0;width:100%;max-width:250px;border-radius:22px;background:var(--paper-solid);border:1px solid var(--line);box-shadow:0 6px 22px rgba(22,16,38,.07);overflow:hidden}
+.payments .payment-detail{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;flex:none;width:100%;min-height:178px;gap:22px;padding:16px;color:#fff;text-align:left;overflow:hidden}
+.payments .payment-detail::before{content:"";position:absolute;z-index:-1;width:180px;height:180px;right:-48px;top:-80px;border-radius:50%;background:rgba(255,255,255,.12);box-shadow:-40px 190px 0 30px rgba(255,255,255,.055);pointer-events:none}
+.payments .payment-detail:hover{filter:brightness(1.08)}
+.payments .payment-detail:focus-visible{outline:3px solid #fff;outline-offset:-6px}
+.pay-art-home{background:linear-gradient(135deg,#493d85,#22203e)}
+.pay-art-music{background:linear-gradient(135deg,#c42959,#791932)}
+.pay-art-tv{background:linear-gradient(135deg,#633aa4,#29224d)}
+.pay-art-phone{background:linear-gradient(135deg,#23668b,#193545)}
+.pay-art-transport{background:linear-gradient(135deg,#287867,#183d36)}
+.pay-art-subscription{background:linear-gradient(135deg,#955136,#492e38)}
+.pay-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pay-symbol{display:grid;place-items:center;flex-shrink:0;width:44px;height:44px;border:1px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(255,255,255,.13)}
+.pay-symbol svg{width:26px;height:26px}
+.pay-status{max-width:140px;border-radius:999px;background:rgba(0,0,0,.22);padding:6px 9px;font-size:11px;line-height:1.3;font-weight:650;white-space:normal}
+.pay-heading{display:grid;gap:7px}
+.pay-title{display:block;font-size:18px;line-height:1.2;font-weight:750;letter-spacing:-.02em;overflow-wrap:anywhere}
+.payments .pay-amount{display:block;font-size:25px;font-weight:750;line-height:1.15;letter-spacing:-.035em;white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.payments .pay-controls{display:flex;flex-direction:column;gap:7px;padding:13px 14px 14px;flex:1;min-width:0}
+.payments .pay-date{margin:0;color:var(--ink);font-size:12px;font-weight:600}
+.pay-reminder{display:flex;align-items:center;gap:5px;margin:0;color:var(--muted);font-size:11px;line-height:1.4}
+.pay-reminder .ui-icon{width:13px;height:13px;flex-shrink:0}
+.payments .pay-controls .button{margin-top:auto;width:100%;min-height:44px;padding:10px 8px;font-size:12px;border-radius:12px;background:var(--soft);color:var(--accent-text)}
+.payments .pay-urgent{border-color:var(--accent)}
+.pay-urgent .pay-status{background:rgba(255,255,255,.92);color:#612338}
+@media(max-width:720px){
+ .payments .shelf{display:flex;gap:12px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:0;padding:3px 2px 16px;-webkit-overflow-scrolling:touch}
+ .payments .pay-card{flex:0 0 clamp(210px,68vw,242px);max-width:242px;scroll-snap-align:start}
+ .payments .payment-detail{min-height:170px;padding:15px}
+ .payments .section-head{align-items:center;gap:12px}
+ .payments .section-head h2{font-size:21px}
+}
+
+/* Navigation courte et réglages progressifs */
+.settings-simple{align-items:start;gap:16px}
+.settings-simple .card{margin-bottom:0;padding:22px}
+.settings-simple .install-card{grid-column:1/-1;background:linear-gradient(130deg,var(--soft),var(--paper-solid))}
+.settings-simple h2{font-size:20px;margin-bottom:14px}
+.settings-more{margin:14px 0;color:var(--muted);font-size:13px}
+.settings-more summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;font-weight:600;list-style:none}
+.settings-more summary::before{content:'›';font-size:21px;transition:transform .15s}
+.settings-more[open]>summary::before{transform:rotate(90deg)}
+.settings-more summary::-webkit-details-marker{display:none}
+.settings-more .help{line-height:1.6;margin-top:8px}
+.settings-advanced{margin-top:18px}
+.settings-advanced>summary{min-height:44px;cursor:pointer;font-size:16px;font-weight:650}
+.advanced-content{padding-top:18px}.advanced-content h3{margin-top:22px}
+.install-steps{padding-left:22px;line-height:1.8}
+.detail-amount{font-size:36px;font-weight:750;letter-spacing:-.035em;margin:12px 0}
+.preset-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px}
+.preset-button{display:flex;align-items:center;gap:10px;text-align:left;padding:14px 12px;border:1px solid var(--line);border-radius:16px;background:var(--paper);font-weight:650;min-height:72px}
+.preset-button:hover{background:var(--soft)}
+.preset-symbol{display:grid;place-items:center;background:var(--soft);color:var(--accent-text);border-radius:12px;width:38px;height:38px;flex-shrink:0}
+.preset-symbol svg{width:24px;height:24px}
+.date-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin:20px 0}
+.date-grid label{position:relative;cursor:pointer}
+.date-grid input{position:absolute;inset:0;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.date-grid span{display:grid;place-items:center;min-height:44px;border-radius:12px;border:1px solid var(--line);font-size:14px}
+.date-grid input:checked+span{background:var(--accent);color:#fff;border-color:var(--accent)}
+.date-grid input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.date-grid .last-day{grid-column:4/8}
+.payments .pay-controls{flex:none;padding:12px 14px}
+.payments .payment-detail{min-height:154px;gap:16px}
+#charge-flow-form [name=amount]{font-size:30px;font-weight:700}
+@media(max-width:390px){.date-grid{gap:3px}.preset-button{padding:11px 8px;gap:7px;font-size:13px}.dialog-inner{padding:20px}}
+@media(prefers-reduced-motion:reduce){.settings-more summary::before{transition:none}}
+
+
+/* Lisibilité et adaptation aux petits écrans, y compris Safari iOS. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.balance-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+.balance-summary>div{min-width:0}.balance-summary h2{min-height:0;line-height:1.5}
+.balance-summary strong{overflow-wrap:anywhere}.forecast-result p{font-size:13px;line-height:1.5;margin:8px 0 0;color:rgba(255,255,255,.85)}
+.balance-section .quick{margin-top:20px}
+input,select,textarea{font-size:16px;max-width:100%;min-width:0}
+input[type=date]{min-height:44px;display:block;width:100%}
+dialog{max-height:calc(100vh - 32px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);overflow-y:auto;overscroll-behavior:contain}
+.dialog-inner{min-width:0}.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+main{overflow-wrap:break-word}.topbar>*{min-width:0}
+#welcome{border:0;max-width:none;max-height:none;width:100%;height:100%;height:100dvh;margin:0;border-radius:0;background:radial-gradient(ellipse at 30% 20%,#702951,transparent 65%),#18121e;color:white;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));text-align:center}
+#welcome[open]{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px}
+#welcome .hello{font-family:"Snell Roundhand","Segoe Script",cursive;font-size:clamp(60px,17vw,110px);font-weight:400;line-height:1.3;margin:0;animation:hello-in .65s ease-out both}
+#welcome p{margin:0;line-height:1.7}#welcome .welcome-credit{color:#e6cfdc;font-size:14px}
+#welcome button{margin-top:24px;border:1px solid #ffffff55;border-radius:99px;background:#ffffff16;color:white;padding:12px 24px;min-height:44px;font:inherit}
+@keyframes hello-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:720px){
+main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
+.topbar{gap:12px;align-items:center}.topbar .status{font-size:11px;max-width:48%;line-height:1.4;text-align:right}
+.balance-section{padding:22px 18px}.balance{font-size:clamp(36px,10vw,52px)}
+.balance-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.balance-summary>div{padding:13px 11px}
+.balance-summary h2{font-size:13px;min-height:0}.balance-summary strong{font-size:clamp(18px,5.4vw,23px)}
+.balance-top h1{font-size:22px}.form-grid{grid-template-columns:minmax(0,1fr)}
+.bottom-nav{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.section-head{flex-wrap:wrap;gap:10px}.section-head h2{font-size:24px}
+}
+@media(prefers-reduced-motion:reduce){#welcome .hello{animation:none}}
+
+
+.account-card{max-width:500px;margin:24px auto}.account-card h1{font-size:30px;margin:20px 0 12px}.account-card form{display:grid;gap:16px}.account-card .brand-mark{margin-bottom:12px}
+/* Account recovery uses one focused screen, including on small phones. */
+.bottom-nav:empty{display:none}
+.account-recovery{max-width:520px;margin-inline:auto}
+.account-recovery .brand-mark{margin-bottom:20px}
+.account-recovery h1{font-size:clamp(1.55rem,6vw,2.2rem);line-height:1.2}
+.account-recovery .button.primary{width:100%;min-height:48px}
+.account-recovery>.link{margin-top:18px}
+.account-recovery .recovery-email{overflow-wrap:anywhere;font-weight:650}
+.recovery-actions{display:grid;gap:18px}
+.password-toggle{display:block;margin-top:8px;min-height:44px;text-align:left}
+
+/* Decorative companion; all guidance remains accessible as text. */
+.mascot-pose{display:block;width:126px;aspect-ratio:512/683;background-image:url('assets/mascotte-poses.png');background-size:400% 100%;background-repeat:no-repeat;flex:none}
+.pose-0{background-position:0% 0}.pose-1{background-position:33.3333% 0}.pose-2{background-position:66.6667% 0}.pose-3{background-position:100% 0}
+.mascot-guide{display:flex;align-items:center;gap:18px;margin:16px 0 22px;padding:10px 18px;border:1px solid var(--line);border-radius:24px;background:var(--soft)}
+.mascot-copy{margin:0;line-height:1.5;color:var(--accent-text);font-size:15px;font-weight:600}
+.account-card .mascot-guide{justify-content:center}.account-card .mascot-pose{width:108px}
+#welcome .welcome-content{width:min(100%,420px);margin:auto;display:flex;align-items:center;flex-direction:column;gap:14px}
+#welcome .welcome-brand{font-size:36px;font-weight:850;letter-spacing:-2px}
+#welcome .mascot-pose{width:180px}
+#welcome h1{font-size:clamp(32px,7vw,44px);line-height:1.05;letter-spacing:-1.5px;color:white;margin:0}
+#welcome .welcome-actions{display:grid;gap:4px;width:100%;margin-top:4px}
+#welcome button{margin-top:0;width:100%;font-weight:650}
+#welcome #welcome-skip{background:white;color:#700d3b;border:0}
+#welcome #welcome-login{background:transparent;border:0;text-decoration:underline}
+#welcome button[hidden]{display:none}
+#welcome .welcome-credit{font-size:12px}
+@media(max-width:600px){.mascot-guide{gap:12px;padding:8px 12px}.mascot-pose{width:90px}.mascot-copy{font-size:14px}.account-card{margin:8px auto}.account-card h1{font-size:28px}.account-card:has(input:focus,select:focus,textarea:focus) .mascot-pose,dialog:has(input:focus,select:focus,textarea:focus) .mascot-pose{width:56px}.account-card:has(input:focus,select:focus,textarea:focus) .mascot-guide,dialog:has(input:focus,select:focus,textarea:focus) .mascot-guide{margin:8px 0;gap:10px}}
+@media(max-height:700px){#welcome{overflow-y:auto}#welcome .mascot-pose{width:110px}#welcome .welcome-content{gap:10px}}
+</style>
+</head>
+<body data-wall="plain">
+<div class="wall" aria-hidden="true"></div>
+<div class="shell"><aside class="sidebar"><div class="brand"><span class="brand-mark" aria-hidden="true">c</span>clair</div><p class="tagline">Mon argent, simplement.</p><nav class="nav" aria-label="Navigation principale"></nav><div class="sidebar-foot"><p>Mon espace personnel.</p><button class="link" data-nav="settings">Sauvegarder mes données</button></div></aside>
+<main><header class="topbar"><div class="mobile-brand"><span class="brand-mark" aria-hidden="true">c</span>clair</div><span class="top-date" id="today-label"></span><span class="status"><span class="dot" aria-hidden="true"></span><span id="status-label">Sur cet appareil</span></span></header><div id="alert" role="alert"></div><div id="reminders" aria-live="polite"></div><div id="sync-alert" aria-live="polite"></div><div id="page"></div></main></div>
+<nav class="bottom-nav" aria-label="Navigation mobile"></nav><dialog id="dialog" aria-labelledby="dialog-title"></dialog><div id="toast" role="status" aria-live="polite"></div>
+<dialog id="welcome" aria-labelledby="welcome-title"><div class="welcome-content"><div class="welcome-brand">clair</div><span class="mascot-pose pose-0" aria-hidden="true"></span><h1 id="welcome-title">Ton argent,<br>simplement.</h1><p>Configure tes habitudes une fois.<br>Clair suit tes dépenses répétitives.</p><div class="welcome-actions"><button type="button" id="welcome-skip" autofocus>Créer mon compte</button><button type="button" id="welcome-login">J’ai déjà un compte</button></div><p class="welcome-credit">Développé par El-Hadj</p></div></dialog>
+<script>
+/* Clair — calculs en centimes, dates civiles, aucune requête réseau. */
+(function (root) {
+  'use strict';
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+  const safeId = x => typeof x === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(x) && !['__proto__', 'constructor', 'prototype'].includes(x);
+  const KEY_RE = /^[a-zA-Z0-9_-]+:\d{4}-\d{2}-\d{2}$/;
+  function cents(value) {
+    const s = String(value ?? '').trim().replace(/\s/g, '').replace(',', '.');
+    if (!/^-?\d+(\.\d{1,2})?$/.test(s)) throw Error('Montant invalide : utilisez au maximum deux décimales.');
+    const n = Math.round(Number(s) * 100);
+    if (!Number.isSafeInteger(n) || Math.abs(n) > 10000000000) throw Error('Montant trop élevé.');
+    return n;
+  }
+  function validDate(s) {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const d = new Date(s + 'T12:00:00Z');
+    return Number.isFinite(+d) && d.toISOString().slice(0, 10) === s && s >= '2000-01-01' && s <= '2100-12-31';
+  }
+  function addDays(s, n) { return new Date(+new Date(s + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10); }
+  function daysBetween(a, b) { return Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000); }
+  function today() {
+    const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+    const get = k => p.find(x => x.type === k).value;
+    return `${get('year')}-${get('month')}-${get('day')}`;
+  }
+  function lastDay(month) { const [y, m] = month.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
+  function monthOffset(month, n) { const [y, m] = month.split('-').map(Number); return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7); }
+  const text = x => String(x ?? '').slice(0, 300);
+  const THEMES = ['light', 'dark', 'auto'], WALLPAPERS = ['plain', 'aurora', 'ocean', 'sunset', 'forest', 'photo'], PHOTO_MAX_BYTES = 1800000;
+  const defaultPrefs = () => ({ theme: 'auto', wallpaper: 'plain', photo: null, reminders: true });
+  function normPrefs(p) {
+    p = p && typeof p === 'object' && !Array.isArray(p) ? p : {};
+    const prefix = 'data:image/jpeg;base64,';
+    let photo = null;
+    if (typeof p.photo === 'string' && p.photo.startsWith(prefix) && p.photo.length <= prefix.length + Math.ceil(PHOTO_MAX_BYTES / 3) * 4) {
+      const b = p.photo.slice(prefix.length);
+      if (b.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(b) && Math.floor(b.length * 3 / 4) - (b.match(/=+$/)?.[0].length || 0) <= PHOTO_MAX_BYTES) photo = p.photo;
+    }
+    let wallpaper = WALLPAPERS.includes(p.wallpaper) ? p.wallpaper : 'plain';
+    if (wallpaper === 'photo' && !photo) wallpaper = 'plain';
+    return { theme: THEMES.includes(p.theme) ? p.theme : 'auto', wallpaper, photo, reminders: p.reminders !== false };
+  }
+  const empty = () => ({ version: 3, initialized: false, setupDone: false, openingCents: 0, openingBalanceDate: today(), transactions: [], rules: [], skipped: [], budgets: {}, budgetOverrides: {}, customCategories: [], savingsGoal: 0, fixedExpenses: [], preferences: defaultPrefs() });
+  function moneyMap(o) {
+    const result = {};
+    if (o && typeof o === 'object' && !Array.isArray(o)) for (const [k, v] of Object.entries(o)) {
+      if (safeId(k)) { const n = cents(v); if (n >= 0) result[k] = n / 100; }
+    }
+    return result;
+  }
+  function normalize(input) {
+    if (!input || typeof input !== 'object' || !Array.isArray(input.transactions)) throw Error('Sauvegarde Clair invalide.');
+    if (input.transactions.length > 50000 || (input.rules || []).length > 500 || (Array.isArray(input.skipped) && input.skipped.length > 100000)) throw Error('Sauvegarde trop volumineuse.');
+    const d = empty();
+    const integer = n => { if (!Number.isSafeInteger(n) || Math.abs(n) > 10000000000) throw Error('Montant invalide.'); return n; };
+    d.initialized = Boolean(input.initialized);
+    d.setupDone = Boolean(input.setupDone);
+    d.openingCents = input.version === 3 ? integer(input.openingCents) : cents(input.openingBalance ?? 0);
+    d.openingBalanceDate = validDate(input.openingBalanceDate) ? input.openingBalanceDate : today();
+    const ids = new Set(), keys = new Set();
+    d.transactions = input.transactions.map((t, i) => {
+      if (!t || !validDate(t.date)) throw Error('Une opération contient une date invalide.');
+      const id = safeId(t.id) ? t.id : 'import-' + i;
+      if (ids.has(id)) throw Error('Identifiant d’opération en double.'); ids.add(id);
+      const amountCents = input.version === 3 ? integer(t.amountCents) : cents(t.amount);
+      if (amountCents < 0) throw Error('Une dépense doit avoir un montant positif.');
+      const autoKey = typeof t.autoKey === 'string' && KEY_RE.test(t.autoKey) && validDate(t.autoKey.slice(-10)) ? t.autoKey : null;
+      if (autoKey && keys.has(autoKey)) throw Error('Dépense automatique en double.'); if (autoKey) keys.add(autoKey);
+      return { id, type: t.type === 'income' ? 'income' : 'expense', amountCents, name: text(t.name), categoryId: safeId(t.categoryId) ? t.categoryId : 'autre', date: t.date, note: text(t.note), autoKey, ruleId: safeId(t.ruleId) ? t.ruleId : null, fixedExpenseId: safeId(t.fixedExpenseId) ? t.fixedExpenseId : null, fixedMonth: /^\d{4}-\d{2}$/.test(t.fixedMonth || '') ? t.fixedMonth : null, corrected: Boolean(t.corrected), paymentConfirmed: Boolean(t.paymentConfirmed), confirmedAt: validDate(t.confirmedAt) ? t.confirmedAt : null, earlyPaid: Boolean(t.earlyPaid && autoKey) };
+    });
+    // Anciennes versions : le solde était une opération de revenu.
+    if (input.version !== 3 && input.openingBalance === undefined) {
+      const t = d.transactions.find(t => t.type === 'income' && t.name === 'Solde de départ' && !t.note);
+      if (t) { d.openingCents = t.amountCents; d.openingBalanceDate = t.date; d.transactions = d.transactions.filter(x => x !== t); }
+    }
+    d.customCategories = (Array.isArray(input.customCategories) ? input.customCategories : []).slice(0, 100).filter(x => x && safeId(x.id)).map(x => ({ id: x.id, label: text(x.label), icon: text(x.icon) }));
+    d.budgets = moneyMap(input.budgets);
+    for (const [m, v] of Object.entries(input.budgetOverrides || {})) if (validDate(m + '-01')) d.budgetOverrides[m] = moneyMap(v);
+    d.savingsGoal = Math.max(0, cents(input.savingsGoal ?? 0)) / 100;
+    d.fixedExpenses = (Array.isArray(input.fixedExpenses) ? input.fixedExpenses : []).slice(0, 500).filter(x => x && safeId(x.id)).map(x => ({ id: x.id, name: text(x.name), amount: Math.max(0, cents(x.amount)) / 100, categoryId: safeId(x.categoryId) ? x.categoryId : 'autre', day: Math.max(1, Math.min(31, Math.trunc(Number(x.day) || 1))) }));
+    const rids = new Set();
+    d.rules = (Array.isArray(input.rules) ? input.rules : []).map(r => {
+      if (!r || !safeId(r.id) || rids.has(r.id) || !validDate(r.start) || (r.end && (!validDate(r.end) || r.end < r.start))) throw Error('Règle automatique invalide.');
+      rids.add(r.id);
+      if (!['weekly', 'monthly', 'yearly'].includes(r.kind)) throw Error('Fréquence invalide.');
+      const amounts = r.kind === 'weekly' ? r.amounts : [];
+      if (r.kind === 'weekly' && (!Array.isArray(amounts) || amounts.length !== 7)) throw Error('Jours de repas invalides.');
+      const a = amounts.map(n => integer(n));
+      const amountCents = integer(r.amountCents || 0);
+      if (a.some(n => n < 0) || amountCents < 0) throw Error('Montant de règle invalide.');
+      if (Array.isArray(r.pauses) && r.pauses.length > 500) throw Error('Trop de pauses.');
+      const pauses = (Array.isArray(r.pauses) ? r.pauses : []).map(p => { if (!p || !validDate(p.start) || !validDate(p.end) || p.end < p.start) throw Error('Pause invalide.'); return { start: p.start, end: p.end }; });
+      return { id: r.id, name: text(r.name), categoryId: safeId(r.categoryId) ? r.categoryId : 'autre', kind: r.kind, start: r.start, end: r.end || null, amounts: a, amountCents, day: r.day === 'last' ? 'last' : Math.max(1, Math.min(31, Math.trunc(Number(r.day) || 1))), month: Math.max(1, Math.min(12, Math.trunc(Number(r.month) || 1))), pauses, originFixedId: safeId(r.originFixedId) ? r.originFixedId : null, reminderEnabled: r.kind === 'weekly' ? false : r.reminderEnabled !== false };
+    });
+    d.skipped = [...new Set((Array.isArray(input.skipped) ? input.skipped : []).filter(x => typeof x === 'string' && KEY_RE.test(x)))];
+    d.preferences = normPrefs(input.preferences);
+    return d;
+  }
+  function dueAmount(r, date) {
+    if (date < r.start || (r.end && date > r.end) || r.pauses.some(p => date >= p.start && date <= p.end)) return 0;
+    if (r.kind === 'weekly') return r.amounts[new Date(date + 'T12:00:00Z').getUTCDay()] || 0;
+    const day = r.day === 'last' ? lastDay(date.slice(0, 7)) : Math.min(r.day, lastDay(date.slice(0, 7)));
+    if (Number(date.slice(8)) !== day || (r.kind === 'yearly' && Number(date.slice(5, 7)) !== r.month)) return 0;
+    return r.amountCents;
+  }
+  function occurrences(d, from, through) {
+    if (!validDate(from) || !validDate(through) || from > through) return [];
+    if (daysBetween(from, through) > 40000) throw Error('Période de calcul trop longue.');
+    const skipped = new Set(d.skipped), recorded = new Set(d.transactions.map(t => t.autoKey).filter(Boolean));
+    const paid = new Set(d.transactions.filter(t => t.fixedExpenseId).map(t => t.fixedExpenseId + ':' + (t.fixedMonth || t.date.slice(0, 7))));
+    const out = [];
+    for (const r of d.rules) {
+      const first = from > r.start ? from : r.start;
+      const last = r.end && r.end < through ? r.end : through;
+      for (let date = first; date <= last; date = addDays(date, 1)) {
+        const amountCents = dueAmount(r, date), key = r.id + ':' + date;
+        if (!amountCents || skipped.has(key) || recorded.has(key) || (r.originFixedId && paid.has(r.originFixedId + ':' + date.slice(0, 7)))) continue;
+        out.push({ id: 'auto-' + r.id + '-' + date, type: 'expense', amountCents, date, name: r.name, categoryId: r.categoryId, note: '', autoKey: key, ruleId: r.id, fixedExpenseId: r.originFixedId || null, fixedMonth: r.originFixedId ? date.slice(0, 7) : null, corrected: false, paymentConfirmed: false, confirmedAt: null, earlyPaid: false });
+        if (out.length > 50000) throw Error('Trop de dépenses à rattraper. Réduis le nombre de règles ou avance leur date de début.');
+      }
+    }
+    return out.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  }
+  function sync(d, date = today()) {
+    if (!d.initialized || !d.setupDone) return 0;
+    const pending = occurrences(d, d.openingBalanceDate, date);
+    if (d.transactions.length + pending.length > 50000) throw Error('La limite de 50 000 opérations est atteinte. Exporte tes données avant de démarrer un nouveau suivi.');
+    d.transactions.push(...pending);
+    return pending.length;
+  }
+  function balance(d, date = today()) { return d.transactions.filter(t => t.date <= date).reduce((n, t) => n + (t.type === 'income' ? t.amountCents : -t.amountCents), d.openingCents); }
+  function skip(d, id) {
+    const t = d.transactions.find(t => t.id === id);
+    if (t?.autoKey && !d.skipped.includes(t.autoKey)) d.skipped.push(t.autoKey);
+    // Une charge payée dans l'ancienne version ne doit pas revenir après annulation.
+    if (t?.fixedExpenseId && !t.autoKey) {
+      const m = t.fixedMonth || t.date.slice(0, 7);
+      for (const r of d.rules.filter(r => r.originFixedId === t.fixedExpenseId)) {
+        const day = r.day === 'last' ? lastDay(m) : Math.min(r.day, lastDay(m));
+        const date = m + '-' + String(day).padStart(2, '0');
+        const key = r.id + ':' + date;
+        if (dueAmount(r, date) && !d.skipped.includes(key)) d.skipped.push(key);
+      }
+    }
+    d.transactions = d.transactions.filter(t => t.id !== id);
+    return t;
+  }
+  function reserve(d, date = today()) {
+    const end = date.slice(0, 7) + '-' + lastDay(date.slice(0, 7));
+    const predicted = occurrences(d, addDays(date, 1), end);
+    const scheduled = d.transactions.filter(t => t.date > date && t.date <= end);
+    return { predicted, scheduled, cents: predicted.reduce((n, t) => n + t.amountCents, 0) + scheduled.filter(t => t.type === 'expense').reduce((n, t) => n + t.amountCents, 0) };
+  }
+  /* Échéances mensuelles/annuelles : prochaine occurrence par règle + charges passées non confirmées (31 j). */
+  function upcoming(d, date = today(), horizon = 62) {
+    const rules = new Map(d.rules.filter(r => r.kind !== 'weekly').map(r => [r.id, r]));
+    const future = occurrences({ ...d, rules: [...rules.values()] }, addDays(date, 1), addDays(date, horizon));
+    const seen = new Set(), next = [];
+    for (const o of future) if (!seen.has(o.ruleId)) { seen.add(o.ruleId); next.push({ ...o, status: 'future' }); }
+    const past = d.transactions.filter(t => t.type === 'expense' && t.autoKey && rules.has(t.ruleId) && !t.paymentConfirmed && t.date <= date && t.date >= addDays(date, -31)).map(t => ({ ...t, status: t.date < date ? 'unconfirmed' : 'today' }));
+    return [...past, ...next].map(o => ({ ...o, dueDate: o.autoKey.slice(-10), days: daysBetween(date, o.autoKey.slice(-10)), reminderEnabled: rules.get(o.ruleId).reminderEnabled })).sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.id.localeCompare(b.id));
+  }
+  const reminderDate = due => addDays(due, -2);
+  /* Données minimales pour le serveur de rappels : uniquement les règles choisies. */
+  function pushPayload(d, date = today()) {
+    if (!d.preferences.reminders) return { rules: [] };
+    const out = [];
+    for (const r of d.rules.filter(r => r.kind !== 'weekly' && r.reminderEnabled && (!r.end || r.end > date)).slice(0, 100)) {
+      const dueDates = occurrences({ ...d, rules: [r] }, addDays(date, 1), addDays(date, 400)).map(o => o.date).slice(0, 24);
+      if (dueDates.length) out.push({ ruleId: r.id, name: r.name.slice(0, 80), amountCents: r.amountCents, dueDates });
+    }
+    return { rules: out };
+  }
+  /* Calendrier iCalendar (RFC 5545) : 12 mois, rappel 2 jours avant, 09:00 Europe/Paris. */
+  function icsEscape(s) { return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+  function icsFold(line) {
+    const enc = new TextEncoder(); let out = '', bytes = 0;
+    for (const ch of line) { const b = enc.encode(ch).length; if (bytes + b > 75) { out += '\r\n '; bytes = 1; } out += ch; bytes += b; }
+    return out;
+  }
+  function ics(d, date = today(), now = new Date(), fmt = c => (c / 100).toFixed(2).replace('.', ',') + ' €') {
+    const end = addDays(monthOffset(date.slice(0, 7), 12) + '-01', -1);
+    const rules = d.rules.filter(r => r.kind !== 'weekly');
+    const occ = occurrences({ ...d, rules }, addDays(date, 1), end);
+    const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Clair//Echeances//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Clair — échéances', 'X-WR-TIMEZONE:Europe/Paris',
+      'BEGIN:VTIMEZONE', 'TZID:Europe/Paris', 'BEGIN:DAYLIGHT', 'TZOFFSETFROM:+0100', 'TZOFFSETTO:+0200', 'TZNAME:CEST', 'DTSTART:19700329T020000', 'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU', 'END:DAYLIGHT', 'BEGIN:STANDARD', 'TZOFFSETFROM:+0200', 'TZOFFSETTO:+0100', 'TZNAME:CET', 'DTSTART:19701025T030000', 'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU', 'END:STANDARD', 'END:VTIMEZONE'];
+    for (const o of occ) {
+      const ds = o.date.replace(/-/g, '');
+      L.push('BEGIN:VEVENT', 'UID:' + o.autoKey.replace(':', '-') + '@clair.local', 'DTSTAMP:' + stamp, 'DTSTART;TZID=Europe/Paris:' + ds + 'T090000', 'DURATION:PT15M',
+        'SUMMARY:' + icsEscape(o.name + ' — ' + fmt(o.amountCents)), 'DESCRIPTION:' + icsEscape('Échéance prévue dans Clair (prévision, pas une confirmation bancaire).'), 'TRANSP:TRANSPARENT',
+        'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:-P2D', 'DESCRIPTION:' + icsEscape(o.name + ' dans 2 jours — ' + fmt(o.amountCents)), 'END:VALARM', 'END:VEVENT');
+    }
+    L.push('END:VCALENDAR');
+    return { text: L.map(icsFold).join('\r\n') + '\r\n', count: occ.length };
+  }
+  const csvCell = x => '"' + String(x ?? '').replace(/"/g, '""').replace(/^[\s]*[=+@-]/, match => "'" + match) + '"';
+  root.ClairEngine = { csvCell, own, safeId, cents, validDate, addDays, daysBetween, today, lastDay, monthOffset, empty, normalize, normPrefs, dueAmount, occurrences, sync, balance, skip, reserve, upcoming, reminderDate, pushPayload, ics, icsFold, icsEscape, PHOTO_MAX_BYTES };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* @supabase/supabase-js 2.102.0 — MIT license. Vendored for offline startup. */
+var supabase=(function(e){function t(e,t){var n={};for(var r in e)Object.prototype.hasOwnProperty.call(e,r)&&t.indexOf(r)<0&&(n[r]=e[r]);if(e!=null&&typeof Object.getOwnPropertySymbols==`function`)for(var i=0,r=Object.getOwnPropertySymbols(e);i<r.length;i++)t.indexOf(r[i])<0&&Object.prototype.propertyIsEnumerable.call(e,r[i])&&(n[r[i]]=e[r[i]]);return n}function n(e,t,n,r){function i(e){return e instanceof n?e:new n(function(t){t(e)})}return new(n||=Promise)(function(n,a){function o(e){try{c(r.next(e))}catch(e){a(e)}}function s(e){try{c(r.throw(e))}catch(e){a(e)}}function c(e){e.done?n(e.value):i(e.value).then(o,s)}c((r=r.apply(e,t||[])).next())})}let r=e=>e?(...t)=>e(...t):(...e)=>fetch(...e);var i=class extends Error{constructor(e,t=`FunctionsError`,n){super(e),this.name=t,this.context=n}},a=class extends i{constructor(e){super(`Failed to send a request to the Edge Function`,`FunctionsFetchError`,e)}},o=class extends i{constructor(e){super(`Relay Error invoking the Edge Function`,`FunctionsRelayError`,e)}},s=class extends i{constructor(e){super(`Edge Function returned a non-2xx status code`,`FunctionsHttpError`,e)}},c;(function(e){e.Any=`any`,e.ApNortheast1=`ap-northeast-1`,e.ApNortheast2=`ap-northeast-2`,e.ApSouth1=`ap-south-1`,e.ApSoutheast1=`ap-southeast-1`,e.ApSoutheast2=`ap-southeast-2`,e.CaCentral1=`ca-central-1`,e.EuCentral1=`eu-central-1`,e.EuWest1=`eu-west-1`,e.EuWest2=`eu-west-2`,e.EuWest3=`eu-west-3`,e.SaEast1=`sa-east-1`,e.UsEast1=`us-east-1`,e.UsWest1=`us-west-1`,e.UsWest2=`us-west-2`})(c||={});var l=class{constructor(e,{headers:t={},customFetch:n,region:i=c.Any}={}){this.url=e,this.headers=t,this.region=i,this.fetch=r(n)}setAuth(e){this.headers.Authorization=`Bearer ${e}`}invoke(e){return n(this,arguments,void 0,function*(e,t={}){let n,r;try{let{headers:i,method:c,body:l,signal:u,timeout:d}=t,f={},{region:p}=t;p||=this.region;let m=new URL(`${this.url}/${e}`);p&&p!==`any`&&(f[`x-region`]=p,m.searchParams.set(`forceFunctionRegion`,p));let h;l&&(i&&!Object.prototype.hasOwnProperty.call(i,`Content-Type`)||!i)?typeof Blob<`u`&&l instanceof Blob||l instanceof ArrayBuffer?(f[`Content-Type`]=`application/octet-stream`,h=l):typeof l==`string`?(f[`Content-Type`]=`text/plain`,h=l):typeof FormData<`u`&&l instanceof FormData?h=l:(f[`Content-Type`]=`application/json`,h=JSON.stringify(l)):h=l&&typeof l!=`string`&&!(typeof Blob<`u`&&l instanceof Blob)&&!(l instanceof ArrayBuffer)&&!(typeof FormData<`u`&&l instanceof FormData)?JSON.stringify(l):l;let ee=u;d&&(r=new AbortController,n=setTimeout(()=>r.abort(),d),u?(ee=r.signal,u.addEventListener(`abort`,()=>r.abort())):ee=r.signal);let g=yield this.fetch(m.toString(),{method:c||`POST`,headers:Object.assign(Object.assign(Object.assign({},f),this.headers),i),body:h,signal:ee}).catch(e=>{throw new a(e)}),te=g.headers.get(`x-relay-error`);if(te&&te===`true`)throw new o(g);if(!g.ok)throw new s(g);let _=(g.headers.get(`Content-Type`)??`text/plain`).split(`;`)[0].trim(),ne;return ne=_===`application/json`?yield g.json():_===`application/octet-stream`||_===`application/pdf`?yield g.blob():_===`text/event-stream`?g:_===`multipart/form-data`?yield g.formData():yield g.text(),{data:ne,error:null,response:g}}catch(e){return{data:null,error:e,response:e instanceof s||e instanceof o?e.context:void 0}}finally{n&&clearTimeout(n)}})}};let u=e=>Math.min(1e3*2**e,3e4),d=[520,503],f=[`GET`,`HEAD`,`OPTIONS`];var p=class extends Error{constructor(e){super(e.message),this.name=`PostgrestError`,this.details=e.details,this.hint=e.hint,this.code=e.code}toJSON(){return{name:this.name,message:this.message,details:this.details,hint:this.hint,code:this.code}}};function m(e,t){return new Promise(n=>{if(t?.aborted){n();return}let r=setTimeout(()=>{t?.removeEventListener(`abort`,i),n()},e);function i(){clearTimeout(r),n()}t?.addEventListener(`abort`,i)})}function h(e,t,n,r){return!(!r||n>=3||!f.includes(e)||!d.includes(t))}var ee=class{constructor(e){this.shouldThrowOnError=!1,this.retryEnabled=!0,this.method=e.method,this.url=e.url,this.headers=new Headers(e.headers),this.schema=e.schema,this.body=e.body,this.shouldThrowOnError=e.shouldThrowOnError??!1,this.signal=e.signal,this.isMaybeSingle=e.isMaybeSingle??!1,this.urlLengthLimit=e.urlLengthLimit??8e3,this.retryEnabled=e.retry??!0,e.fetch?this.fetch=e.fetch:this.fetch=fetch}throwOnError(){return this.shouldThrowOnError=!0,this}setHeader(e,t){return this.headers=new Headers(this.headers),this.headers.set(e,t),this}retry(e){return this.retryEnabled=e,this}then(e,t){var n=this;this.schema===void 0||([`GET`,`HEAD`].includes(this.method)?this.headers.set(`Accept-Profile`,this.schema):this.headers.set(`Content-Profile`,this.schema)),this.method!==`GET`&&this.method!==`HEAD`&&this.headers.set(`Content-Type`,`application/json`);let r=this.fetch,i=(async()=>{let e=0;for(;;){let t=new Headers(n.headers);e>0&&t.set(`X-Retry-Count`,String(e));let i;try{i=await r(n.url.toString(),{method:n.method,headers:t,body:JSON.stringify(n.body),signal:n.signal})}catch(t){if(t?.name===`AbortError`||t?.code===`ABORT_ERR`||!f.includes(n.method))throw t;if(n.retryEnabled&&e<3){let t=u(e);e++,await m(t,n.signal);continue}throw t}if(h(n.method,i.status,e,n.retryEnabled)){let t=i.headers?.get(`Retry-After`)??null,r=t===null?u(e):Math.max(0,parseInt(t,10)||0)*1e3;await i.text(),e++,await m(r,n.signal);continue}return await n.processResponse(i)}})();return this.shouldThrowOnError||(i=i.catch(e=>{let t=``,n=``,r=``,i=e?.cause;if(i){let n=i?.message??``,r=i?.code??``;t=`${e?.name??`FetchError`}: ${e?.message}`,t+=`\n\nCaused by: ${i?.name??`Error`}: ${n}`,r&&(t+=` (${r})`),i?.stack&&(t+=`\n${i.stack}`)}else t=e?.stack??``;let a=this.url.toString().length;return e?.name===`AbortError`||e?.code===`ABORT_ERR`?(r=``,n=`Request was aborted (timeout or manual cancellation)`,a>this.urlLengthLimit&&(n+=`. Note: Your request URL is ${a} characters, which may exceed server limits. If selecting many fields, consider using views. If filtering with large arrays (e.g., .in('id', [many IDs])), consider using an RPC function to pass values server-side.`)):(i?.name===`HeadersOverflowError`||i?.code===`UND_ERR_HEADERS_OVERFLOW`)&&(r=``,n=`HTTP headers exceeded server limits (typically 16KB)`,a>this.urlLengthLimit&&(n+=`. Your request URL is ${a} characters. If selecting many fields, consider using views. If filtering with large arrays (e.g., .in('id', [200+ IDs])), consider using an RPC function instead.`)),{success:!1,error:{message:`${e?.name??`FetchError`}: ${e?.message}`,details:t,hint:n,code:r},data:null,count:null,status:0,statusText:``}})),i.then(e,t)}async processResponse(e){var t=this;let n=null,r=null,i=null,a=e.status,o=e.statusText;if(e.ok){if(t.method!==`HEAD`){let n=await e.text();n===``||(r=t.headers.get(`Accept`)===`text/csv`||t.headers.get(`Accept`)&&t.headers.get(`Accept`)?.includes(`application/vnd.pgrst.plan+text`)?n:JSON.parse(n))}let s=t.headers.get(`Prefer`)?.match(/count=(exact|planned|estimated)/),c=e.headers.get(`content-range`)?.split(`/`);s&&c&&c.length>1&&(i=parseInt(c[1])),t.isMaybeSingle&&Array.isArray(r)&&(r.length>1?(n={code:`PGRST116`,details:`Results contain ${r.length} rows, application/vnd.pgrst.object+json requires 1 row`,hint:null,message:`JSON object requested, multiple (or no) rows returned`},r=null,i=null,a=406,o=`Not Acceptable`):r=r.length===1?r[0]:null)}else{let i=await e.text();try{n=JSON.parse(i),Array.isArray(n)&&e.status===404&&(r=[],n=null,a=200,o=`OK`)}catch{e.status===404&&i===``?(a=204,o=`No Content`):n={message:i}}if(n&&t.shouldThrowOnError)throw new p(n)}return{success:n===null,error:n,data:r,count:i,status:a,statusText:o}}returns(){return this}overrideTypes(){return this}},g=class extends ee{select(e){let t=!1,n=(e??`*`).split(``).map(e=>/\s/.test(e)&&!t?``:(e===`"`&&(t=!t),e)).join(``);return this.url.searchParams.set(`select`,n),this.headers.append(`Prefer`,`return=representation`),this}order(e,{ascending:t=!0,nullsFirst:n,foreignTable:r,referencedTable:i=r}={}){let a=i?`${i}.order`:`order`,o=this.url.searchParams.get(a);return this.url.searchParams.set(a,`${o?`${o},`:``}${e}.${t?`asc`:`desc`}${n===void 0?``:n?`.nullsfirst`:`.nullslast`}`),this}limit(e,{foreignTable:t,referencedTable:n=t}={}){let r=n===void 0?`limit`:`${n}.limit`;return this.url.searchParams.set(r,`${e}`),this}range(e,t,{foreignTable:n,referencedTable:r=n}={}){let i=r===void 0?`offset`:`${r}.offset`,a=r===void 0?`limit`:`${r}.limit`;return this.url.searchParams.set(i,`${e}`),this.url.searchParams.set(a,`${t-e+1}`),this}abortSignal(e){return this.signal=e,this}single(){return this.headers.set(`Accept`,`application/vnd.pgrst.object+json`),this}maybeSingle(){return this.isMaybeSingle=!0,this}csv(){return this.headers.set(`Accept`,`text/csv`),this}geojson(){return this.headers.set(`Accept`,`application/geo+json`),this}explain({analyze:e=!1,verbose:t=!1,settings:n=!1,buffers:r=!1,wal:i=!1,format:a=`text`}={}){let o=[e?`analyze`:null,t?`verbose`:null,n?`settings`:null,r?`buffers`:null,i?`wal`:null].filter(Boolean).join(`|`),s=this.headers.get(`Accept`)??`application/json`;return this.headers.set(`Accept`,`application/vnd.pgrst.plan+${a}; for="${s}"; options=${o};`),this}rollback(){return this.headers.append(`Prefer`,`tx=rollback`),this}returns(){return this}maxAffected(e){return this.headers.append(`Prefer`,`handling=strict`),this.headers.append(`Prefer`,`max-affected=${e}`),this}};let te=RegExp(`[,()]`);var _=class extends g{eq(e,t){return this.url.searchParams.append(e,`eq.${t}`),this}neq(e,t){return this.url.searchParams.append(e,`neq.${t}`),this}gt(e,t){return this.url.searchParams.append(e,`gt.${t}`),this}gte(e,t){return this.url.searchParams.append(e,`gte.${t}`),this}lt(e,t){return this.url.searchParams.append(e,`lt.${t}`),this}lte(e,t){return this.url.searchParams.append(e,`lte.${t}`),this}like(e,t){return this.url.searchParams.append(e,`like.${t}`),this}likeAllOf(e,t){return this.url.searchParams.append(e,`like(all).{${t.join(`,`)}}`),this}likeAnyOf(e,t){return this.url.searchParams.append(e,`like(any).{${t.join(`,`)}}`),this}ilike(e,t){return this.url.searchParams.append(e,`ilike.${t}`),this}ilikeAllOf(e,t){return this.url.searchParams.append(e,`ilike(all).{${t.join(`,`)}}`),this}ilikeAnyOf(e,t){return this.url.searchParams.append(e,`ilike(any).{${t.join(`,`)}}`),this}regexMatch(e,t){return this.url.searchParams.append(e,`match.${t}`),this}regexIMatch(e,t){return this.url.searchParams.append(e,`imatch.${t}`),this}is(e,t){return this.url.searchParams.append(e,`is.${t}`),this}isDistinct(e,t){return this.url.searchParams.append(e,`isdistinct.${t}`),this}in(e,t){let n=Array.from(new Set(t)).map(e=>typeof e==`string`&&te.test(e)?`"${e}"`:`${e}`).join(`,`);return this.url.searchParams.append(e,`in.(${n})`),this}notIn(e,t){let n=Array.from(new Set(t)).map(e=>typeof e==`string`&&te.test(e)?`"${e}"`:`${e}`).join(`,`);return this.url.searchParams.append(e,`not.in.(${n})`),this}contains(e,t){return typeof t==`string`?this.url.searchParams.append(e,`cs.${t}`):Array.isArray(t)?this.url.searchParams.append(e,`cs.{${t.join(`,`)}}`):this.url.searchParams.append(e,`cs.${JSON.stringify(t)}`),this}containedBy(e,t){return typeof t==`string`?this.url.searchParams.append(e,`cd.${t}`):Array.isArray(t)?this.url.searchParams.append(e,`cd.{${t.join(`,`)}}`):this.url.searchParams.append(e,`cd.${JSON.stringify(t)}`),this}rangeGt(e,t){return this.url.searchParams.append(e,`sr.${t}`),this}rangeGte(e,t){return this.url.searchParams.append(e,`nxl.${t}`),this}rangeLt(e,t){return this.url.searchParams.append(e,`sl.${t}`),this}rangeLte(e,t){return this.url.searchParams.append(e,`nxr.${t}`),this}rangeAdjacent(e,t){return this.url.searchParams.append(e,`adj.${t}`),this}overlaps(e,t){return typeof t==`string`?this.url.searchParams.append(e,`ov.${t}`):this.url.searchParams.append(e,`ov.{${t.join(`,`)}}`),this}textSearch(e,t,{config:n,type:r}={}){let i=``;r===`plain`?i=`pl`:r===`phrase`?i=`ph`:r===`websearch`&&(i=`w`);let a=n===void 0?``:`(${n})`;return this.url.searchParams.append(e,`${i}fts${a}.${t}`),this}match(e){return Object.entries(e).filter(([e,t])=>t!==void 0).forEach(([e,t])=>{this.url.searchParams.append(e,`eq.${t}`)}),this}not(e,t,n){return this.url.searchParams.append(e,`not.${t}.${n}`),this}or(e,{foreignTable:t,referencedTable:n=t}={}){let r=n?`${n}.or`:`or`;return this.url.searchParams.append(r,`(${e})`),this}filter(e,t,n){return this.url.searchParams.append(e,`${t}.${n}`),this}},ne=class{constructor(e,{headers:t={},schema:n,fetch:r,urlLengthLimit:i=8e3,retry:a}){this.url=e,this.headers=new Headers(t),this.schema=n,this.fetch=r,this.urlLengthLimit=i,this.retry=a}cloneRequestState(){return{url:new URL(this.url.toString()),headers:new Headers(this.headers)}}select(e,t){let{head:n=!1,count:r}=t??{},i=n?`HEAD`:`GET`,a=!1,o=(e??`*`).split(``).map(e=>/\s/.test(e)&&!a?``:(e===`"`&&(a=!a),e)).join(``),{url:s,headers:c}=this.cloneRequestState();return s.searchParams.set(`select`,o),r&&c.append(`Prefer`,`count=${r}`),new _({method:i,url:s,headers:c,schema:this.schema,fetch:this.fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}insert(e,{count:t,defaultToNull:n=!0}={}){let{url:r,headers:i}=this.cloneRequestState();if(t&&i.append(`Prefer`,`count=${t}`),n||i.append(`Prefer`,`missing=default`),Array.isArray(e)){let t=e.reduce((e,t)=>e.concat(Object.keys(t)),[]);if(t.length>0){let e=[...new Set(t)].map(e=>`"${e}"`);r.searchParams.set(`columns`,e.join(`,`))}}return new _({method:`POST`,url:r,headers:i,schema:this.schema,body:e,fetch:this.fetch??fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}upsert(e,{onConflict:t,ignoreDuplicates:n=!1,count:r,defaultToNull:i=!0}={}){let{url:a,headers:o}=this.cloneRequestState();if(o.append(`Prefer`,`resolution=${n?`ignore`:`merge`}-duplicates`),t!==void 0&&a.searchParams.set(`on_conflict`,t),r&&o.append(`Prefer`,`count=${r}`),i||o.append(`Prefer`,`missing=default`),Array.isArray(e)){let t=e.reduce((e,t)=>e.concat(Object.keys(t)),[]);if(t.length>0){let e=[...new Set(t)].map(e=>`"${e}"`);a.searchParams.set(`columns`,e.join(`,`))}}return new _({method:`POST`,url:a,headers:o,schema:this.schema,body:e,fetch:this.fetch??fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}update(e,{count:t}={}){let{url:n,headers:r}=this.cloneRequestState();return t&&r.append(`Prefer`,`count=${t}`),new _({method:`PATCH`,url:n,headers:r,schema:this.schema,body:e,fetch:this.fetch??fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}delete({count:e}={}){let{url:t,headers:n}=this.cloneRequestState();return e&&n.append(`Prefer`,`count=${e}`),new _({method:`DELETE`,url:t,headers:n,schema:this.schema,fetch:this.fetch??fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}};function re(e){"@babel/helpers - typeof";return re=typeof Symbol==`function`&&typeof Symbol.iterator==`symbol`?function(e){return typeof e}:function(e){return e&&typeof Symbol==`function`&&e.constructor===Symbol&&e!==Symbol.prototype?`symbol`:typeof e},re(e)}function ie(e,t){if(re(e)!=`object`||!e)return e;var n=e[Symbol.toPrimitive];if(n!==void 0){var r=n.call(e,t||`default`);if(re(r)!=`object`)return r;throw TypeError(`@@toPrimitive must return a primitive value.`)}return(t===`string`?String:Number)(e)}function ae(e){var t=ie(e,`string`);return re(t)==`symbol`?t:t+``}function oe(e,t,n){return(t=ae(t))in e?Object.defineProperty(e,t,{value:n,enumerable:!0,configurable:!0,writable:!0}):e[t]=n,e}function se(e,t){var n=Object.keys(e);if(Object.getOwnPropertySymbols){var r=Object.getOwnPropertySymbols(e);t&&(r=r.filter(function(t){return Object.getOwnPropertyDescriptor(e,t).enumerable})),n.push.apply(n,r)}return n}function ce(e){for(var t=1;t<arguments.length;t++){var n=arguments[t]==null?{}:arguments[t];t%2?se(Object(n),!0).forEach(function(t){oe(e,t,n[t])}):Object.getOwnPropertyDescriptors?Object.defineProperties(e,Object.getOwnPropertyDescriptors(n)):se(Object(n)).forEach(function(t){Object.defineProperty(e,t,Object.getOwnPropertyDescriptor(n,t))})}return e}var le=class e{constructor(e,{headers:t={},schema:n,fetch:r,timeout:i,urlLengthLimit:a=8e3,retry:o}={}){this.url=e,this.headers=new Headers(t),this.schemaName=n,this.urlLengthLimit=a;let s=r??globalThis.fetch;i!==void 0&&i>0?this.fetch=(e,t)=>{let n=new AbortController,r=setTimeout(()=>n.abort(),i),a=t?.signal;if(a){if(a.aborted)return clearTimeout(r),s(e,t);let i=()=>{clearTimeout(r),n.abort()};return a.addEventListener(`abort`,i,{once:!0}),s(e,ce(ce({},t),{},{signal:n.signal})).finally(()=>{clearTimeout(r),a.removeEventListener(`abort`,i)})}return s(e,ce(ce({},t),{},{signal:n.signal})).finally(()=>clearTimeout(r))}:this.fetch=s,this.retry=o}from(e){if(!e||typeof e!=`string`||e.trim()===``)throw Error(`Invalid relation name: relation must be a non-empty string.`);return new ne(new URL(`${this.url}/${e}`),{headers:new Headers(this.headers),schema:this.schemaName,fetch:this.fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}schema(t){return new e(this.url,{headers:this.headers,schema:t,fetch:this.fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}rpc(e,t={},{head:n=!1,get:r=!1,count:i}={}){let a,o=new URL(`${this.url}/rpc/${e}`),s,c=e=>typeof e==`object`&&!!e&&(!Array.isArray(e)||e.some(c)),l=n&&Object.values(t).some(c);l?(a=`POST`,s=t):n||r?(a=n?`HEAD`:`GET`,Object.entries(t).filter(([e,t])=>t!==void 0).map(([e,t])=>[e,Array.isArray(t)?`{${t.join(`,`)}}`:`${t}`]).forEach(([e,t])=>{o.searchParams.append(e,t)})):(a=`POST`,s=t);let u=new Headers(this.headers);return l?u.set(`Prefer`,i?`count=${i},return=minimal`:`return=minimal`):i&&u.set(`Prefer`,`count=${i}`),new _({method:a,url:o,headers:u,schema:this.schemaName,body:s,fetch:this.fetch??fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}},ue=class{constructor(){}static detectEnvironment(){if(typeof WebSocket<`u`)return{type:`native`,constructor:WebSocket};if(typeof globalThis<`u`&&globalThis.WebSocket!==void 0)return{type:`native`,constructor:globalThis.WebSocket};if(typeof global<`u`&&global.WebSocket!==void 0)return{type:`native`,constructor:global.WebSocket};if(typeof globalThis<`u`&&globalThis.WebSocketPair!==void 0&&globalThis.WebSocket===void 0)return{type:`cloudflare`,error:`Cloudflare Workers detected. WebSocket clients are not supported in Cloudflare Workers.`,workaround:`Use Cloudflare Workers WebSocket API for server-side WebSocket handling, or deploy to a different runtime.`};if(typeof globalThis<`u`&&globalThis.EdgeRuntime||typeof navigator<`u`&&navigator.userAgent?.includes(`Vercel-Edge`))return{type:`unsupported`,error:`Edge runtime detected (Vercel Edge/Netlify Edge). WebSockets are not supported in edge functions.`,workaround:`Use serverless functions or a different deployment target for WebSocket functionality.`};let e=globalThis.process;if(e){let t=e.versions;if(t&&t.node){let e=t.node,n=parseInt(e.replace(/^v/,``).split(`.`)[0]);return n>=22?globalThis.WebSocket===void 0?{type:`unsupported`,error:`Node.js ${n} detected but native WebSocket not found.`,workaround:`Provide a WebSocket implementation via the transport option.`}:{type:`native`,constructor:globalThis.WebSocket}:{type:`unsupported`,error:`Node.js ${n} detected without native WebSocket support.`,workaround:`For Node.js < 22, install "ws" package and provide it via the transport option:
+import ws from "ws"
+new RealtimeClient(url, { transport: ws })`}}}return{type:`unsupported`,error:`Unknown JavaScript runtime without WebSocket support.`,workaround:`Ensure you're running in a supported environment (browser, Node.js, Deno) or provide a custom WebSocket implementation.`}}static getWebSocketConstructor(){let e=this.detectEnvironment();if(e.constructor)return e.constructor;let t=e.error||`WebSocket not supported in this environment.`;throw e.workaround&&(t+=`\n\nSuggested solution: ${e.workaround}`),Error(t)}static isWebSocketSupported(){try{let e=this.detectEnvironment();return e.type===`native`||e.type===`ws`}catch{return!1}}};let v={closed:`closed`,errored:`errored`,joined:`joined`,joining:`joining`,leaving:`leaving`},de={close:`phx_close`,error:`phx_error`,join:`phx_join`,reply:`phx_reply`,leave:`phx_leave`,access_token:`access_token`},fe={connecting:`connecting`,open:`open`,closing:`closing`,closed:`closed`};var pe=class{constructor(e){this.HEADER_LENGTH=1,this.USER_BROADCAST_PUSH_META_LENGTH=6,this.KINDS={userBroadcastPush:3,userBroadcast:4},this.BINARY_ENCODING=0,this.JSON_ENCODING=1,this.BROADCAST_EVENT=`broadcast`,this.allowedMetadataKeys=[],this.allowedMetadataKeys=e??[]}encode(e,t){if(e.event===this.BROADCAST_EVENT&&!(e.payload instanceof ArrayBuffer)&&typeof e.payload.event==`string`)return t(this._binaryEncodeUserBroadcastPush(e));let n=[e.join_ref,e.ref,e.topic,e.event,e.payload];return t(JSON.stringify(n))}_binaryEncodeUserBroadcastPush(e){return this._isArrayBuffer(e.payload?.payload)?this._encodeBinaryUserBroadcastPush(e):this._encodeJsonUserBroadcastPush(e)}_encodeBinaryUserBroadcastPush(e){let t=e.payload?.payload??new ArrayBuffer(0);return this._encodeUserBroadcastPush(e,this.BINARY_ENCODING,t)}_encodeJsonUserBroadcastPush(e){let t=e.payload?.payload??{},n=new TextEncoder().encode(JSON.stringify(t)).buffer;return this._encodeUserBroadcastPush(e,this.JSON_ENCODING,n)}_encodeUserBroadcastPush(e,t,n){let r=e.topic,i=e.ref??``,a=e.join_ref??``,o=e.payload.event,s=this.allowedMetadataKeys?this._pick(e.payload,this.allowedMetadataKeys):{},c=Object.keys(s).length===0?``:JSON.stringify(s);if(a.length>255)throw Error(`joinRef length ${a.length} exceeds maximum of 255`);if(i.length>255)throw Error(`ref length ${i.length} exceeds maximum of 255`);if(r.length>255)throw Error(`topic length ${r.length} exceeds maximum of 255`);if(o.length>255)throw Error(`userEvent length ${o.length} exceeds maximum of 255`);if(c.length>255)throw Error(`metadata length ${c.length} exceeds maximum of 255`);let l=this.USER_BROADCAST_PUSH_META_LENGTH+a.length+i.length+r.length+o.length+c.length,u=new ArrayBuffer(this.HEADER_LENGTH+l),d=new DataView(u),f=0;d.setUint8(f++,this.KINDS.userBroadcastPush),d.setUint8(f++,a.length),d.setUint8(f++,i.length),d.setUint8(f++,r.length),d.setUint8(f++,o.length),d.setUint8(f++,c.length),d.setUint8(f++,t),Array.from(a,e=>d.setUint8(f++,e.charCodeAt(0))),Array.from(i,e=>d.setUint8(f++,e.charCodeAt(0))),Array.from(r,e=>d.setUint8(f++,e.charCodeAt(0))),Array.from(o,e=>d.setUint8(f++,e.charCodeAt(0))),Array.from(c,e=>d.setUint8(f++,e.charCodeAt(0)));var p=new Uint8Array(u.byteLength+n.byteLength);return p.set(new Uint8Array(u),0),p.set(new Uint8Array(n),u.byteLength),p.buffer}decode(e,t){if(this._isArrayBuffer(e))return t(this._binaryDecode(e));if(typeof e==`string`){let[n,r,i,a,o]=JSON.parse(e);return t({join_ref:n,ref:r,topic:i,event:a,payload:o})}return t({})}_binaryDecode(e){let t=new DataView(e),n=t.getUint8(0),r=new TextDecoder;switch(n){case this.KINDS.userBroadcast:return this._decodeUserBroadcast(e,t,r)}}_decodeUserBroadcast(e,t,n){let r=t.getUint8(1),i=t.getUint8(2),a=t.getUint8(3),o=t.getUint8(4),s=this.HEADER_LENGTH+4,c=n.decode(e.slice(s,s+r));s+=r;let l=n.decode(e.slice(s,s+i));s+=i;let u=n.decode(e.slice(s,s+a));s+=a;let d=e.slice(s,e.byteLength),f=o===this.JSON_ENCODING?JSON.parse(n.decode(d)):d,p={type:this.BROADCAST_EVENT,event:l,payload:f};return a>0&&(p.meta=JSON.parse(u)),{join_ref:null,ref:null,topic:c,event:this.BROADCAST_EVENT,payload:p}}_isArrayBuffer(e){return e instanceof ArrayBuffer||e?.constructor?.name===`ArrayBuffer`}_pick(e,t){return!e||typeof e!=`object`?{}:Object.fromEntries(Object.entries(e).filter(([e])=>t.includes(e)))}},y;(function(e){e.abstime=`abstime`,e.bool=`bool`,e.date=`date`,e.daterange=`daterange`,e.float4=`float4`,e.float8=`float8`,e.int2=`int2`,e.int4=`int4`,e.int4range=`int4range`,e.int8=`int8`,e.int8range=`int8range`,e.json=`json`,e.jsonb=`jsonb`,e.money=`money`,e.numeric=`numeric`,e.oid=`oid`,e.reltime=`reltime`,e.text=`text`,e.time=`time`,e.timestamp=`timestamp`,e.timestamptz=`timestamptz`,e.timetz=`timetz`,e.tsrange=`tsrange`,e.tstzrange=`tstzrange`})(y||={});let me=(e,t,n={})=>{let r=n.skipTypes??[];return t?Object.keys(t).reduce((n,i)=>(n[i]=he(i,e,t,r),n),{}):{}},he=(e,t,n,r)=>{let i=t.find(t=>t.name===e)?.type,a=n[e];return i&&!r.includes(i)?ge(i,a):_e(a)},ge=(e,t)=>{if(e.charAt(0)===`_`)return xe(t,e.slice(1,e.length));switch(e){case y.bool:return ve(t);case y.float4:case y.float8:case y.int2:case y.int4:case y.int8:case y.numeric:case y.oid:return ye(t);case y.json:case y.jsonb:return be(t);case y.timestamp:return Se(t);case y.abstime:case y.date:case y.daterange:case y.int4range:case y.int8range:case y.money:case y.reltime:case y.text:case y.time:case y.timestamptz:case y.timetz:case y.tsrange:case y.tstzrange:return _e(t);default:return _e(t)}},_e=e=>e,ve=e=>{switch(e){case`t`:return!0;case`f`:return!1;default:return e}},ye=e=>{if(typeof e==`string`){let t=parseFloat(e);if(!Number.isNaN(t))return t}return e},be=e=>{if(typeof e==`string`)try{return JSON.parse(e)}catch{return e}return e},xe=(e,t)=>{if(typeof e!=`string`)return e;let n=e.length-1,r=e[n];if(e[0]===`{`&&r===`}`){let r,i=e.slice(1,n);try{r=JSON.parse(`[`+i+`]`)}catch{r=i?i.split(`,`):[]}return r.map(e=>ge(t,e))}return e},Se=e=>typeof e==`string`?e.replace(` `,`T`):e,Ce=e=>{let t=new URL(e);return t.protocol=t.protocol.replace(/^ws/i,`http`),t.pathname=t.pathname.replace(/\/+$/,``).replace(/\/socket\/websocket$/i,``).replace(/\/socket$/i,``).replace(/\/websocket$/i,``),t.pathname===``||t.pathname===`/`?t.pathname=`/api/broadcast`:t.pathname+=`/api/broadcast`,t.href};var we=e=>typeof e==`function`?e:function(){return e},Te=typeof self<`u`?self:null,b=typeof window<`u`?window:null,x=Te||b||globalThis,Ee=`2.0.0`,De=1e4,Oe=1e3,S={connecting:0,open:1,closing:2,closed:3},C={closed:`closed`,errored:`errored`,joined:`joined`,joining:`joining`,leaving:`leaving`},w={close:`phx_close`,error:`phx_error`,join:`phx_join`,reply:`phx_reply`,leave:`phx_leave`},ke={longpoll:`longpoll`,websocket:`websocket`},Ae={complete:4},je=`base64url.bearer.phx.`,Me=class{constructor(e,t,n,r){this.channel=e,this.event=t,this.payload=n||function(){return{}},this.receivedResp=null,this.timeout=r,this.timeoutTimer=null,this.recHooks=[],this.sent=!1,this.ref=void 0}resend(e){this.timeout=e,this.reset(),this.send()}send(){this.hasReceived(`timeout`)||(this.startTimeout(),this.sent=!0,this.channel.socket.push({topic:this.channel.topic,event:this.event,payload:this.payload(),ref:this.ref,join_ref:this.channel.joinRef()}))}receive(e,t){return this.hasReceived(e)&&t(this.receivedResp.response),this.recHooks.push({status:e,callback:t}),this}reset(){this.cancelRefEvent(),this.ref=null,this.refEvent=null,this.receivedResp=null,this.sent=!1}destroy(){this.cancelRefEvent(),this.cancelTimeout()}matchReceive({status:e,response:t,_ref:n}){this.recHooks.filter(t=>t.status===e).forEach(e=>e.callback(t))}cancelRefEvent(){this.refEvent&&this.channel.off(this.refEvent)}cancelTimeout(){clearTimeout(this.timeoutTimer),this.timeoutTimer=null}startTimeout(){this.timeoutTimer&&this.cancelTimeout(),this.ref=this.channel.socket.makeRef(),this.refEvent=this.channel.replyEventName(this.ref),this.channel.on(this.refEvent,e=>{this.cancelRefEvent(),this.cancelTimeout(),this.receivedResp=e,this.matchReceive(e)}),this.timeoutTimer=setTimeout(()=>{this.trigger(`timeout`,{})},this.timeout)}hasReceived(e){return this.receivedResp&&this.receivedResp.status===e}trigger(e,t){this.channel.trigger(this.refEvent,{status:e,response:t})}},Ne=class{constructor(e,t){this.callback=e,this.timerCalc=t,this.timer=void 0,this.tries=0}reset(){this.tries=0,clearTimeout(this.timer)}scheduleTimeout(){clearTimeout(this.timer),this.timer=setTimeout(()=>{this.tries+=1,this.callback()},this.timerCalc(this.tries+1))}},Pe=class{constructor(e,t,n){this.state=C.closed,this.topic=e,this.params=we(t||{}),this.socket=n,this.bindings=[],this.bindingRef=0,this.timeout=this.socket.timeout,this.joinedOnce=!1,this.joinPush=new Me(this,w.join,this.params,this.timeout),this.pushBuffer=[],this.stateChangeRefs=[],this.rejoinTimer=new Ne(()=>{this.socket.isConnected()&&this.rejoin()},this.socket.rejoinAfterMs),this.stateChangeRefs.push(this.socket.onError(()=>this.rejoinTimer.reset())),this.stateChangeRefs.push(this.socket.onOpen(()=>{this.rejoinTimer.reset(),this.isErrored()&&this.rejoin()})),this.joinPush.receive(`ok`,()=>{this.state=C.joined,this.rejoinTimer.reset(),this.pushBuffer.forEach(e=>e.send()),this.pushBuffer=[]}),this.joinPush.receive(`error`,e=>{this.state=C.errored,this.socket.hasLogger()&&this.socket.log(`channel`,`error ${this.topic}`,e),this.socket.isConnected()&&this.rejoinTimer.scheduleTimeout()}),this.onClose(()=>{this.rejoinTimer.reset(),this.socket.hasLogger()&&this.socket.log(`channel`,`close ${this.topic}`),this.state=C.closed,this.socket.remove(this)}),this.onError(e=>{this.socket.hasLogger()&&this.socket.log(`channel`,`error ${this.topic}`,e),this.isJoining()&&this.joinPush.reset(),this.state=C.errored,this.socket.isConnected()&&this.rejoinTimer.scheduleTimeout()}),this.joinPush.receive(`timeout`,()=>{this.socket.hasLogger()&&this.socket.log(`channel`,`timeout ${this.topic}`,this.joinPush.timeout),new Me(this,w.leave,we({}),this.timeout).send(),this.state=C.errored,this.joinPush.reset(),this.socket.isConnected()&&this.rejoinTimer.scheduleTimeout()}),this.on(w.reply,(e,t)=>{this.trigger(this.replyEventName(t),e)})}join(e=this.timeout){if(this.joinedOnce)throw Error(`tried to join multiple times. 'join' can only be called a single time per channel instance`);return this.timeout=e,this.joinedOnce=!0,this.rejoin(),this.joinPush}teardown(){this.pushBuffer.forEach(e=>e.destroy()),this.pushBuffer=[],this.rejoinTimer.reset(),this.joinPush.destroy(),this.state=C.closed,this.bindings=[]}onClose(e){this.on(w.close,e)}onError(e){return this.on(w.error,t=>e(t))}on(e,t){let n=this.bindingRef++;return this.bindings.push({event:e,ref:n,callback:t}),n}off(e,t){this.bindings=this.bindings.filter(n=>!(n.event===e&&(t===void 0||t===n.ref)))}canPush(){return this.socket.isConnected()&&this.isJoined()}push(e,t,n=this.timeout){if(t||={},!this.joinedOnce)throw Error(`tried to push '${e}' to '${this.topic}' before joining. Use channel.join() before pushing events`);let r=new Me(this,e,function(){return t},n);return this.canPush()?r.send():(r.startTimeout(),this.pushBuffer.push(r)),r}leave(e=this.timeout){this.rejoinTimer.reset(),this.joinPush.cancelTimeout(),this.state=C.leaving;let t=()=>{this.socket.hasLogger()&&this.socket.log(`channel`,`leave ${this.topic}`),this.trigger(w.close,`leave`)},n=new Me(this,w.leave,we({}),e);return n.receive(`ok`,()=>t()).receive(`timeout`,()=>t()),n.send(),this.canPush()||n.trigger(`ok`,{}),n}onMessage(e,t,n){return t}filterBindings(e,t,n){return!0}isMember(e,t,n,r){return this.topic===e?r&&r!==this.joinRef()?(this.socket.hasLogger()&&this.socket.log(`channel`,`dropping outdated message`,{topic:e,event:t,payload:n,joinRef:r}),!1):!0:!1}joinRef(){return this.joinPush.ref}rejoin(e=this.timeout){this.isLeaving()||(this.socket.leaveOpenTopic(this.topic),this.state=C.joining,this.joinPush.resend(e))}trigger(e,t,n,r){let i=this.onMessage(e,t,n,r);if(t&&!i)throw Error(`channel onMessage callbacks must return the payload, modified or unmodified`);let a=this.bindings.filter(r=>r.event===e&&this.filterBindings(r,t,n));for(let e=0;e<a.length;e++)a[e].callback(i,n,r||this.joinRef())}replyEventName(e){return`chan_reply_${e}`}isClosed(){return this.state===C.closed}isErrored(){return this.state===C.errored}isJoined(){return this.state===C.joined}isJoining(){return this.state===C.joining}isLeaving(){return this.state===C.leaving}},Fe=class{static request(e,t,n,r,i,a,o){if(x.XDomainRequest){let n=new x.XDomainRequest;return this.xdomainRequest(n,e,t,r,i,a,o)}else if(x.XMLHttpRequest){let s=new x.XMLHttpRequest;return this.xhrRequest(s,e,t,n,r,i,a,o)}else if(x.fetch&&x.AbortController)return this.fetchRequest(e,t,n,r,i,a,o);else throw Error(`No suitable XMLHttpRequest implementation found`)}static fetchRequest(e,t,n,r,i,a,o){let s={method:e,headers:n,body:r},c=null;return i&&(c=new AbortController,setTimeout(()=>c.abort(),i),s.signal=c.signal),x.fetch(t,s).then(e=>e.text()).then(e=>this.parseJSON(e)).then(e=>o&&o(e)).catch(e=>{e.name===`AbortError`&&a?a():o&&o(null)}),c}static xdomainRequest(e,t,n,r,i,a,o){return e.timeout=i,e.open(t,n),e.onload=()=>{let t=this.parseJSON(e.responseText);o&&o(t)},a&&(e.ontimeout=a),e.onprogress=()=>{},e.send(r),e}static xhrRequest(e,t,n,r,i,a,o,s){e.open(t,n,!0),e.timeout=a;for(let[t,n]of Object.entries(r))e.setRequestHeader(t,n);return e.onerror=()=>s&&s(null),e.onreadystatechange=()=>{e.readyState===Ae.complete&&s&&s(this.parseJSON(e.responseText))},o&&(e.ontimeout=o),e.send(i),e}static parseJSON(e){if(!e||e===``)return null;try{return JSON.parse(e)}catch{return console&&console.log(`failed to parse JSON response`,e),null}}static serialize(e,t){let n=[];for(var r in e){if(!Object.prototype.hasOwnProperty.call(e,r))continue;let i=t?`${t}[${r}]`:r,a=e[r];typeof a==`object`?n.push(this.serialize(a,i)):n.push(encodeURIComponent(i)+`=`+encodeURIComponent(a))}return n.join(`&`)}static appendParams(e,t){return Object.keys(t).length===0?e:`${e}${e.match(/\?/)?`&`:`?`}${this.serialize(t)}`}},Ie=e=>{let t=``,n=new Uint8Array(e),r=n.byteLength;for(let e=0;e<r;e++)t+=String.fromCharCode(n[e]);return btoa(t)},T=class{constructor(e,t){t&&t.length===2&&t[1].startsWith(je)&&(this.authToken=atob(t[1].slice(je.length))),this.endPoint=null,this.token=null,this.skipHeartbeat=!0,this.reqs=new Set,this.awaitingBatchAck=!1,this.currentBatch=null,this.currentBatchTimer=null,this.batchBuffer=[],this.onopen=function(){},this.onerror=function(){},this.onmessage=function(){},this.onclose=function(){},this.pollEndpoint=this.normalizeEndpoint(e),this.readyState=S.connecting,setTimeout(()=>this.poll(),0)}normalizeEndpoint(e){return e.replace(`ws://`,`http://`).replace(`wss://`,`https://`).replace(RegExp(`(.*)/`+ke.websocket),`$1/`+ke.longpoll)}endpointURL(){return Fe.appendParams(this.pollEndpoint,{token:this.token})}closeAndRetry(e,t,n){this.close(e,t,n),this.readyState=S.connecting}ontimeout(){this.onerror(`timeout`),this.closeAndRetry(1005,`timeout`,!1)}isActive(){return this.readyState===S.open||this.readyState===S.connecting}poll(){let e={Accept:`application/json`};this.authToken&&(e[`X-Phoenix-AuthToken`]=this.authToken),this.ajax(`GET`,e,null,()=>this.ontimeout(),e=>{if(e){var{status:t,token:n,messages:r}=e;if(t===410&&this.token!==null){this.onerror(410),this.closeAndRetry(3410,`session_gone`,!1);return}this.token=n}else t=0;switch(t){case 200:r.forEach(e=>{setTimeout(()=>this.onmessage({data:e}),0)}),this.poll();break;case 204:this.poll();break;case 410:this.readyState=S.open,this.onopen({}),this.poll();break;case 403:this.onerror(403),this.close(1008,`forbidden`,!1);break;case 0:case 500:this.onerror(500),this.closeAndRetry(1011,`internal server error`,500);break;default:throw Error(`unhandled poll status ${t}`)}})}send(e){typeof e!=`string`&&(e=Ie(e)),this.currentBatch?this.currentBatch.push(e):this.awaitingBatchAck?this.batchBuffer.push(e):(this.currentBatch=[e],this.currentBatchTimer=setTimeout(()=>{this.batchSend(this.currentBatch),this.currentBatch=null},0))}batchSend(e){this.awaitingBatchAck=!0,this.ajax(`POST`,{"Content-Type":`application/x-ndjson`},e.join(`
+`),()=>this.onerror(`timeout`),e=>{this.awaitingBatchAck=!1,!e||e.status!==200?(this.onerror(e&&e.status),this.closeAndRetry(1011,`internal server error`,!1)):this.batchBuffer.length>0&&(this.batchSend(this.batchBuffer),this.batchBuffer=[])})}close(e,t,n){for(let e of this.reqs)e.abort();this.readyState=S.closed;let r=Object.assign({code:1e3,reason:void 0,wasClean:!0},{code:e,reason:t,wasClean:n});this.batchBuffer=[],clearTimeout(this.currentBatchTimer),this.currentBatchTimer=null,typeof CloseEvent<`u`?this.onclose(new CloseEvent(`close`,r)):this.onclose(r)}ajax(e,t,n,r,i){let a;a=Fe.request(e,this.endpointURL(),t,n,this.timeout,()=>{this.reqs.delete(a),r()},e=>{this.reqs.delete(a),this.isActive()&&i(e)}),this.reqs.add(a)}},Le=class e{constructor(t,n={}){let r=n.events||{state:`presence_state`,diff:`presence_diff`};this.state={},this.pendingDiffs=[],this.channel=t,this.joinRef=null,this.caller={onJoin:function(){},onLeave:function(){},onSync:function(){}},this.channel.on(r.state,t=>{let{onJoin:n,onLeave:r,onSync:i}=this.caller;this.joinRef=this.channel.joinRef(),this.state=e.syncState(this.state,t,n,r),this.pendingDiffs.forEach(t=>{this.state=e.syncDiff(this.state,t,n,r)}),this.pendingDiffs=[],i()}),this.channel.on(r.diff,t=>{let{onJoin:n,onLeave:r,onSync:i}=this.caller;this.inPendingSyncState()?this.pendingDiffs.push(t):(this.state=e.syncDiff(this.state,t,n,r),i())})}onJoin(e){this.caller.onJoin=e}onLeave(e){this.caller.onLeave=e}onSync(e){this.caller.onSync=e}list(t){return e.list(this.state,t)}inPendingSyncState(){return!this.joinRef||this.joinRef!==this.channel.joinRef()}static syncState(e,t,n,r){let i=this.clone(e),a={},o={};return this.map(i,(e,n)=>{t[e]||(o[e]=n)}),this.map(t,(e,t)=>{let n=i[e];if(n){let r=t.metas.map(e=>e.phx_ref),i=n.metas.map(e=>e.phx_ref),s=t.metas.filter(e=>i.indexOf(e.phx_ref)<0),c=n.metas.filter(e=>r.indexOf(e.phx_ref)<0);s.length>0&&(a[e]=t,a[e].metas=s),c.length>0&&(o[e]=this.clone(n),o[e].metas=c)}else a[e]=t}),this.syncDiff(i,{joins:a,leaves:o},n,r)}static syncDiff(e,t,n,r){let{joins:i,leaves:a}=this.clone(t);return n||=function(){},r||=function(){},this.map(i,(t,r)=>{let i=e[t];if(e[t]=this.clone(r),i){let n=e[t].metas.map(e=>e.phx_ref),r=i.metas.filter(e=>n.indexOf(e.phx_ref)<0);e[t].metas.unshift(...r)}n(t,i,r)}),this.map(a,(t,n)=>{let i=e[t];if(!i)return;let a=n.metas.map(e=>e.phx_ref);i.metas=i.metas.filter(e=>a.indexOf(e.phx_ref)<0),r(t,i,n),i.metas.length===0&&delete e[t]}),e}static list(e,t){return t||=function(e,t){return t},this.map(e,(e,n)=>t(e,n))}static map(e,t){return Object.getOwnPropertyNames(e).map(n=>t(n,e[n]))}static clone(e){return JSON.parse(JSON.stringify(e))}},Re={HEADER_LENGTH:1,META_LENGTH:4,KINDS:{push:0,reply:1,broadcast:2},encode(e,t){if(e.payload.constructor===ArrayBuffer)return t(this.binaryEncode(e));{let n=[e.join_ref,e.ref,e.topic,e.event,e.payload];return t(JSON.stringify(n))}},decode(e,t){if(e.constructor===ArrayBuffer)return t(this.binaryDecode(e));{let[n,r,i,a,o]=JSON.parse(e);return t({join_ref:n,ref:r,topic:i,event:a,payload:o})}},binaryEncode(e){let{join_ref:t,ref:n,event:r,topic:i,payload:a}=e,o=this.META_LENGTH+t.length+n.length+i.length+r.length,s=new ArrayBuffer(this.HEADER_LENGTH+o),c=new DataView(s),l=0;c.setUint8(l++,this.KINDS.push),c.setUint8(l++,t.length),c.setUint8(l++,n.length),c.setUint8(l++,i.length),c.setUint8(l++,r.length),Array.from(t,e=>c.setUint8(l++,e.charCodeAt(0))),Array.from(n,e=>c.setUint8(l++,e.charCodeAt(0))),Array.from(i,e=>c.setUint8(l++,e.charCodeAt(0))),Array.from(r,e=>c.setUint8(l++,e.charCodeAt(0)));var u=new Uint8Array(s.byteLength+a.byteLength);return u.set(new Uint8Array(s),0),u.set(new Uint8Array(a),s.byteLength),u.buffer},binaryDecode(e){let t=new DataView(e),n=t.getUint8(0),r=new TextDecoder;switch(n){case this.KINDS.push:return this.decodePush(e,t,r);case this.KINDS.reply:return this.decodeReply(e,t,r);case this.KINDS.broadcast:return this.decodeBroadcast(e,t,r)}},decodePush(e,t,n){let r=t.getUint8(1),i=t.getUint8(2),a=t.getUint8(3),o=this.HEADER_LENGTH+this.META_LENGTH-1,s=n.decode(e.slice(o,o+r));o+=r;let c=n.decode(e.slice(o,o+i));o+=i;let l=n.decode(e.slice(o,o+a));return o+=a,{join_ref:s,ref:null,topic:c,event:l,payload:e.slice(o,e.byteLength)}},decodeReply(e,t,n){let r=t.getUint8(1),i=t.getUint8(2),a=t.getUint8(3),o=t.getUint8(4),s=this.HEADER_LENGTH+this.META_LENGTH,c=n.decode(e.slice(s,s+r));s+=r;let l=n.decode(e.slice(s,s+i));s+=i;let u=n.decode(e.slice(s,s+a));s+=a;let d=n.decode(e.slice(s,s+o));s+=o;let f={status:d,response:e.slice(s,e.byteLength)};return{join_ref:c,ref:l,topic:u,event:w.reply,payload:f}},decodeBroadcast(e,t,n){let r=t.getUint8(1),i=t.getUint8(2),a=this.HEADER_LENGTH+2,o=n.decode(e.slice(a,a+r));a+=r;let s=n.decode(e.slice(a,a+i));return a+=i,{join_ref:null,ref:null,topic:o,event:s,payload:e.slice(a,e.byteLength)}}},ze=class{constructor(e,t={}){this.stateChangeCallbacks={open:[],close:[],error:[],message:[]},this.channels=[],this.sendBuffer=[],this.ref=0,this.fallbackRef=null,this.timeout=t.timeout||De,this.transport=t.transport||x.WebSocket||T,this.conn=void 0,this.primaryPassedHealthCheck=!1,this.longPollFallbackMs=t.longPollFallbackMs,this.fallbackTimer=null,this.sessionStore=t.sessionStorage||x&&x.sessionStorage,this.establishedConnections=0,this.defaultEncoder=Re.encode.bind(Re),this.defaultDecoder=Re.decode.bind(Re),this.closeWasClean=!0,this.disconnecting=!1,this.binaryType=t.binaryType||`arraybuffer`,this.connectClock=1,this.pageHidden=!1,this.encode=void 0,this.decode=void 0,this.transport===T?(this.encode=this.defaultEncoder,this.decode=this.defaultDecoder):(this.encode=t.encode||this.defaultEncoder,this.decode=t.decode||this.defaultDecoder);let n=null;b&&b.addEventListener&&(b.addEventListener(`pagehide`,e=>{this.conn&&(this.disconnect(),n=this.connectClock)}),b.addEventListener(`pageshow`,e=>{n===this.connectClock&&(n=null,this.connect())}),b.addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`?this.pageHidden=!0:(this.pageHidden=!1,!this.isConnected()&&!this.closeWasClean&&this.teardown(()=>this.connect()))})),this.heartbeatIntervalMs=t.heartbeatIntervalMs||3e4,this.autoSendHeartbeat=t.autoSendHeartbeat??!0,this.heartbeatCallback=t.heartbeatCallback??(()=>{}),this.rejoinAfterMs=e=>t.rejoinAfterMs?t.rejoinAfterMs(e):[1e3,2e3,5e3][e-1]||1e4,this.reconnectAfterMs=e=>t.reconnectAfterMs?t.reconnectAfterMs(e):[10,50,100,150,200,250,500,1e3,2e3][e-1]||5e3,this.logger=t.logger||null,!this.logger&&t.debug&&(this.logger=(e,t,n)=>{console.log(`${e}: ${t}`,n)}),this.longpollerTimeout=t.longpollerTimeout||2e4,this.params=we(t.params||{}),this.endPoint=`${e}/${ke.websocket}`,this.vsn=t.vsn||Ee,this.heartbeatTimeoutTimer=null,this.heartbeatTimer=null,this.heartbeatSentAt=null,this.pendingHeartbeatRef=null,this.reconnectTimer=new Ne(()=>{if(this.pageHidden){this.log(`Not reconnecting as page is hidden!`),this.teardown();return}this.teardown(async()=>{t.beforeReconnect&&await t.beforeReconnect(),this.connect()})},this.reconnectAfterMs),this.authToken=t.authToken}getLongPollTransport(){return T}replaceTransport(e){this.connectClock++,this.closeWasClean=!0,clearTimeout(this.fallbackTimer),this.reconnectTimer.reset(),this.conn&&=(this.conn.close(),null),this.transport=e}protocol(){return location.protocol.match(/^https/)?`wss`:`ws`}endPointURL(){let e=Fe.appendParams(Fe.appendParams(this.endPoint,this.params()),{vsn:this.vsn});return e.charAt(0)===`/`?e.charAt(1)===`/`?`${this.protocol()}:${e}`:`${this.protocol()}://${location.host}${e}`:e}disconnect(e,t,n){this.connectClock++,this.disconnecting=!0,this.closeWasClean=!0,clearTimeout(this.fallbackTimer),this.reconnectTimer.reset(),this.teardown(()=>{this.disconnecting=!1,e&&e()},t,n)}connect(e){e&&(console&&console.log(`passing params to connect is deprecated. Instead pass :params to the Socket constructor`),this.params=we(e)),!(this.conn&&!this.disconnecting)&&(this.longPollFallbackMs&&this.transport!==T?this.connectWithFallback(T,this.longPollFallbackMs):this.transportConnect())}log(e,t,n){this.logger&&this.logger(e,t,n)}hasLogger(){return this.logger!==null}onOpen(e){let t=this.makeRef();return this.stateChangeCallbacks.open.push([t,e]),t}onClose(e){let t=this.makeRef();return this.stateChangeCallbacks.close.push([t,e]),t}onError(e){let t=this.makeRef();return this.stateChangeCallbacks.error.push([t,e]),t}onMessage(e){let t=this.makeRef();return this.stateChangeCallbacks.message.push([t,e]),t}onHeartbeat(e){this.heartbeatCallback=e}ping(e){if(!this.isConnected())return!1;let t=this.makeRef(),n=Date.now();this.push({topic:`phoenix`,event:`heartbeat`,payload:{},ref:t});let r=this.onMessage(i=>{i.ref===t&&(this.off([r]),e(Date.now()-n))});return!0}transportName(e){switch(e){case T:return`LongPoll`;default:return e.name}}transportConnect(){this.connectClock++,this.closeWasClean=!1;let e;this.authToken&&(e=[`phoenix`,`${je}${btoa(this.authToken).replace(/=/g,``)}`]),this.conn=new this.transport(this.endPointURL(),e),this.conn.binaryType=this.binaryType,this.conn.timeout=this.longpollerTimeout,this.conn.onopen=()=>this.onConnOpen(),this.conn.onerror=e=>this.onConnError(e),this.conn.onmessage=e=>this.onConnMessage(e),this.conn.onclose=e=>this.onConnClose(e)}getSession(e){return this.sessionStore&&this.sessionStore.getItem(e)}storeSession(e,t){this.sessionStore&&this.sessionStore.setItem(e,t)}connectWithFallback(e,t=2500){clearTimeout(this.fallbackTimer);let n=!1,r=!0,i,a=this.transportName(e),o=t=>{this.log(`transport`,`falling back to ${a}...`,t),this.off([void 0,i]),r=!1,this.replaceTransport(e),this.transportConnect()};if(this.getSession(`phx:fallback:${a}`))return o(`memorized`);this.fallbackTimer=setTimeout(o,t),i=this.onError(e=>{this.log(`transport`,`error`,e),r&&!n&&(clearTimeout(this.fallbackTimer),o(e))}),this.fallbackRef&&this.off([this.fallbackRef]),this.fallbackRef=this.onOpen(()=>{if(n=!0,!r){let t=this.transportName(e);return this.primaryPassedHealthCheck||this.storeSession(`phx:fallback:${t}`,`true`),this.log(`transport`,`established ${t} fallback`)}clearTimeout(this.fallbackTimer),this.fallbackTimer=setTimeout(o,t),this.ping(e=>{this.log(`transport`,`connected to primary after`,e),this.primaryPassedHealthCheck=!0,clearTimeout(this.fallbackTimer)})}),this.transportConnect()}clearHeartbeats(){clearTimeout(this.heartbeatTimer),clearTimeout(this.heartbeatTimeoutTimer)}onConnOpen(){this.hasLogger()&&this.log(`transport`,`connected to ${this.endPointURL()}`),this.closeWasClean=!1,this.disconnecting=!1,this.establishedConnections++,this.flushSendBuffer(),this.reconnectTimer.reset(),this.autoSendHeartbeat&&this.resetHeartbeat(),this.triggerStateCallbacks(`open`)}heartbeatTimeout(){if(this.pendingHeartbeatRef){this.pendingHeartbeatRef=null,this.heartbeatSentAt=null,this.hasLogger()&&this.log(`transport`,`heartbeat timeout. Attempting to re-establish connection`);try{this.heartbeatCallback(`timeout`)}catch(e){this.log(`error`,`error in heartbeat callback`,e)}this.triggerChanError(),this.closeWasClean=!1,this.teardown(()=>this.reconnectTimer.scheduleTimeout(),Oe,`heartbeat timeout`)}}resetHeartbeat(){this.conn&&this.conn.skipHeartbeat||(this.pendingHeartbeatRef=null,this.clearHeartbeats(),this.heartbeatTimer=setTimeout(()=>this.sendHeartbeat(),this.heartbeatIntervalMs))}teardown(e,t,n){if(!this.conn)return e&&e();let r=this.conn;this.waitForBufferDone(r,()=>{t?r.close(t,n||``):r.close(),this.waitForSocketClosed(r,()=>{this.conn===r&&(this.conn.onopen=function(){},this.conn.onerror=function(){},this.conn.onmessage=function(){},this.conn.onclose=function(){},this.conn=null),e&&e()})})}waitForBufferDone(e,t,n=1){if(n===5||!e.bufferedAmount){t();return}setTimeout(()=>{this.waitForBufferDone(e,t,n+1)},150*n)}waitForSocketClosed(e,t,n=1){if(n===5||e.readyState===S.closed){t();return}setTimeout(()=>{this.waitForSocketClosed(e,t,n+1)},150*n)}onConnClose(e){this.conn&&(this.conn.onclose=()=>{}),this.hasLogger()&&this.log(`transport`,`close`,e),this.triggerChanError(),this.clearHeartbeats(),this.closeWasClean||this.reconnectTimer.scheduleTimeout(),this.triggerStateCallbacks(`close`,e)}onConnError(e){this.hasLogger()&&this.log(`transport`,e);let t=this.transport,n=this.establishedConnections;this.triggerStateCallbacks(`error`,e,t,n),(t===this.transport||n>0)&&this.triggerChanError()}triggerChanError(){this.channels.forEach(e=>{e.isErrored()||e.isLeaving()||e.isClosed()||e.trigger(w.error)})}connectionState(){switch(this.conn&&this.conn.readyState){case S.connecting:return`connecting`;case S.open:return`open`;case S.closing:return`closing`;default:return`closed`}}isConnected(){return this.connectionState()===`open`}remove(e){this.off(e.stateChangeRefs),this.channels=this.channels.filter(t=>t!==e)}off(e){for(let t in this.stateChangeCallbacks)this.stateChangeCallbacks[t]=this.stateChangeCallbacks[t].filter(([t])=>e.indexOf(t)===-1)}channel(e,t={}){let n=new Pe(e,t,this);return this.channels.push(n),n}push(e){if(this.hasLogger()){let{topic:t,event:n,payload:r,ref:i,join_ref:a}=e;this.log(`push`,`${t} ${n} (${a}, ${i})`,r)}this.isConnected()?this.encode(e,e=>this.conn.send(e)):this.sendBuffer.push(()=>this.encode(e,e=>this.conn.send(e)))}makeRef(){let e=this.ref+1;return e===this.ref?this.ref=0:this.ref=e,this.ref.toString()}sendHeartbeat(){if(!this.isConnected()){try{this.heartbeatCallback(`disconnected`)}catch(e){this.log(`error`,`error in heartbeat callback`,e)}return}if(this.pendingHeartbeatRef){this.heartbeatTimeout();return}this.pendingHeartbeatRef=this.makeRef(),this.heartbeatSentAt=Date.now(),this.push({topic:`phoenix`,event:`heartbeat`,payload:{},ref:this.pendingHeartbeatRef});try{this.heartbeatCallback(`sent`)}catch(e){this.log(`error`,`error in heartbeat callback`,e)}this.heartbeatTimeoutTimer=setTimeout(()=>this.heartbeatTimeout(),this.heartbeatIntervalMs)}flushSendBuffer(){this.isConnected()&&this.sendBuffer.length>0&&(this.sendBuffer.forEach(e=>e()),this.sendBuffer=[])}onConnMessage(e){this.decode(e.data,e=>{let{topic:t,event:n,payload:r,ref:i,join_ref:a}=e;if(i&&i===this.pendingHeartbeatRef){let e=this.heartbeatSentAt?Date.now()-this.heartbeatSentAt:void 0;this.clearHeartbeats();try{this.heartbeatCallback(r.status===`ok`?`ok`:`error`,e)}catch(e){this.log(`error`,`error in heartbeat callback`,e)}this.pendingHeartbeatRef=null,this.heartbeatSentAt=null,this.autoSendHeartbeat&&(this.heartbeatTimer=setTimeout(()=>this.sendHeartbeat(),this.heartbeatIntervalMs))}this.hasLogger()&&this.log(`receive`,`${r.status||``} ${t} ${n} ${i&&`(`+i+`)`||``}`.trim(),r);for(let e=0;e<this.channels.length;e++){let o=this.channels[e];o.isMember(t,n,r,a)&&o.trigger(n,r,i,a)}this.triggerStateCallbacks(`message`,e)})}triggerStateCallbacks(e,...t){try{this.stateChangeCallbacks[e].forEach(([n,r])=>{try{r(...t)}catch(t){this.log(`error`,`error in ${e} callback`,t)}})}catch(t){this.log(`error`,`error triggering ${e} callbacks`,t)}}leaveOpenTopic(e){let t=this.channels.find(t=>t.topic===e&&(t.isJoined()||t.isJoining()));t&&(this.hasLogger()&&this.log(`transport`,`leaving duplicate topic "${e}"`),t.leave())}},Be=class e{constructor(t,n){let r=Ue(n);this.presence=new Le(t.getChannel(),r),this.presence.onJoin((n,r,i)=>{let a=e.onJoinPayload(n,r,i);t.getChannel().trigger(`presence`,a)}),this.presence.onLeave((n,r,i)=>{let a=e.onLeavePayload(n,r,i);t.getChannel().trigger(`presence`,a)}),this.presence.onSync(()=>{t.getChannel().trigger(`presence`,{event:`sync`})})}get state(){return e.transformState(this.presence.state)}static transformState(e){return e=He(e),Object.getOwnPropertyNames(e).reduce((t,n)=>{let r=e[n];return t[n]=Ve(r),t},{})}static onJoinPayload(e,t,n){return{event:`join`,key:e,currentPresences:We(t),newPresences:Ve(n)}}static onLeavePayload(e,t,n){return{event:`leave`,key:e,currentPresences:We(t),leftPresences:Ve(n)}}};function Ve(e){return e.metas.map(e=>(e.presence_ref=e.phx_ref,delete e.phx_ref,delete e.phx_ref_prev,e))}function He(e){return JSON.parse(JSON.stringify(e))}function Ue(e){return e?.events&&{events:e.events}}function We(e){return e?.metas?Ve(e):[]}var Ge;(function(e){e.SYNC=`sync`,e.JOIN=`join`,e.LEAVE=`leave`})(Ge||={});var Ke=class{get state(){return this.presenceAdapter.state}constructor(e,t){this.channel=e,this.presenceAdapter=new Be(this.channel.channelAdapter,t)}},qe=class{constructor(e,t,n){let r=Je(n);this.channel=e.getSocket().channel(t,r),this.socket=e}get state(){return this.channel.state}set state(e){this.channel.state=e}get joinedOnce(){return this.channel.joinedOnce}get joinPush(){return this.channel.joinPush}get rejoinTimer(){return this.channel.rejoinTimer}on(e,t){return this.channel.on(e,t)}off(e,t){this.channel.off(e,t)}subscribe(e){return this.channel.join(e)}unsubscribe(e){return this.channel.leave(e)}teardown(){this.channel.teardown()}onClose(e){this.channel.onClose(e)}onError(e){return this.channel.onError(e)}push(e,t,n){let r;try{r=this.channel.push(e,t,n)}catch{throw`tried to push '${e}' to '${this.channel.topic}' before joining. Use channel.subscribe() before pushing events`}if(this.channel.pushBuffer.length>100){let e=this.channel.pushBuffer.shift();e.cancelTimeout(),this.socket.log(`channel`,`discarded push due to buffer overflow: ${e.event}`,e.payload())}return r}updateJoinPayload(e){let t=this.channel.joinPush.payload();this.channel.joinPush.payload=()=>Object.assign(Object.assign({},t),e)}canPush(){return this.socket.isConnected()&&this.state===v.joined}isJoined(){return this.state===v.joined}isJoining(){return this.state===v.joining}isClosed(){return this.state===v.closed}isLeaving(){return this.state===v.leaving}updateFilterBindings(e){this.channel.filterBindings=e}updatePayloadTransform(e){this.channel.onMessage=e}getChannel(){return this.channel}};function Je(e){return{config:Object.assign({broadcast:{ack:!1,self:!1},presence:{key:``,enabled:!1},private:!1},e.config)}}var Ye;(function(e){e.ALL=`*`,e.INSERT=`INSERT`,e.UPDATE=`UPDATE`,e.DELETE=`DELETE`})(Ye||={});var E;(function(e){e.BROADCAST=`broadcast`,e.PRESENCE=`presence`,e.POSTGRES_CHANGES=`postgres_changes`,e.SYSTEM=`system`})(E||={});var D;(function(e){e.SUBSCRIBED=`SUBSCRIBED`,e.TIMED_OUT=`TIMED_OUT`,e.CLOSED=`CLOSED`,e.CHANNEL_ERROR=`CHANNEL_ERROR`})(D||={});let Xe=v;var Ze=class e{get state(){return this.channelAdapter.state}set state(e){this.channelAdapter.state=e}get joinedOnce(){return this.channelAdapter.joinedOnce}get timeout(){return this.socket.timeout}get joinPush(){return this.channelAdapter.joinPush}get rejoinTimer(){return this.channelAdapter.rejoinTimer}constructor(e,t={config:{}},n){if(this.topic=e,this.params=t,this.socket=n,this.bindings={},this.subTopic=e.replace(/^realtime:/i,``),this.params.config=Object.assign({broadcast:{ack:!1,self:!1},presence:{key:``,enabled:!1},private:!1},t.config),this.channelAdapter=new qe(this.socket.socketAdapter,e,this.params),this.presence=new Ke(this),this._onClose(()=>{this.socket._remove(this)}),this._updateFilterTransform(),this.broadcastEndpointURL=Ce(this.socket.socketAdapter.endPointURL()),this.private=this.params.config.private||!1,!this.private&&this.params.config?.broadcast?.replay)throw`tried to use replay on public channel '${this.topic}'. It must be a private channel.`}subscribe(e,t=this.timeout){if(this.socket.isConnected()||this.socket.connect(),this.channelAdapter.isClosed()){let{config:{broadcast:n,presence:r,private:i}}=this.params,a=this.bindings.postgres_changes?.map(e=>e.filter)??[],o=!!this.bindings[E.PRESENCE]&&this.bindings[E.PRESENCE].length>0||this.params.config.presence?.enabled===!0,s={},c={broadcast:n,presence:Object.assign(Object.assign({},r),{enabled:o}),postgres_changes:a,private:i};this.socket.accessTokenValue&&(s.access_token=this.socket.accessTokenValue),this._onError(t=>{e?.(D.CHANNEL_ERROR,t)}),this._onClose(()=>e?.(D.CLOSED)),this.updateJoinPayload(Object.assign({config:c},s)),this._updateFilterMessage(),this.channelAdapter.subscribe(t).receive(`ok`,async({postgres_changes:t})=>{if(this.socket._isManualToken()||this.socket.setAuth(),t===void 0){e?.(D.SUBSCRIBED);return}this._updatePostgresBindings(t,e)}).receive(`error`,t=>{this.state=v.errored,e?.(D.CHANNEL_ERROR,Error(JSON.stringify(Object.values(t).join(`, `)||`error`)))}).receive(`timeout`,()=>{e?.(D.TIMED_OUT)})}return this}_updatePostgresBindings(t,n){let r=this.bindings.postgres_changes,i=r?.length??0,a=[];for(let o=0;o<i;o++){let i=r[o],{filter:{event:s,schema:c,table:l,filter:u}}=i,d=t&&t[o];if(d&&d.event===s&&e.isFilterValueEqual(d.schema,c)&&e.isFilterValueEqual(d.table,l)&&e.isFilterValueEqual(d.filter,u))a.push(Object.assign(Object.assign({},i),{id:d.id}));else{this.unsubscribe(),this.state=v.errored,n?.(D.CHANNEL_ERROR,Error(`mismatch between server and client bindings for postgres changes`));return}}this.bindings.postgres_changes=a,this.state!=v.errored&&n&&n(D.SUBSCRIBED)}presenceState(){return this.presence.state}async track(e,t={}){return await this.send({type:`presence`,event:`track`,payload:e},t.timeout||this.timeout)}async untrack(e={}){return await this.send({type:`presence`,event:`untrack`},e)}on(e,t,n){let r=this.channelAdapter.isJoined()||this.channelAdapter.isJoining(),i=e===E.PRESENCE||e===E.POSTGRES_CHANGES;if(r&&i)throw this.socket.log(`channel`,`cannot add \`${e}\` callbacks for ${this.topic} after \`subscribe()\`.`),Error(`cannot add \`${e}\` callbacks for ${this.topic} after \`subscribe()\`.`);return this._on(e,t,n)}async httpSend(e,t,n={}){if(t==null)return Promise.reject(`Payload is required for httpSend()`);let r={apikey:this.socket.apiKey?this.socket.apiKey:``,"Content-Type":`application/json`};this.socket.accessTokenValue&&(r.Authorization=`Bearer ${this.socket.accessTokenValue}`);let i={method:`POST`,headers:r,body:JSON.stringify({messages:[{topic:this.subTopic,event:e,payload:t,private:this.private}]})},a=await this._fetchWithTimeout(this.broadcastEndpointURL,i,n.timeout??this.timeout);if(a.status===202)return{success:!0};let o=a.statusText;try{let e=await a.json();o=e.error||e.message||o}catch{}return Promise.reject(Error(o))}async send(e,t={}){if(!this.channelAdapter.canPush()&&e.type===`broadcast`){console.warn(`Realtime send() is automatically falling back to REST API. This behavior will be deprecated in the future. Please use httpSend() explicitly for REST delivery.`);let{event:n,payload:r}=e,i={apikey:this.socket.apiKey?this.socket.apiKey:``,"Content-Type":`application/json`};this.socket.accessTokenValue&&(i.Authorization=`Bearer ${this.socket.accessTokenValue}`);let a={method:`POST`,headers:i,body:JSON.stringify({messages:[{topic:this.subTopic,event:n,payload:r,private:this.private}]})};try{let e=await this._fetchWithTimeout(this.broadcastEndpointURL,a,t.timeout??this.timeout);return await e.body?.cancel(),e.ok?`ok`:`error`}catch(e){return e.name===`AbortError`?`timed out`:`error`}}else return new Promise(n=>{let r=this.channelAdapter.push(e.type,e,t.timeout||this.timeout);e.type===`broadcast`&&!this.params?.config?.broadcast?.ack&&n(`ok`),r.receive(`ok`,()=>n(`ok`)),r.receive(`error`,()=>n(`error`)),r.receive(`timeout`,()=>n(`timed out`))})}updateJoinPayload(e){this.channelAdapter.updateJoinPayload(e)}async unsubscribe(e=this.timeout){return new Promise(t=>{this.channelAdapter.unsubscribe(e).receive(`ok`,()=>t(`ok`)).receive(`timeout`,()=>t(`timed out`)).receive(`error`,()=>t(`error`))})}teardown(){this.channelAdapter.teardown()}async _fetchWithTimeout(e,t,n){let r=new AbortController,i=setTimeout(()=>r.abort(),n),a=await this.socket.fetch(e,Object.assign(Object.assign({},t),{signal:r.signal}));return clearTimeout(i),a}_on(e,t,n){let r=e.toLocaleLowerCase(),i={type:r,filter:t,callback:n,ref:this.channelAdapter.on(e,n)};return this.bindings[r]?this.bindings[r].push(i):this.bindings[r]=[i],this._updateFilterMessage(),this}_onClose(e){this.channelAdapter.onClose(e)}_onError(e){this.channelAdapter.onError(e)}_updateFilterMessage(){this.channelAdapter.updateFilterBindings((e,t,n)=>{let r=e.event.toLocaleLowerCase();if(this._notThisChannelEvent(r,n))return!1;let i=this.bindings[r]?.find(t=>t.ref===e.ref);if(!i)return!0;if([`broadcast`,`presence`,`postgres_changes`].includes(r))if(`id`in i){let e=i.id,n=i.filter?.event;return e&&t.ids?.includes(e)&&(n===`*`||n?.toLocaleLowerCase()===t.data?.type.toLocaleLowerCase())}else{let e=(i?.filter?.event)?.toLocaleLowerCase();return e===`*`||e===(t?.event)?.toLocaleLowerCase()}else return i.type.toLocaleLowerCase()===r})}_notThisChannelEvent(e,t){let{close:n,error:r,leave:i,join:a}=de;return t&&[n,r,i,a].includes(e)&&t!==this.joinPush.ref}_updateFilterTransform(){this.channelAdapter.updatePayloadTransform((e,t,n)=>{if(typeof t==`object`&&`ids`in t){let e=t.data,{schema:n,table:r,commit_timestamp:i,type:a,errors:o}=e,s={schema:n,table:r,commit_timestamp:i,eventType:a,new:{},old:{},errors:o};return Object.assign(Object.assign({},s),this._getPayloadRecords(e))}return t})}copyBindings(e){if(this.joinedOnce)throw Error(`cannot copy bindings into joined channel`);for(let t in e.bindings)for(let n of e.bindings[t])this._on(n.type,n.filter,n.callback)}static isFilterValueEqual(e,t){return(e??void 0)===(t??void 0)}_getPayloadRecords(e){let t={new:{},old:{}};return(e.type===`INSERT`||e.type===`UPDATE`)&&(t.new=me(e.columns,e.record)),(e.type===`UPDATE`||e.type===`DELETE`)&&(t.old=me(e.columns,e.old_record)),t}},Qe=class{constructor(e,t){this.socket=new ze(e,t)}get timeout(){return this.socket.timeout}get endPoint(){return this.socket.endPoint}get transport(){return this.socket.transport}get heartbeatIntervalMs(){return this.socket.heartbeatIntervalMs}get heartbeatCallback(){return this.socket.heartbeatCallback}set heartbeatCallback(e){this.socket.heartbeatCallback=e}get heartbeatTimer(){return this.socket.heartbeatTimer}get pendingHeartbeatRef(){return this.socket.pendingHeartbeatRef}get reconnectTimer(){return this.socket.reconnectTimer}get vsn(){return this.socket.vsn}get encode(){return this.socket.encode}get decode(){return this.socket.decode}get reconnectAfterMs(){return this.socket.reconnectAfterMs}get sendBuffer(){return this.socket.sendBuffer}get stateChangeCallbacks(){return this.socket.stateChangeCallbacks}connect(){this.socket.connect()}disconnect(e,t,n,r=1e4){return new Promise(i=>{setTimeout(()=>i(`timeout`),r),this.socket.disconnect(()=>{e(),i(`ok`)},t,n)})}push(e){this.socket.push(e)}log(e,t,n){this.socket.log(e,t,n)}makeRef(){return this.socket.makeRef()}onOpen(e){this.socket.onOpen(e)}onClose(e){this.socket.onClose(e)}onError(e){this.socket.onError(e)}onMessage(e){this.socket.onMessage(e)}isConnected(){return this.socket.isConnected()}isConnecting(){return this.socket.connectionState()==fe.connecting}isDisconnecting(){return this.socket.connectionState()==fe.closing}connectionState(){return this.socket.connectionState()}endPointURL(){return this.socket.endPointURL()}sendHeartbeat(){this.socket.sendHeartbeat()}getSocket(){return this.socket}};let $e={HEARTBEAT_INTERVAL:25e3,RECONNECT_DELAY:10,HEARTBEAT_TIMEOUT_FALLBACK:100},et=[1e3,2e3,5e3,1e4];var tt=class{get endPoint(){return this.socketAdapter.endPoint}get timeout(){return this.socketAdapter.timeout}get transport(){return this.socketAdapter.transport}get heartbeatCallback(){return this.socketAdapter.heartbeatCallback}get heartbeatIntervalMs(){return this.socketAdapter.heartbeatIntervalMs}get heartbeatTimer(){return this.worker?this._workerHeartbeatTimer:this.socketAdapter.heartbeatTimer}get pendingHeartbeatRef(){return this.worker?this._pendingWorkerHeartbeatRef:this.socketAdapter.pendingHeartbeatRef}get reconnectTimer(){return this.socketAdapter.reconnectTimer}get vsn(){return this.socketAdapter.vsn}get encode(){return this.socketAdapter.encode}get decode(){return this.socketAdapter.decode}get reconnectAfterMs(){return this.socketAdapter.reconnectAfterMs}get sendBuffer(){return this.socketAdapter.sendBuffer}get stateChangeCallbacks(){return this.socketAdapter.stateChangeCallbacks}constructor(e,t){if(this.channels=[],this.accessTokenValue=null,this.accessToken=null,this.apiKey=null,this.httpEndpoint=``,this.headers={},this.params={},this.ref=0,this.serializer=new pe,this._manuallySetToken=!1,this._authPromise=null,this._workerHeartbeatTimer=void 0,this._pendingWorkerHeartbeatRef=null,this._resolveFetch=e=>e?(...t)=>e(...t):(...e)=>fetch(...e),!t?.params?.apikey)throw Error(`API key is required to connect to Realtime`);this.apiKey=t.params.apikey,this.socketAdapter=new Qe(e,this._initializeOptions(t)),this.httpEndpoint=Ce(e),this.fetch=this._resolveFetch(t?.fetch)}connect(){if(!(this.isConnecting()||this.isDisconnecting()||this.isConnected())){this.accessToken&&!this._authPromise&&this._setAuthSafely(`connect`),this._setupConnectionHandlers();try{this.socketAdapter.connect()}catch(e){let t=e.message;throw t.includes(`Node.js`)?Error(`${t}\n\nTo use Realtime in Node.js, you need to provide a WebSocket implementation:
+
+Option 1: Use Node.js 22+ which has native WebSocket support
+Option 2: Install and provide the "ws" package:
+
+  npm install ws
+
+  import ws from "ws"
+  const client = new RealtimeClient(url, {
+    ...options,
+    transport: ws
+  })`):Error(`WebSocket not available: ${t}`)}this._handleNodeJsRaceCondition()}}endpointURL(){return this.socketAdapter.endPointURL()}async disconnect(e,t){return this.isDisconnecting()?`ok`:await this.socketAdapter.disconnect(()=>{clearInterval(this._workerHeartbeatTimer),this._terminateWorker()},e,t)}getChannels(){return this.channels}async removeChannel(e){let t=await e.unsubscribe();return t===`ok`&&e.teardown(),this.channels.length===0&&this.disconnect(),t}async removeAllChannels(){let e=this.channels.map(async e=>{let t=await e.unsubscribe();return e.teardown(),t}),t=await Promise.all(e);return this.disconnect(),t}log(e,t,n){this.socketAdapter.log(e,t,n)}connectionState(){return this.socketAdapter.connectionState()||fe.closed}isConnected(){return this.socketAdapter.isConnected()}isConnecting(){return this.socketAdapter.isConnecting()}isDisconnecting(){return this.socketAdapter.isDisconnecting()}channel(e,t={config:{}}){let n=`realtime:${e}`,r=this.getChannels().find(e=>e.topic===n);if(r)return r;{let n=new Ze(`realtime:${e}`,t,this);return this.channels.push(n),n}}push(e){this.socketAdapter.push(e)}async setAuth(e=null){this._authPromise=this._performAuth(e);try{await this._authPromise}finally{this._authPromise=null}}_isManualToken(){return this._manuallySetToken}async sendHeartbeat(){this.socketAdapter.sendHeartbeat()}onHeartbeat(e){this.socketAdapter.heartbeatCallback=this._wrapHeartbeatCallback(e)}_makeRef(){return this.socketAdapter.makeRef()}_remove(e){this.channels=this.channels.filter(t=>t.topic!==e.topic)}async _performAuth(e=null){let t,n=!1;if(e)t=e,n=!0;else if(this.accessToken)try{t=await this.accessToken()}catch(e){this.log(`error`,`Error fetching access token from callback`,e),t=this.accessTokenValue}else t=this.accessTokenValue;n?this._manuallySetToken=!0:this.accessToken&&(this._manuallySetToken=!1),this.accessTokenValue!=t&&(this.accessTokenValue=t,this.channels.forEach(e=>{let n={access_token:t,version:`realtime-js/2.102.0`};t&&e.updateJoinPayload(n),e.joinedOnce&&e.channelAdapter.isJoined()&&e.channelAdapter.push(de.access_token,{access_token:t})}))}async _waitForAuthIfNeeded(){this._authPromise&&await this._authPromise}_setAuthSafely(e=`general`){this._isManualToken()||this.setAuth().catch(t=>{this.log(`error`,`Error setting auth in ${e}`,t)})}_setupConnectionHandlers(){this.socketAdapter.onOpen(()=>{(this._authPromise||(this.accessToken&&!this.accessTokenValue?this.setAuth():Promise.resolve())).catch(e=>{this.log(`error`,`error waiting for auth on connect`,e)}),this.worker&&!this.workerRef&&this._startWorkerHeartbeat()}),this.socketAdapter.onClose(()=>{this.worker&&this.workerRef&&this._terminateWorker()}),this.socketAdapter.onMessage(e=>{e.ref&&e.ref===this._pendingWorkerHeartbeatRef&&(this._pendingWorkerHeartbeatRef=null)})}_handleNodeJsRaceCondition(){this.socketAdapter.isConnected()&&this.socketAdapter.getSocket().onConnOpen()}_wrapHeartbeatCallback(e){return(t,n)=>{t==`sent`&&this._setAuthSafely(),e&&e(t,n)}}_startWorkerHeartbeat(){this.workerUrl?this.log(`worker`,`starting worker for from ${this.workerUrl}`):this.log(`worker`,`starting default worker`);let e=this._workerObjectUrl(this.workerUrl);this.workerRef=new Worker(e),this.workerRef.onerror=e=>{this.log(`worker`,`worker error`,e.message),this._terminateWorker(),this.disconnect()},this.workerRef.onmessage=e=>{e.data.event===`keepAlive`&&this.sendHeartbeat()},this.workerRef.postMessage({event:`start`,interval:this.heartbeatIntervalMs})}_terminateWorker(){this.workerRef&&=(this.log(`worker`,`terminating worker`),this.workerRef.terminate(),void 0)}_workerObjectUrl(e){let t;if(e)t=e;else{let e=new Blob([`
+  addEventListener("message", (e) => {
+    if (e.data.event === "start") {
+      setInterval(() => postMessage({ event: "keepAlive" }), e.data.interval);
+    }
+  });`],{type:`application/javascript`});t=URL.createObjectURL(e)}return t}_initializeOptions(e){this.worker=e?.worker??!1,this.accessToken=e?.accessToken??null;let t={};t.timeout=e?.timeout??1e4,t.heartbeatIntervalMs=e?.heartbeatIntervalMs??$e.HEARTBEAT_INTERVAL,t.transport=e?.transport??ue.getWebSocketConstructor(),t.params=e?.params,t.logger=e?.logger,t.heartbeatCallback=this._wrapHeartbeatCallback(e?.heartbeatCallback),t.reconnectAfterMs=e?.reconnectAfterMs??(e=>et[e-1]||1e4);let n,r,i=e?.vsn??`2.0.0`;switch(i){case`1.0.0`:n=(e,t)=>t(JSON.stringify(e)),r=(e,t)=>t(JSON.parse(e));break;case`2.0.0`:n=this.serializer.encode.bind(this.serializer),r=this.serializer.decode.bind(this.serializer);break;default:throw Error(`Unsupported serializer version: ${t.vsn}`)}if(t.vsn=i,t.encode=e?.encode??n,t.decode=e?.decode??r,t.beforeReconnect=this._reconnectAuth.bind(this),(e?.logLevel||e?.log_level)&&(this.logLevel=e.logLevel||e.log_level,t.params=Object.assign(Object.assign({},t.params),{log_level:this.logLevel})),this.worker){if(typeof window<`u`&&!window.Worker)throw Error(`Web Worker is not supported`);this.workerUrl=e?.workerUrl,t.autoSendHeartbeat=!this.worker}return t}async _reconnectAuth(){await this._waitForAuthIfNeeded(),this.isConnected()||this.connect()}},nt=class extends Error{constructor(e,t){super(e),this.name=`IcebergError`,this.status=t.status,this.icebergType=t.icebergType,this.icebergCode=t.icebergCode,this.details=t.details,this.isCommitStateUnknown=t.icebergType===`CommitStateUnknownException`||[500,502,504].includes(t.status)&&t.icebergType?.includes(`CommitState`)===!0}isNotFound(){return this.status===404}isConflict(){return this.status===409}isAuthenticationTimeout(){return this.status===419}};function rt(e,t,n){let r=new URL(t,e);if(n)for(let[e,t]of Object.entries(n))t!==void 0&&r.searchParams.set(e,t);return r.toString()}async function it(e){return!e||e.type===`none`?{}:e.type===`bearer`?{Authorization:`Bearer ${e.token}`}:e.type===`header`?{[e.name]:e.value}:e.type===`custom`?await e.getHeaders():{}}function at(e){let t=e.fetchImpl??globalThis.fetch;return{async request({method:n,path:r,query:i,body:a,headers:o}){let s=rt(e.baseUrl,r,i),c=await it(e.auth),l=await t(s,{method:n,headers:{...a?{"Content-Type":`application/json`}:{},...c,...o},body:a?JSON.stringify(a):void 0}),u=await l.text(),d=(l.headers.get(`content-type`)||``).includes(`application/json`),f=d&&u?JSON.parse(u):u;if(!l.ok){let e=d?f:void 0,t=e?.error;throw new nt(t?.message??`Request failed with status ${l.status}`,{status:l.status,icebergType:t?.type,icebergCode:t?.code,details:e})}return{status:l.status,headers:l.headers,data:f}}}}function ot(e){return e.join(``)}var st=class{constructor(e,t=``){this.client=e,this.prefix=t}async listNamespaces(e){let t=e?{parent:ot(e.namespace)}:void 0;return(await this.client.request({method:`GET`,path:`${this.prefix}/namespaces`,query:t})).data.namespaces.map(e=>({namespace:e}))}async createNamespace(e,t){let n={namespace:e.namespace,properties:t?.properties};return(await this.client.request({method:`POST`,path:`${this.prefix}/namespaces`,body:n})).data}async dropNamespace(e){await this.client.request({method:`DELETE`,path:`${this.prefix}/namespaces/${ot(e.namespace)}`})}async loadNamespaceMetadata(e){return{properties:(await this.client.request({method:`GET`,path:`${this.prefix}/namespaces/${ot(e.namespace)}`})).data.properties}}async namespaceExists(e){try{return await this.client.request({method:`HEAD`,path:`${this.prefix}/namespaces/${ot(e.namespace)}`}),!0}catch(e){if(e instanceof nt&&e.status===404)return!1;throw e}}async createNamespaceIfNotExists(e,t){try{return await this.createNamespace(e,t)}catch(e){if(e instanceof nt&&e.status===409)return;throw e}}};function O(e){return e.join(``)}var ct=class{constructor(e,t=``,n){this.client=e,this.prefix=t,this.accessDelegation=n}async listTables(e){return(await this.client.request({method:`GET`,path:`${this.prefix}/namespaces/${O(e.namespace)}/tables`})).data.identifiers}async createTable(e,t){let n={};return this.accessDelegation&&(n[`X-Iceberg-Access-Delegation`]=this.accessDelegation),(await this.client.request({method:`POST`,path:`${this.prefix}/namespaces/${O(e.namespace)}/tables`,body:t,headers:n})).data.metadata}async updateTable(e,t){let n=await this.client.request({method:`POST`,path:`${this.prefix}/namespaces/${O(e.namespace)}/tables/${e.name}`,body:t});return{"metadata-location":n.data[`metadata-location`],metadata:n.data.metadata}}async dropTable(e,t){await this.client.request({method:`DELETE`,path:`${this.prefix}/namespaces/${O(e.namespace)}/tables/${e.name}`,query:{purgeRequested:String(t?.purge??!1)}})}async loadTable(e){let t={};return this.accessDelegation&&(t[`X-Iceberg-Access-Delegation`]=this.accessDelegation),(await this.client.request({method:`GET`,path:`${this.prefix}/namespaces/${O(e.namespace)}/tables/${e.name}`,headers:t})).data.metadata}async tableExists(e){let t={};this.accessDelegation&&(t[`X-Iceberg-Access-Delegation`]=this.accessDelegation);try{return await this.client.request({method:`HEAD`,path:`${this.prefix}/namespaces/${O(e.namespace)}/tables/${e.name}`,headers:t}),!0}catch(e){if(e instanceof nt&&e.status===404)return!1;throw e}}async createTableIfNotExists(e,t){try{return await this.createTable(e,t)}catch(n){if(n instanceof nt&&n.status===409)return await this.loadTable({namespace:e.namespace,name:t.name});throw n}}},lt=class{constructor(e){let t=`v1`;e.catalogName&&(t+=`/${e.catalogName}`),this.client=at({baseUrl:e.baseUrl.endsWith(`/`)?e.baseUrl:`${e.baseUrl}/`,auth:e.auth,fetchImpl:e.fetch}),this.accessDelegation=e.accessDelegation?.join(`,`),this.namespaceOps=new st(this.client,t),this.tableOps=new ct(this.client,t,this.accessDelegation)}async listNamespaces(e){return this.namespaceOps.listNamespaces(e)}async createNamespace(e,t){return this.namespaceOps.createNamespace(e,t)}async dropNamespace(e){await this.namespaceOps.dropNamespace(e)}async loadNamespaceMetadata(e){return this.namespaceOps.loadNamespaceMetadata(e)}async listTables(e){return this.tableOps.listTables(e)}async createTable(e,t){return this.tableOps.createTable(e,t)}async updateTable(e,t){return this.tableOps.updateTable(e,t)}async dropTable(e,t){await this.tableOps.dropTable(e,t)}async loadTable(e){return this.tableOps.loadTable(e)}async namespaceExists(e){return this.namespaceOps.namespaceExists(e)}async tableExists(e){return this.tableOps.tableExists(e)}async createNamespaceIfNotExists(e,t){return this.namespaceOps.createNamespaceIfNotExists(e,t)}async createTableIfNotExists(e,t){return this.tableOps.createTableIfNotExists(e,t)}},ut=class extends Error{constructor(e,t=`storage`,n,r){super(e),this.__isStorageError=!0,this.namespace=t,this.name=t===`vectors`?`StorageVectorsError`:`StorageError`,this.status=n,this.statusCode=r}};function dt(e){return typeof e==`object`&&!!e&&`__isStorageError`in e}var ft=class extends ut{constructor(e,t,n,r=`storage`){super(e,r,t,n),this.name=r===`vectors`?`StorageVectorsApiError`:`StorageApiError`,this.status=t,this.statusCode=n}toJSON(){return{name:this.name,message:this.message,status:this.status,statusCode:this.statusCode}}},pt=class extends ut{constructor(e,t,n=`storage`){super(e,n),this.name=n===`vectors`?`StorageVectorsUnknownError`:`StorageUnknownError`,this.originalError=t}};let mt=e=>e?(...t)=>e(...t):(...e)=>fetch(...e),ht=e=>{if(typeof e!=`object`||!e)return!1;let t=Object.getPrototypeOf(e);return(t===null||t===Object.prototype||Object.getPrototypeOf(t)===null)&&!(Symbol.toStringTag in e)&&!(Symbol.iterator in e)},gt=e=>{if(Array.isArray(e))return e.map(e=>gt(e));if(typeof e==`function`||e!==Object(e))return e;let t={};return Object.entries(e).forEach(([e,n])=>{let r=e.replace(/([-_][a-z])/gi,e=>e.toUpperCase().replace(/[-_]/g,``));t[r]=gt(n)}),t},_t=e=>!e||typeof e!=`string`||e.length===0||e.length>100||e.trim()!==e||e.includes(`/`)||e.includes(`\\`)?!1:/^[\w!.\*'() &$@=;:+,?-]+$/.test(e);function vt(e){"@babel/helpers - typeof";return vt=typeof Symbol==`function`&&typeof Symbol.iterator==`symbol`?function(e){return typeof e}:function(e){return e&&typeof Symbol==`function`&&e.constructor===Symbol&&e!==Symbol.prototype?`symbol`:typeof e},vt(e)}function yt(e,t){if(vt(e)!=`object`||!e)return e;var n=e[Symbol.toPrimitive];if(n!==void 0){var r=n.call(e,t||`default`);if(vt(r)!=`object`)return r;throw TypeError(`@@toPrimitive must return a primitive value.`)}return(t===`string`?String:Number)(e)}function bt(e){var t=yt(e,`string`);return vt(t)==`symbol`?t:t+``}function xt(e,t,n){return(t=bt(t))in e?Object.defineProperty(e,t,{value:n,enumerable:!0,configurable:!0,writable:!0}):e[t]=n,e}function St(e,t){var n=Object.keys(e);if(Object.getOwnPropertySymbols){var r=Object.getOwnPropertySymbols(e);t&&(r=r.filter(function(t){return Object.getOwnPropertyDescriptor(e,t).enumerable})),n.push.apply(n,r)}return n}function k(e){for(var t=1;t<arguments.length;t++){var n=arguments[t]==null?{}:arguments[t];t%2?St(Object(n),!0).forEach(function(t){xt(e,t,n[t])}):Object.getOwnPropertyDescriptors?Object.defineProperties(e,Object.getOwnPropertyDescriptors(n)):St(Object(n)).forEach(function(t){Object.defineProperty(e,t,Object.getOwnPropertyDescriptor(n,t))})}return e}let Ct=e=>e.msg||e.message||e.error_description||(typeof e.error==`string`?e.error:e.error?.message)||JSON.stringify(e),wt=async(e,t,n,r)=>{if(typeof e==`object`&&e&&typeof e.json==`function`){let n=e,i=parseInt(n.status,10);Number.isFinite(i)||(i=500),n.json().then(e=>{let n=e?.statusCode||e?.code||i+``;t(new ft(Ct(e),i,n,r))}).catch(()=>{let e=i+``;t(new ft(n.statusText||`HTTP ${i} error`,i,e,r))})}else t(new pt(Ct(e),e,r))},Tt=(e,t,n,r)=>{let i={method:e,headers:t?.headers||{}};if(e===`GET`||e===`HEAD`||!r)return k(k({},i),n);if(ht(r)){let e=t?.headers||{},n;for(let[t,r]of Object.entries(e))t.toLowerCase()===`content-type`&&(n=r);i.headers=Et(e,`Content-Type`,n??`application/json`),i.body=JSON.stringify(r)}else i.body=r;return t?.duplex&&(i.duplex=t.duplex),k(k({},i),n)};function Et(e,t,n){let r=k({},e);for(let e of Object.keys(r))e.toLowerCase()===t.toLowerCase()&&delete r[e];return r[t]=n,r}async function Dt(e,t,n,r,i,a,o){return new Promise((s,c)=>{e(n,Tt(t,r,i,a)).then(e=>{if(!e.ok)throw e;if(r?.noResolveJson)return e;if(o===`vectors`){let t=e.headers.get(`content-type`);if(e.headers.get(`content-length`)===`0`||e.status===204||!t||!t.includes(`application/json`))return{}}return e.json()}).then(e=>s(e)).catch(e=>wt(e,c,r,o))})}function Ot(e=`storage`){return{get:async(t,n,r,i)=>Dt(t,`GET`,n,r,i,void 0,e),post:async(t,n,r,i,a)=>Dt(t,`POST`,n,i,a,r,e),put:async(t,n,r,i,a)=>Dt(t,`PUT`,n,i,a,r,e),head:async(t,n,r,i)=>Dt(t,`HEAD`,n,k(k({},r),{},{noResolveJson:!0}),i,void 0,e),remove:async(t,n,r,i,a)=>Dt(t,`DELETE`,n,i,a,r,e)}}let{get:kt,post:A,put:At,head:jt,remove:Mt}=Ot(`storage`),j=Ot(`vectors`);var M=class{constructor(e,t={},n,r=`storage`){this.shouldThrowOnError=!1,this.url=e,this.headers=Object.fromEntries(Object.entries(t).map(([e,t])=>[e.toLowerCase(),t])),this.fetch=mt(n),this.namespace=r}throwOnError(){return this.shouldThrowOnError=!0,this}setHeader(e,t){return this.headers=k(k({},this.headers),{},{[e.toLowerCase()]:t}),this}async handleOperation(e){var t=this;try{return{data:await e(),error:null}}catch(e){if(t.shouldThrowOnError)throw e;if(dt(e))return{data:null,error:e};throw e}}},Nt=class{constructor(e,t){this.downloadFn=e,this.shouldThrowOnError=t}then(e,t){return this.execute().then(e,t)}async execute(){var e=this;try{return{data:(await e.downloadFn()).body,error:null}}catch(t){if(e.shouldThrowOnError)throw t;if(dt(t))return{data:null,error:t};throw t}}};let Pt;Pt=Symbol.toStringTag;var Ft=class{constructor(e,t){this.downloadFn=e,this.shouldThrowOnError=t,this[Pt]=`BlobDownloadBuilder`,this.promise=null}asStream(){return new Nt(this.downloadFn,this.shouldThrowOnError)}then(e,t){return this.getPromise().then(e,t)}catch(e){return this.getPromise().catch(e)}finally(e){return this.getPromise().finally(e)}getPromise(){return this.promise||=this.execute(),this.promise}async execute(){var e=this;try{return{data:await(await e.downloadFn()).blob(),error:null}}catch(t){if(e.shouldThrowOnError)throw t;if(dt(t))return{data:null,error:t};throw t}}};let It={limit:100,offset:0,sortBy:{column:`name`,order:`asc`}},Lt={cacheControl:`3600`,contentType:`text/plain;charset=UTF-8`,upsert:!1};var Rt=class extends M{constructor(e,t={},n,r){super(e,t,r,`storage`),this.bucketId=n}async uploadOrUpdate(e,t,n,r){var i=this;return i.handleOperation(async()=>{let a,o=k(k({},Lt),r),s=k(k({},i.headers),e===`POST`&&{"x-upsert":String(o.upsert)}),c=o.metadata;typeof Blob<`u`&&n instanceof Blob?(a=new FormData,a.append(`cacheControl`,o.cacheControl),c&&a.append(`metadata`,i.encodeMetadata(c)),a.append(``,n)):typeof FormData<`u`&&n instanceof FormData?(a=n,a.has(`cacheControl`)||a.append(`cacheControl`,o.cacheControl),c&&!a.has(`metadata`)&&a.append(`metadata`,i.encodeMetadata(c))):(a=n,s[`cache-control`]=`max-age=${o.cacheControl}`,s[`content-type`]=o.contentType,c&&(s[`x-metadata`]=i.toBase64(i.encodeMetadata(c))),(typeof ReadableStream<`u`&&a instanceof ReadableStream||a&&typeof a==`object`&&`pipe`in a&&typeof a.pipe==`function`)&&!o.duplex&&(o.duplex=`half`)),r?.headers&&(s=k(k({},s),r.headers));let l=i._removeEmptyFolders(t),u=i._getFinalPath(l),d=await(e==`PUT`?At:A)(i.fetch,`${i.url}/object/${u}`,a,k({headers:s},o?.duplex?{duplex:o.duplex}:{}));return{path:l,id:d.Id,fullPath:d.Key}})}async upload(e,t,n){return this.uploadOrUpdate(`POST`,e,t,n)}async uploadToSignedUrl(e,t,n,r){var i=this;let a=i._removeEmptyFolders(e),o=i._getFinalPath(a),s=new URL(i.url+`/object/upload/sign/${o}`);return s.searchParams.set(`token`,t),i.handleOperation(async()=>{let e,t=k(k({},Lt),r),o=k(k({},i.headers),{"x-upsert":String(t.upsert)});return typeof Blob<`u`&&n instanceof Blob?(e=new FormData,e.append(`cacheControl`,t.cacheControl),e.append(``,n)):typeof FormData<`u`&&n instanceof FormData?(e=n,e.append(`cacheControl`,t.cacheControl)):(e=n,o[`cache-control`]=`max-age=${t.cacheControl}`,o[`content-type`]=t.contentType),{path:a,fullPath:(await At(i.fetch,s.toString(),e,{headers:o})).Key}})}async createSignedUploadUrl(e,t){var n=this;return n.handleOperation(async()=>{let r=n._getFinalPath(e),i=k({},n.headers);t?.upsert&&(i[`x-upsert`]=`true`);let a=await A(n.fetch,`${n.url}/object/upload/sign/${r}`,{},{headers:i}),o=new URL(n.url+a.url),s=o.searchParams.get(`token`);if(!s)throw new ut(`No token returned by API`);return{signedUrl:o.toString(),path:e,token:s}})}async update(e,t,n){return this.uploadOrUpdate(`PUT`,e,t,n)}async move(e,t,n){var r=this;return r.handleOperation(async()=>await A(r.fetch,`${r.url}/object/move`,{bucketId:r.bucketId,sourceKey:e,destinationKey:t,destinationBucket:n?.destinationBucket},{headers:r.headers}))}async copy(e,t,n){var r=this;return r.handleOperation(async()=>({path:(await A(r.fetch,`${r.url}/object/copy`,{bucketId:r.bucketId,sourceKey:e,destinationKey:t,destinationBucket:n?.destinationBucket},{headers:r.headers})).Key}))}async createSignedUrl(e,t,n){var r=this;return r.handleOperation(async()=>{let i=r._getFinalPath(e),a=typeof n?.transform==`object`&&n.transform!==null&&Object.keys(n.transform).length>0,o=await A(r.fetch,`${r.url}/object/sign/${i}`,k({expiresIn:t},a?{transform:n.transform}:{}),{headers:r.headers}),s=n?.download?`&download=${n.download===!0?``:n.download}`:``,c=a&&o.signedURL.includes(`/object/sign/`)?o.signedURL.replace(`/object/sign/`,`/render/image/sign/`):o.signedURL;return{signedUrl:encodeURI(`${r.url}${c}${s}`)}})}async createSignedUrls(e,t,n){var r=this;return r.handleOperation(async()=>{let i=await A(r.fetch,`${r.url}/object/sign/${r.bucketId}`,{expiresIn:t,paths:e},{headers:r.headers}),a=n?.download?`&download=${n.download===!0?``:n.download}`:``;return i.map(e=>k(k({},e),{},{signedUrl:e.signedURL?encodeURI(`${r.url}${e.signedURL}${a}`):null}))})}download(e,t,n){let r=t?.transform===void 0?`object`:`render/image/authenticated`,i=this.transformOptsToQueryString(t?.transform||{}),a=i?`?${i}`:``,o=this._getFinalPath(e);return new Ft(()=>kt(this.fetch,`${this.url}/${r}/${o}${a}`,{headers:this.headers,noResolveJson:!0},n),this.shouldThrowOnError)}async info(e){var t=this;let n=t._getFinalPath(e);return t.handleOperation(async()=>gt(await kt(t.fetch,`${t.url}/object/info/${n}`,{headers:t.headers})))}async exists(e){var t=this;let n=t._getFinalPath(e);try{return await jt(t.fetch,`${t.url}/object/${n}`,{headers:t.headers}),{data:!0,error:null}}catch(e){if(t.shouldThrowOnError)throw e;if(dt(e)){let t=e instanceof ft?e.status:e instanceof pt?e.originalError?.status:void 0;if(t!==void 0&&[400,404].includes(t))return{data:!1,error:e}}throw e}}getPublicUrl(e,t){let n=this._getFinalPath(e),r=[],i=t?.download?`download=${t.download===!0?``:t.download}`:``;i!==``&&r.push(i);let a=t?.transform===void 0?`object`:`render/image`,o=this.transformOptsToQueryString(t?.transform||{});o!==``&&r.push(o);let s=r.join(`&`);return s!==``&&(s=`?${s}`),{data:{publicUrl:encodeURI(`${this.url}/${a}/public/${n}${s}`)}}}async remove(e){var t=this;return t.handleOperation(async()=>await Mt(t.fetch,`${t.url}/object/${t.bucketId}`,{prefixes:e},{headers:t.headers}))}async list(e,t,n){var r=this;return r.handleOperation(async()=>{let i=k(k(k({},It),t),{},{prefix:e||``});return await A(r.fetch,`${r.url}/object/list/${r.bucketId}`,i,{headers:r.headers},n)})}async listV2(e,t){var n=this;return n.handleOperation(async()=>{let r=k({},e);return await A(n.fetch,`${n.url}/object/list-v2/${n.bucketId}`,r,{headers:n.headers},t)})}encodeMetadata(e){return JSON.stringify(e)}toBase64(e){return typeof Buffer<`u`?Buffer.from(e).toString(`base64`):btoa(e)}_getFinalPath(e){return`${this.bucketId}/${e.replace(/^\/+/,``)}`}_removeEmptyFolders(e){return e.replace(/^\/|\/$/g,``).replace(/\/+/g,`/`)}transformOptsToQueryString(e){let t=[];return e.width&&t.push(`width=${e.width}`),e.height&&t.push(`height=${e.height}`),e.resize&&t.push(`resize=${e.resize}`),e.format&&t.push(`format=${e.format}`),e.quality&&t.push(`quality=${e.quality}`),t.join(`&`)}};let zt={"X-Client-Info":`storage-js/2.102.0`};var Bt=class extends M{constructor(e,t={},n,r){let i=new URL(e);r?.useNewHostname&&/supabase\.(co|in|red)$/.test(i.hostname)&&!i.hostname.includes(`storage.supabase.`)&&(i.hostname=i.hostname.replace(`supabase.`,`storage.supabase.`));let a=i.href.replace(/\/$/,``),o=k(k({},zt),t);super(a,o,n,`storage`)}async listBuckets(e){var t=this;return t.handleOperation(async()=>{let n=t.listBucketOptionsToQueryString(e);return await kt(t.fetch,`${t.url}/bucket${n}`,{headers:t.headers})})}async getBucket(e){var t=this;return t.handleOperation(async()=>await kt(t.fetch,`${t.url}/bucket/${e}`,{headers:t.headers}))}async createBucket(e,t={public:!1}){var n=this;return n.handleOperation(async()=>await A(n.fetch,`${n.url}/bucket`,{id:e,name:e,type:t.type,public:t.public,file_size_limit:t.fileSizeLimit,allowed_mime_types:t.allowedMimeTypes},{headers:n.headers}))}async updateBucket(e,t){var n=this;return n.handleOperation(async()=>await At(n.fetch,`${n.url}/bucket/${e}`,{id:e,name:e,public:t.public,file_size_limit:t.fileSizeLimit,allowed_mime_types:t.allowedMimeTypes},{headers:n.headers}))}async emptyBucket(e){var t=this;return t.handleOperation(async()=>await A(t.fetch,`${t.url}/bucket/${e}/empty`,{},{headers:t.headers}))}async deleteBucket(e){var t=this;return t.handleOperation(async()=>await Mt(t.fetch,`${t.url}/bucket/${e}`,{},{headers:t.headers}))}listBucketOptionsToQueryString(e){let t={};return e&&(`limit`in e&&(t.limit=String(e.limit)),`offset`in e&&(t.offset=String(e.offset)),e.search&&(t.search=e.search),e.sortColumn&&(t.sortColumn=e.sortColumn),e.sortOrder&&(t.sortOrder=e.sortOrder)),Object.keys(t).length>0?`?`+new URLSearchParams(t).toString():``}},Vt=class extends M{constructor(e,t={},n){let r=e.replace(/\/$/,``),i=k(k({},zt),t);super(r,i,n,`storage`)}async createBucket(e){var t=this;return t.handleOperation(async()=>await A(t.fetch,`${t.url}/bucket`,{name:e},{headers:t.headers}))}async listBuckets(e){var t=this;return t.handleOperation(async()=>{let n=new URLSearchParams;e?.limit!==void 0&&n.set(`limit`,e.limit.toString()),e?.offset!==void 0&&n.set(`offset`,e.offset.toString()),e?.sortColumn&&n.set(`sortColumn`,e.sortColumn),e?.sortOrder&&n.set(`sortOrder`,e.sortOrder),e?.search&&n.set(`search`,e.search);let r=n.toString(),i=r?`${t.url}/bucket?${r}`:`${t.url}/bucket`;return await kt(t.fetch,i,{headers:t.headers})})}async deleteBucket(e){var t=this;return t.handleOperation(async()=>await Mt(t.fetch,`${t.url}/bucket/${e}`,{},{headers:t.headers}))}from(e){var t=this;if(!_t(e))throw new ut(`Invalid bucket name: File, folder, and bucket names must follow AWS object key naming guidelines and should avoid the use of any other characters.`);let n=new lt({baseUrl:this.url,catalogName:e,auth:{type:`custom`,getHeaders:async()=>t.headers},fetch:this.fetch}),r=this.shouldThrowOnError;return new Proxy(n,{get(e,t){let n=e[t];return typeof n==`function`?async(...t)=>{try{return{data:await n.apply(e,t),error:null}}catch(e){if(r)throw e;return{data:null,error:e}}}:n}})}},Ht=class extends M{constructor(e,t={},n){let r=e.replace(/\/$/,``),i=k(k({},zt),{},{"Content-Type":`application/json`},t);super(r,i,n,`vectors`)}async createIndex(e){var t=this;return t.handleOperation(async()=>await j.post(t.fetch,`${t.url}/CreateIndex`,e,{headers:t.headers})||{})}async getIndex(e,t){var n=this;return n.handleOperation(async()=>await j.post(n.fetch,`${n.url}/GetIndex`,{vectorBucketName:e,indexName:t},{headers:n.headers}))}async listIndexes(e){var t=this;return t.handleOperation(async()=>await j.post(t.fetch,`${t.url}/ListIndexes`,e,{headers:t.headers}))}async deleteIndex(e,t){var n=this;return n.handleOperation(async()=>await j.post(n.fetch,`${n.url}/DeleteIndex`,{vectorBucketName:e,indexName:t},{headers:n.headers})||{})}},Ut=class extends M{constructor(e,t={},n){let r=e.replace(/\/$/,``),i=k(k({},zt),{},{"Content-Type":`application/json`},t);super(r,i,n,`vectors`)}async putVectors(e){var t=this;if(e.vectors.length<1||e.vectors.length>500)throw Error(`Vector batch size must be between 1 and 500 items`);return t.handleOperation(async()=>await j.post(t.fetch,`${t.url}/PutVectors`,e,{headers:t.headers})||{})}async getVectors(e){var t=this;return t.handleOperation(async()=>await j.post(t.fetch,`${t.url}/GetVectors`,e,{headers:t.headers}))}async listVectors(e){var t=this;if(e.segmentCount!==void 0){if(e.segmentCount<1||e.segmentCount>16)throw Error(`segmentCount must be between 1 and 16`);if(e.segmentIndex!==void 0&&(e.segmentIndex<0||e.segmentIndex>=e.segmentCount))throw Error(`segmentIndex must be between 0 and ${e.segmentCount-1}`)}return t.handleOperation(async()=>await j.post(t.fetch,`${t.url}/ListVectors`,e,{headers:t.headers}))}async queryVectors(e){var t=this;return t.handleOperation(async()=>await j.post(t.fetch,`${t.url}/QueryVectors`,e,{headers:t.headers}))}async deleteVectors(e){var t=this;if(e.keys.length<1||e.keys.length>500)throw Error(`Keys batch size must be between 1 and 500 items`);return t.handleOperation(async()=>await j.post(t.fetch,`${t.url}/DeleteVectors`,e,{headers:t.headers})||{})}},Wt=class extends M{constructor(e,t={},n){let r=e.replace(/\/$/,``),i=k(k({},zt),{},{"Content-Type":`application/json`},t);super(r,i,n,`vectors`)}async createBucket(e){var t=this;return t.handleOperation(async()=>await j.post(t.fetch,`${t.url}/CreateVectorBucket`,{vectorBucketName:e},{headers:t.headers})||{})}async getBucket(e){var t=this;return t.handleOperation(async()=>await j.post(t.fetch,`${t.url}/GetVectorBucket`,{vectorBucketName:e},{headers:t.headers}))}async listBuckets(e={}){var t=this;return t.handleOperation(async()=>await j.post(t.fetch,`${t.url}/ListVectorBuckets`,e,{headers:t.headers}))}async deleteBucket(e){var t=this;return t.handleOperation(async()=>await j.post(t.fetch,`${t.url}/DeleteVectorBucket`,{vectorBucketName:e},{headers:t.headers})||{})}},Gt=class extends Wt{constructor(e,t={}){super(e,t.headers||{},t.fetch)}from(e){return new Kt(this.url,this.headers,e,this.fetch)}async createBucket(e){var t=()=>super.createBucket,n=this;return t().call(n,e)}async getBucket(e){var t=()=>super.getBucket,n=this;return t().call(n,e)}async listBuckets(e={}){var t=()=>super.listBuckets,n=this;return t().call(n,e)}async deleteBucket(e){var t=()=>super.deleteBucket,n=this;return t().call(n,e)}},Kt=class extends Ht{constructor(e,t,n,r){super(e,t,r),this.vectorBucketName=n}async createIndex(e){var t=()=>super.createIndex,n=this;return t().call(n,k(k({},e),{},{vectorBucketName:n.vectorBucketName}))}async listIndexes(e={}){var t=()=>super.listIndexes,n=this;return t().call(n,k(k({},e),{},{vectorBucketName:n.vectorBucketName}))}async getIndex(e){var t=()=>super.getIndex,n=this;return t().call(n,n.vectorBucketName,e)}async deleteIndex(e){var t=()=>super.deleteIndex,n=this;return t().call(n,n.vectorBucketName,e)}index(e){return new qt(this.url,this.headers,this.vectorBucketName,e,this.fetch)}},qt=class extends Ut{constructor(e,t,n,r,i){super(e,t,i),this.vectorBucketName=n,this.indexName=r}async putVectors(e){var t=()=>super.putVectors,n=this;return t().call(n,k(k({},e),{},{vectorBucketName:n.vectorBucketName,indexName:n.indexName}))}async getVectors(e){var t=()=>super.getVectors,n=this;return t().call(n,k(k({},e),{},{vectorBucketName:n.vectorBucketName,indexName:n.indexName}))}async listVectors(e={}){var t=()=>super.listVectors,n=this;return t().call(n,k(k({},e),{},{vectorBucketName:n.vectorBucketName,indexName:n.indexName}))}async queryVectors(e){var t=()=>super.queryVectors,n=this;return t().call(n,k(k({},e),{},{vectorBucketName:n.vectorBucketName,indexName:n.indexName}))}async deleteVectors(e){var t=()=>super.deleteVectors,n=this;return t().call(n,k(k({},e),{},{vectorBucketName:n.vectorBucketName,indexName:n.indexName}))}},Jt=class extends Bt{constructor(e,t={},n,r){super(e,t,n,r)}from(e){return new Rt(this.url,this.headers,e,this.fetch)}get vectors(){return new Gt(this.url+`/vector`,{headers:this.headers,fetch:this.fetch})}get analytics(){return new Vt(this.url+`/iceberg`,this.headers,this.fetch)}};let Yt=``;Yt=typeof Deno<`u`?`deno`:typeof document<`u`?`web`:typeof navigator<`u`&&navigator.product===`ReactNative`?`react-native`:`node`;let Xt={headers:{"X-Client-Info":`supabase-js-${Yt}/2.102.0`}},Zt={schema:`public`},Qt={autoRefreshToken:!0,persistSession:!0,detectSessionInUrl:!0,flowType:`implicit`},$t={},en=e=>e?(...t)=>e(...t):(...e)=>fetch(...e),tn=()=>Headers,nn=(e,t,n)=>{let r=en(n),i=tn();return async(n,a)=>{let o=await t()??e,s=new i(a?.headers);return s.has(`apikey`)||s.set(`apikey`,e),s.has(`Authorization`)||s.set(`Authorization`,`Bearer ${o}`),r(n,{...a,headers:s})}};function rn(e){return e.endsWith(`/`)?e:e+`/`}function an(e,t){let{db:n,auth:r,realtime:i,global:a}=e,{db:o,auth:s,realtime:c,global:l}=t,u={db:{...o,...n},auth:{...s,...r},realtime:{...c,...i},storage:{},global:{...l,...a,headers:{...l?.headers??{},...a?.headers??{}}},accessToken:async()=>``};return e.accessToken?u.accessToken=e.accessToken:delete u.accessToken,u}function on(e){let t=e?.trim();if(!t)throw Error(`supabaseUrl is required.`);if(!t.match(/^https?:\/\//i))throw Error(`Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL.`);try{return new URL(rn(t))}catch{throw Error(`Invalid supabaseUrl: Provided URL is malformed.`)}}let sn=`2.102.0`,N=30*1e3,cn=3*N,ln={"X-Client-Info":`gotrue-js/${sn}`},un=`X-Supabase-Api-Version`,dn={"2024-01-01":{timestamp:Date.parse(`2024-01-01T00:00:00.0Z`),name:`2024-01-01`}},fn=/^([a-z0-9_-]{4})*($|[a-z0-9_-]{3}$|[a-z0-9_-]{2}$)$/i;var P=class extends Error{constructor(e,t,n){super(e),this.__isAuthError=!0,this.name=`AuthError`,this.status=t,this.code=n}};function F(e){return typeof e==`object`&&!!e&&`__isAuthError`in e}var pn=class extends P{constructor(e,t,n){super(e,t,n),this.name=`AuthApiError`,this.status=t,this.code=n}};function mn(e){return F(e)&&e.name===`AuthApiError`}var I=class extends P{constructor(e,t){super(e),this.name=`AuthUnknownError`,this.originalError=t}},L=class extends P{constructor(e,t,n,r){super(e,n,r),this.name=t,this.status=n}},R=class extends L{constructor(){super(`Auth session missing!`,`AuthSessionMissingError`,400,void 0)}};function hn(e){return F(e)&&e.name===`AuthSessionMissingError`}var z=class extends L{constructor(){super(`Auth session or user missing`,`AuthInvalidTokenResponseError`,500,void 0)}},gn=class extends L{constructor(e){super(e,`AuthInvalidCredentialsError`,400,void 0)}},_n=class extends L{constructor(e,t=null){super(e,`AuthImplicitGrantRedirectError`,500,void 0),this.details=null,this.details=t}toJSON(){return{name:this.name,message:this.message,status:this.status,details:this.details}}};function vn(e){return F(e)&&e.name===`AuthImplicitGrantRedirectError`}var yn=class extends L{constructor(e,t=null){super(e,`AuthPKCEGrantCodeExchangeError`,500,void 0),this.details=null,this.details=t}toJSON(){return{name:this.name,message:this.message,status:this.status,details:this.details}}},bn=class extends L{constructor(){super(`PKCE code verifier not found in storage. This can happen if the auth flow was initiated in a different browser or device, or if the storage was cleared. For SSR frameworks (Next.js, SvelteKit, etc.), use @supabase/ssr on both the server and client to store the code verifier in cookies.`,`AuthPKCECodeVerifierMissingError`,400,`pkce_code_verifier_not_found`)}};function xn(e){return F(e)&&e.name===`AuthPKCECodeVerifierMissingError`}var Sn=class extends L{constructor(e,t){super(e,`AuthRetryableFetchError`,t,void 0)}};function Cn(e){return F(e)&&e.name===`AuthRetryableFetchError`}var wn=class extends L{constructor(e,t,n){super(e,`AuthWeakPasswordError`,t,`weak_password`),this.reasons=n}};function Tn(e){return F(e)&&e.name===`AuthWeakPasswordError`}var En=class extends L{constructor(e){super(e,`AuthInvalidJwtError`,400,`invalid_jwt`)}};let Dn=`ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_`.split(``),On=` 	
+\r=`.split(``),kn=(()=>{let e=Array(128);for(let t=0;t<e.length;t+=1)e[t]=-1;for(let t=0;t<On.length;t+=1)e[On[t].charCodeAt(0)]=-2;for(let t=0;t<Dn.length;t+=1)e[Dn[t].charCodeAt(0)]=t;return e})();function An(e,t,n){if(e!==null)for(t.queue=t.queue<<8|e,t.queuedBits+=8;t.queuedBits>=6;)n(Dn[t.queue>>t.queuedBits-6&63]),t.queuedBits-=6;else if(t.queuedBits>0)for(t.queue<<=6-t.queuedBits,t.queuedBits=6;t.queuedBits>=6;)n(Dn[t.queue>>t.queuedBits-6&63]),t.queuedBits-=6}function jn(e,t,n){let r=kn[e];if(r>-1)for(t.queue=t.queue<<6|r,t.queuedBits+=6;t.queuedBits>=8;)n(t.queue>>t.queuedBits-8&255),t.queuedBits-=8;else if(r===-2)return;else throw Error(`Invalid Base64-URL character "${String.fromCharCode(e)}"`)}function Mn(e){let t=[],n=e=>{t.push(String.fromCodePoint(e))},r={utf8seq:0,codepoint:0},i={queue:0,queuedBits:0},a=e=>{Fn(e,r,n)};for(let t=0;t<e.length;t+=1)jn(e.charCodeAt(t),i,a);return t.join(``)}function Nn(e,t){if(e<=127){t(e);return}else if(e<=2047){t(192|e>>6),t(128|e&63);return}else if(e<=65535){t(224|e>>12),t(128|e>>6&63),t(128|e&63);return}else if(e<=1114111){t(240|e>>18),t(128|e>>12&63),t(128|e>>6&63),t(128|e&63);return}throw Error(`Unrecognized Unicode codepoint: ${e.toString(16)}`)}function Pn(e,t){for(let n=0;n<e.length;n+=1){let r=e.charCodeAt(n);if(r>55295&&r<=56319){let t=(r-55296)*1024&65535;r=(e.charCodeAt(n+1)-56320&65535|t)+65536,n+=1}Nn(r,t)}}function Fn(e,t,n){if(t.utf8seq===0){if(e<=127){n(e);return}for(let n=1;n<6;n+=1)if(!(e>>7-n&1)){t.utf8seq=n;break}if(t.utf8seq===2)t.codepoint=e&31;else if(t.utf8seq===3)t.codepoint=e&15;else if(t.utf8seq===4)t.codepoint=e&7;else throw Error(`Invalid UTF-8 sequence`);--t.utf8seq}else if(t.utf8seq>0){if(e<=127)throw Error(`Invalid UTF-8 sequence`);t.codepoint=t.codepoint<<6|e&63,--t.utf8seq,t.utf8seq===0&&n(t.codepoint)}}function B(e){let t=[],n={queue:0,queuedBits:0},r=e=>{t.push(e)};for(let t=0;t<e.length;t+=1)jn(e.charCodeAt(t),n,r);return new Uint8Array(t)}function In(e){let t=[];return Pn(e,e=>t.push(e)),new Uint8Array(t)}function V(e){let t=[],n={queue:0,queuedBits:0},r=e=>{t.push(e)};return e.forEach(e=>An(e,n,r)),An(null,n,r),t.join(``)}function Ln(e){return Math.round(Date.now()/1e3)+e}function Rn(){return Symbol(`auth-callback`)}let H=()=>typeof window<`u`&&typeof document<`u`,U={tested:!1,writable:!1},zn=()=>{if(!H())return!1;try{if(typeof globalThis.localStorage!=`object`)return!1}catch{return!1}if(U.tested)return U.writable;let e=`lswt-${Math.random()}${Math.random()}`;try{globalThis.localStorage.setItem(e,e),globalThis.localStorage.removeItem(e),U.tested=!0,U.writable=!0}catch{U.tested=!0,U.writable=!1}return U.writable};function Bn(e){let t={},n=new URL(e);if(n.hash&&n.hash[0]===`#`)try{new URLSearchParams(n.hash.substring(1)).forEach((e,n)=>{t[n]=e})}catch{}return n.searchParams.forEach((e,n)=>{t[n]=e}),t}let Vn=e=>e?(...t)=>e(...t):(...e)=>fetch(...e),Hn=e=>typeof e==`object`&&!!e&&`status`in e&&`ok`in e&&`json`in e&&typeof e.json==`function`,W=async(e,t,n)=>{await e.setItem(t,JSON.stringify(n))},G=async(e,t)=>{let n=await e.getItem(t);if(!n)return null;try{return JSON.parse(n)}catch{return n}},K=async(e,t)=>{await e.removeItem(t)};var Un=class e{constructor(){this.promise=new e.promiseConstructor((e,t)=>{this.resolve=e,this.reject=t})}};Un.promiseConstructor=Promise;function Wn(e){let t=e.split(`.`);if(t.length!==3)throw new En(`Invalid JWT structure`);for(let e=0;e<t.length;e++)if(!fn.test(t[e]))throw new En(`JWT not in base64url format`);return{header:JSON.parse(Mn(t[0])),payload:JSON.parse(Mn(t[1])),signature:B(t[2]),raw:{header:t[0],payload:t[1]}}}async function Gn(e){return await new Promise(t=>{setTimeout(()=>t(null),e)})}function Kn(e,t){return new Promise((n,r)=>{(async()=>{for(let i=0;i<1/0;i++)try{let r=await e(i);if(!t(i,null,r)){n(r);return}}catch(e){if(!t(i,e)){r(e);return}}})()})}function qn(e){return(`0`+e.toString(16)).substr(-2)}function Jn(){let e=new Uint32Array(56);if(typeof crypto>`u`){let e=``;for(let t=0;t<56;t++)e+=`ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~`.charAt(Math.floor(Math.random()*66));return e}return crypto.getRandomValues(e),Array.from(e,qn).join(``)}async function Yn(e){let t=new TextEncoder().encode(e),n=await crypto.subtle.digest(`SHA-256`,t),r=new Uint8Array(n);return Array.from(r).map(e=>String.fromCharCode(e)).join(``)}async function Xn(e){if(!(typeof crypto<`u`&&crypto.subtle!==void 0&&typeof TextEncoder<`u`))return console.warn(`WebCrypto API is not supported. Code challenge method will default to use plain instead of sha256.`),e;let t=await Yn(e);return btoa(t).replace(/\+/g,`-`).replace(/\//g,`_`).replace(/=+$/,``)}async function q(e,t,n=!1){let r=Jn(),i=r;n&&(i+=`/PASSWORD_RECOVERY`),await W(e,`${t}-code-verifier`,i);let a=await Xn(r);return[a,r===a?`plain`:`s256`]}let Zn=/^2[0-9]{3}-(0[1-9]|1[0-2])-(0[1-9]|1[0-9]|2[0-9]|3[0-1])$/i;function Qn(e){let t=e.headers.get(un);if(!t||!t.match(Zn))return null;try{return new Date(`${t}T00:00:00.0Z`)}catch{return null}}function $n(e){if(!e)throw Error(`Missing exp claim`);if(e<=Math.floor(Date.now()/1e3))throw Error(`JWT has expired`)}function er(e){switch(e){case`RS256`:return{name:`RSASSA-PKCS1-v1_5`,hash:{name:`SHA-256`}};case`ES256`:return{name:`ECDSA`,namedCurve:`P-256`,hash:{name:`SHA-256`}};default:throw Error(`Invalid alg claim`)}}let tr=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;function nr(e){if(!tr.test(e))throw Error(`@supabase/auth-js: Expected parameter to be UUID but is not`)}function rr(){return new Proxy({},{get:(e,t)=>{if(t===`__isUserNotAvailableProxy`)return!0;if(typeof t==`symbol`){let e=t.toString();if(e===`Symbol(Symbol.toPrimitive)`||e===`Symbol(Symbol.toStringTag)`||e===`Symbol(util.inspect.custom)`)return}throw Error(`@supabase/auth-js: client was created with userStorage option and there was no user stored in the user storage. Accessing the "${t}" property of the session object is not supported. Please use getUser() instead.`)},set:(e,t)=>{throw Error(`@supabase/auth-js: client was created with userStorage option and there was no user stored in the user storage. Setting the "${t}" property of the session object is not supported. Please use getUser() to fetch a user object you can manipulate.`)},deleteProperty:(e,t)=>{throw Error(`@supabase/auth-js: client was created with userStorage option and there was no user stored in the user storage. Deleting the "${t}" property of the session object is not supported. Please use getUser() to fetch a user object you can manipulate.`)}})}function ir(e,t){return new Proxy(e,{get:(e,n,r)=>{if(n===`__isInsecureUserWarningProxy`)return!0;if(typeof n==`symbol`){let t=n.toString();if(t===`Symbol(Symbol.toPrimitive)`||t===`Symbol(Symbol.toStringTag)`||t===`Symbol(util.inspect.custom)`||t===`Symbol(nodejs.util.inspect.custom)`)return Reflect.get(e,n,r)}return!t.value&&typeof n==`string`&&(console.warn(`Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.`),t.value=!0),Reflect.get(e,n,r)}})}function ar(e){return JSON.parse(JSON.stringify(e))}let J=e=>e.msg||e.message||e.error_description||e.error||JSON.stringify(e),or=[502,503,504];async function sr(e){if(!Hn(e))throw new Sn(J(e),0);if(or.includes(e.status))throw new Sn(J(e),e.status);let t;try{t=await e.json()}catch(e){throw new I(J(e),e)}let n,r=Qn(e);if(r&&r.getTime()>=dn[`2024-01-01`].timestamp&&typeof t==`object`&&t&&typeof t.code==`string`?n=t.code:typeof t==`object`&&t&&typeof t.error_code==`string`&&(n=t.error_code),n){if(n===`weak_password`)throw new wn(J(t),e.status,t.weak_password?.reasons||[]);if(n===`session_not_found`)throw new R}else if(typeof t==`object`&&t&&typeof t.weak_password==`object`&&t.weak_password&&Array.isArray(t.weak_password.reasons)&&t.weak_password.reasons.length&&t.weak_password.reasons.reduce((e,t)=>e&&typeof t==`string`,!0))throw new wn(J(t),e.status,t.weak_password.reasons);throw new pn(J(t),e.status||500,n)}let cr=(e,t,n,r)=>{let i={method:e,headers:t?.headers||{}};return e===`GET`?i:(i.headers=Object.assign({"Content-Type":`application/json;charset=UTF-8`},t?.headers),i.body=JSON.stringify(r),Object.assign(Object.assign({},i),n))};async function Y(e,t,n,r){let i=Object.assign({},r?.headers);i[un]||(i[un]=dn[`2024-01-01`].name),r?.jwt&&(i.Authorization=`Bearer ${r.jwt}`);let a=r?.query??{};r?.redirectTo&&(a.redirect_to=r.redirectTo);let o=await lr(e,t,n+(Object.keys(a).length?`?`+new URLSearchParams(a).toString():``),{headers:i,noResolveJson:r?.noResolveJson},{},r?.body);return r?.xform?r?.xform(o):{data:Object.assign({},o),error:null}}async function lr(e,t,n,r,i,a){let o=cr(t,r,i,a),s;try{s=await e(n,Object.assign({},o))}catch(e){throw console.error(e),new Sn(J(e),0)}if(s.ok||await sr(s),r?.noResolveJson)return s;try{return await s.json()}catch(e){await sr(e)}}function X(e){let t=null;mr(e)&&(t=Object.assign({},e),e.expires_at||(t.expires_at=Ln(e.expires_in)));let n=e.user??e;return{data:{session:t,user:n},error:null}}function ur(e){let t=X(e);return!t.error&&e.weak_password&&typeof e.weak_password==`object`&&Array.isArray(e.weak_password.reasons)&&e.weak_password.reasons.length&&e.weak_password.message&&typeof e.weak_password.message==`string`&&e.weak_password.reasons.reduce((e,t)=>e&&typeof t==`string`,!0)&&(t.data.weak_password=e.weak_password),t}function Z(e){return{data:{user:e.user??e},error:null}}function dr(e){return{data:e,error:null}}function fr(e){let{action_link:n,email_otp:r,hashed_token:i,redirect_to:a,verification_type:o}=e,s=t(e,[`action_link`,`email_otp`,`hashed_token`,`redirect_to`,`verification_type`]);return{data:{properties:{action_link:n,email_otp:r,hashed_token:i,redirect_to:a,verification_type:o},user:Object.assign({},s)},error:null}}function pr(e){return e}function mr(e){return e.access_token&&e.refresh_token&&e.expires_in}let hr=[`global`,`local`,`others`];var gr=class{constructor({url:e=``,headers:t={},fetch:n}){this.url=e,this.headers=t,this.fetch=Vn(n),this.mfa={listFactors:this._listFactors.bind(this),deleteFactor:this._deleteFactor.bind(this)},this.oauth={listClients:this._listOAuthClients.bind(this),createClient:this._createOAuthClient.bind(this),getClient:this._getOAuthClient.bind(this),updateClient:this._updateOAuthClient.bind(this),deleteClient:this._deleteOAuthClient.bind(this),regenerateClientSecret:this._regenerateOAuthClientSecret.bind(this)},this.customProviders={listProviders:this._listCustomProviders.bind(this),createProvider:this._createCustomProvider.bind(this),getProvider:this._getCustomProvider.bind(this),updateProvider:this._updateCustomProvider.bind(this),deleteProvider:this._deleteCustomProvider.bind(this)}}async signOut(e,t=hr[0]){if(hr.indexOf(t)<0)throw Error(`@supabase/auth-js: Parameter scope must be one of ${hr.join(`, `)}`);try{return await Y(this.fetch,`POST`,`${this.url}/logout?scope=${t}`,{headers:this.headers,jwt:e,noResolveJson:!0}),{data:null,error:null}}catch(e){if(F(e))return{data:null,error:e};throw e}}async inviteUserByEmail(e,t={}){try{return await Y(this.fetch,`POST`,`${this.url}/invite`,{body:{email:e,data:t.data},headers:this.headers,redirectTo:t.redirectTo,xform:Z})}catch(e){if(F(e))return{data:{user:null},error:e};throw e}}async generateLink(e){try{let{options:n}=e,r=t(e,[`options`]),i=Object.assign(Object.assign({},r),n);return`newEmail`in r&&(i.new_email=r?.newEmail,delete i.newEmail),await Y(this.fetch,`POST`,`${this.url}/admin/generate_link`,{body:i,headers:this.headers,xform:fr,redirectTo:n?.redirectTo})}catch(e){if(F(e))return{data:{properties:null,user:null},error:e};throw e}}async createUser(e){try{return await Y(this.fetch,`POST`,`${this.url}/admin/users`,{body:e,headers:this.headers,xform:Z})}catch(e){if(F(e))return{data:{user:null},error:e};throw e}}async listUsers(e){try{let t={nextPage:null,lastPage:0,total:0},n=await Y(this.fetch,`GET`,`${this.url}/admin/users`,{headers:this.headers,noResolveJson:!0,query:{page:(e?.page)?.toString()??``,per_page:(e?.perPage)?.toString()??``},xform:pr});if(n.error)throw n.error;let r=await n.json(),i=n.headers.get(`x-total-count`)??0,a=n.headers.get(`link`)?.split(`,`)??[];return a.length>0&&(a.forEach(e=>{let n=parseInt(e.split(`;`)[0].split(`=`)[1].substring(0,1)),r=JSON.parse(e.split(`;`)[1].split(`=`)[1]);t[`${r}Page`]=n}),t.total=parseInt(i)),{data:Object.assign(Object.assign({},r),t),error:null}}catch(e){if(F(e))return{data:{users:[]},error:e};throw e}}async getUserById(e){nr(e);try{return await Y(this.fetch,`GET`,`${this.url}/admin/users/${e}`,{headers:this.headers,xform:Z})}catch(e){if(F(e))return{data:{user:null},error:e};throw e}}async updateUserById(e,t){nr(e);try{return await Y(this.fetch,`PUT`,`${this.url}/admin/users/${e}`,{body:t,headers:this.headers,xform:Z})}catch(e){if(F(e))return{data:{user:null},error:e};throw e}}async deleteUser(e,t=!1){nr(e);try{return await Y(this.fetch,`DELETE`,`${this.url}/admin/users/${e}`,{headers:this.headers,body:{should_soft_delete:t},xform:Z})}catch(e){if(F(e))return{data:{user:null},error:e};throw e}}async _listFactors(e){nr(e.userId);try{let{data:t,error:n}=await Y(this.fetch,`GET`,`${this.url}/admin/users/${e.userId}/factors`,{headers:this.headers,xform:e=>({data:{factors:e},error:null})});return{data:t,error:n}}catch(e){if(F(e))return{data:null,error:e};throw e}}async _deleteFactor(e){nr(e.userId),nr(e.id);try{return{data:await Y(this.fetch,`DELETE`,`${this.url}/admin/users/${e.userId}/factors/${e.id}`,{headers:this.headers}),error:null}}catch(e){if(F(e))return{data:null,error:e};throw e}}async _listOAuthClients(e){try{let t={nextPage:null,lastPage:0,total:0},n=await Y(this.fetch,`GET`,`${this.url}/admin/oauth/clients`,{headers:this.headers,noResolveJson:!0,query:{page:(e?.page)?.toString()??``,per_page:(e?.perPage)?.toString()??``},xform:pr});if(n.error)throw n.error;let r=await n.json(),i=n.headers.get(`x-total-count`)??0,a=n.headers.get(`link`)?.split(`,`)??[];return a.length>0&&(a.forEach(e=>{let n=parseInt(e.split(`;`)[0].split(`=`)[1].substring(0,1)),r=JSON.parse(e.split(`;`)[1].split(`=`)[1]);t[`${r}Page`]=n}),t.total=parseInt(i)),{data:Object.assign(Object.assign({},r),t),error:null}}catch(e){if(F(e))return{data:{clients:[]},error:e};throw e}}async _createOAuthClient(e){try{return await Y(this.fetch,`POST`,`${this.url}/admin/oauth/clients`,{body:e,headers:this.headers,xform:e=>({data:e,error:null})})}catch(e){if(F(e))return{data:null,error:e};throw e}}async _getOAuthClient(e){try{return await Y(this.fetch,`GET`,`${this.url}/admin/oauth/clients/${e}`,{headers:this.headers,xform:e=>({data:e,error:null})})}catch(e){if(F(e))return{data:null,error:e};throw e}}async _updateOAuthClient(e,t){try{return await Y(this.fetch,`PUT`,`${this.url}/admin/oauth/clients/${e}`,{body:t,headers:this.headers,xform:e=>({data:e,error:null})})}catch(e){if(F(e))return{data:null,error:e};throw e}}async _deleteOAuthClient(e){try{return await Y(this.fetch,`DELETE`,`${this.url}/admin/oauth/clients/${e}`,{headers:this.headers,noResolveJson:!0}),{data:null,error:null}}catch(e){if(F(e))return{data:null,error:e};throw e}}async _regenerateOAuthClientSecret(e){try{return await Y(this.fetch,`POST`,`${this.url}/admin/oauth/clients/${e}/regenerate_secret`,{headers:this.headers,xform:e=>({data:e,error:null})})}catch(e){if(F(e))return{data:null,error:e};throw e}}async _listCustomProviders(e){try{let t={};return e?.type&&(t.type=e.type),await Y(this.fetch,`GET`,`${this.url}/admin/custom-providers`,{headers:this.headers,query:t,xform:e=>({data:{providers:e?.providers??[]},error:null})})}catch(e){if(F(e))return{data:{providers:[]},error:e};throw e}}async _createCustomProvider(e){try{return await Y(this.fetch,`POST`,`${this.url}/admin/custom-providers`,{body:e,headers:this.headers,xform:e=>({data:e,error:null})})}catch(e){if(F(e))return{data:null,error:e};throw e}}async _getCustomProvider(e){try{return await Y(this.fetch,`GET`,`${this.url}/admin/custom-providers/${e}`,{headers:this.headers,xform:e=>({data:e,error:null})})}catch(e){if(F(e))return{data:null,error:e};throw e}}async _updateCustomProvider(e,t){try{return await Y(this.fetch,`PUT`,`${this.url}/admin/custom-providers/${e}`,{body:t,headers:this.headers,xform:e=>({data:e,error:null})})}catch(e){if(F(e))return{data:null,error:e};throw e}}async _deleteCustomProvider(e){try{return await Y(this.fetch,`DELETE`,`${this.url}/admin/custom-providers/${e}`,{headers:this.headers,noResolveJson:!0}),{data:null,error:null}}catch(e){if(F(e))return{data:null,error:e};throw e}}};function _r(e={}){return{getItem:t=>e[t]||null,setItem:(t,n)=>{e[t]=n},removeItem:t=>{delete e[t]}}}let Q={debug:!!(globalThis&&zn()&&globalThis.localStorage&&globalThis.localStorage.getItem(`supabase.gotrue-js.locks.debug`)===`true`)};var vr=class extends Error{constructor(e){super(e),this.isAcquireTimeout=!0}},yr=class extends vr{},br=class extends vr{};async function xr(e,t,n){Q.debug&&console.log(`@supabase/gotrue-js: navigatorLock: acquire lock`,e,t);let r=new globalThis.AbortController,i;t>0&&(i=setTimeout(()=>{r.abort(),Q.debug&&console.log(`@supabase/gotrue-js: navigatorLock acquire timed out`,e)},t)),await Promise.resolve();try{return await globalThis.navigator.locks.request(e,t===0?{mode:`exclusive`,ifAvailable:!0}:{mode:`exclusive`,signal:r.signal},async r=>{if(r){clearTimeout(i),Q.debug&&console.log(`@supabase/gotrue-js: navigatorLock: acquired`,e,r.name);try{return await n()}finally{Q.debug&&console.log(`@supabase/gotrue-js: navigatorLock: released`,e,r.name)}}else if(t===0)throw Q.debug&&console.log(`@supabase/gotrue-js: navigatorLock: not immediately available`,e),new yr(`Acquiring an exclusive Navigator LockManager lock "${e}" immediately failed`);else{if(Q.debug)try{let e=await globalThis.navigator.locks.query();console.log(`@supabase/gotrue-js: Navigator LockManager state`,JSON.stringify(e,null,`  `))}catch(e){console.warn(`@supabase/gotrue-js: Error when querying Navigator LockManager state`,e)}return console.warn(`@supabase/gotrue-js: Navigator LockManager returned a null lock when using #request without ifAvailable set to true, it appears this browser is not following the LockManager spec https://developer.mozilla.org/en-US/docs/Web/API/LockManager/request`),clearTimeout(i),await n()}})}catch(a){if(t>0&&clearTimeout(i),a?.name===`AbortError`&&t>0){if(r.signal.aborted)return Q.debug&&console.log(`@supabase/gotrue-js: navigatorLock: acquire timeout, recovering by stealing lock`,e),console.warn(`@supabase/gotrue-js: Lock "${e}" was not released within ${t}ms. This may indicate an orphaned lock from a component unmount (e.g., React Strict Mode). Forcefully acquiring the lock to recover.`),await Promise.resolve().then(()=>globalThis.navigator.locks.request(e,{mode:`exclusive`,steal:!0},async t=>{if(t){Q.debug&&console.log(`@supabase/gotrue-js: navigatorLock: recovered (stolen)`,e,t.name);try{return await n()}finally{Q.debug&&console.log(`@supabase/gotrue-js: navigatorLock: released (stolen)`,e,t.name)}}else return console.warn(`@supabase/gotrue-js: Navigator LockManager returned null lock even with steal: true`),await n()}));throw Q.debug&&console.log(`@supabase/gotrue-js: navigatorLock: lock was stolen by another request`,e),new yr(`Lock "${e}" was released because another request stole it`)}throw a}}let Sr={};async function Cr(e,t,n){let r=Sr[e]??Promise.resolve(),i=(async()=>{try{return await r,null}catch{return null}})(),a=(async()=>{let r=null;try{let n=t>=0?new Promise((n,i)=>{r=setTimeout(()=>{console.warn(`@supabase/gotrue-js: Lock "${e}" acquisition timed out after ${t}ms. This may be caused by another operation holding the lock. Consider increasing lockAcquireTimeout or checking for stuck operations.`),i(new br(`Acquiring process lock with name "${e}" timed out`))},t)}):null;await Promise.race([i,n].filter(e=>e)),r!==null&&clearTimeout(r)}catch(e){if(r!==null&&clearTimeout(r),e&&e.isAcquireTimeout)throw e}return await n()})();return Sr[e]=(async()=>{try{return await a}catch(e){if(e&&e.isAcquireTimeout){try{await r}catch{}return null}throw e}})(),await a}function wr(){if(typeof globalThis!=`object`)try{Object.defineProperty(Object.prototype,`__magic__`,{get:function(){return this},configurable:!0}),__magic__.globalThis=__magic__,delete Object.prototype.__magic__}catch{typeof self<`u`&&(self.globalThis=self)}}function Tr(e){if(!/^0x[a-fA-F0-9]{40}$/.test(e))throw Error(`@supabase/auth-js: Address "${e}" is invalid.`);return e.toLowerCase()}function Er(e){return parseInt(e,16)}function Dr(e){let t=new TextEncoder().encode(e);return`0x`+Array.from(t,e=>e.toString(16).padStart(2,`0`)).join(``)}function Or(e){let{chainId:t,domain:n,expirationTime:r,issuedAt:i=new Date,nonce:a,notBefore:o,requestId:s,resources:c,scheme:l,uri:u,version:d}=e;if(!Number.isInteger(t))throw Error(`@supabase/auth-js: Invalid SIWE message field "chainId". Chain ID must be a EIP-155 chain ID. Provided value: ${t}`);if(!n)throw Error(`@supabase/auth-js: Invalid SIWE message field "domain". Domain must be provided.`);if(a&&a.length<8)throw Error(`@supabase/auth-js: Invalid SIWE message field "nonce". Nonce must be at least 8 characters. Provided value: ${a}`);if(!u)throw Error(`@supabase/auth-js: Invalid SIWE message field "uri". URI must be provided.`);if(d!==`1`)throw Error(`@supabase/auth-js: Invalid SIWE message field "version". Version must be '1'. Provided value: ${d}`);if(e.statement?.includes(`
+`))throw Error(`@supabase/auth-js: Invalid SIWE message field "statement". Statement must not include '\\n'. Provided value: ${e.statement}`);let f=Tr(e.address),p=`${l?`${l}://${n}`:n} wants you to sign in with your Ethereum account:\n${f}\n\n${e.statement?`${e.statement}\n`:``}`,m=`URI: ${u}\nVersion: ${d}\nChain ID: ${t}${a?`\nNonce: ${a}`:``}\nIssued At: ${i.toISOString()}`;if(r&&(m+=`\nExpiration Time: ${r.toISOString()}`),o&&(m+=`\nNot Before: ${o.toISOString()}`),s&&(m+=`\nRequest ID: ${s}`),c){let e=`
+Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/auth-js: Invalid SIWE message field "resources". Every resource must be a valid string. Provided value: ${t}`);e+=`\n- ${t}`}m+=e}return`${p}\n${m}`}var $=class extends Error{constructor({message:e,code:t,cause:n,name:r}){super(e,{cause:n}),this.__isWebAuthnError=!0,this.name=r??(n instanceof Error?n.name:void 0)??`Unknown Error`,this.code=t}},kr=class extends ${constructor(e,t){super({code:`ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY`,cause:t,message:e}),this.name=`WebAuthnUnknownError`,this.originalError=t}};function Ar({error:e,options:t}){let{publicKey:n}=t;if(!n)throw Error(`options was missing required publicKey property`);if(e.name===`AbortError`){if(t.signal instanceof AbortSignal)return new $({message:`Registration ceremony was sent an abort signal`,code:`ERROR_CEREMONY_ABORTED`,cause:e})}else if(e.name===`ConstraintError`){if(n.authenticatorSelection?.requireResidentKey===!0)return new $({message:`Discoverable credentials were required but no available authenticator supported it`,code:`ERROR_AUTHENTICATOR_MISSING_DISCOVERABLE_CREDENTIAL_SUPPORT`,cause:e});if(t.mediation===`conditional`&&n.authenticatorSelection?.userVerification===`required`)return new $({message:`User verification was required during automatic registration but it could not be performed`,code:`ERROR_AUTO_REGISTER_USER_VERIFICATION_FAILURE`,cause:e});if(n.authenticatorSelection?.userVerification===`required`)return new $({message:`User verification was required but no available authenticator supported it`,code:`ERROR_AUTHENTICATOR_MISSING_USER_VERIFICATION_SUPPORT`,cause:e})}else if(e.name===`InvalidStateError`)return new $({message:`The authenticator was previously registered`,code:`ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED`,cause:e});else if(e.name===`NotAllowedError`)return new $({message:e.message,code:`ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY`,cause:e});else if(e.name===`NotSupportedError`)return n.pubKeyCredParams.filter(e=>e.type===`public-key`).length===0?new $({message:`No entry in pubKeyCredParams was of type "public-key"`,code:`ERROR_MALFORMED_PUBKEYCREDPARAMS`,cause:e}):new $({message:`No available authenticator supported any of the specified pubKeyCredParams algorithms`,code:`ERROR_AUTHENTICATOR_NO_SUPPORTED_PUBKEYCREDPARAMS_ALG`,cause:e});else if(e.name===`SecurityError`){let t=window.location.hostname;if(Lr(t)){if(n.rp.id!==t)return new $({message:`The RP ID "${n.rp.id}" is invalid for this domain`,code:`ERROR_INVALID_RP_ID`,cause:e})}else return new $({message:`${window.location.hostname} is an invalid domain`,code:`ERROR_INVALID_DOMAIN`,cause:e})}else if(e.name===`TypeError`){if(n.user.id.byteLength<1||n.user.id.byteLength>64)return new $({message:`User ID was not between 1 and 64 characters`,code:`ERROR_INVALID_USER_ID_LENGTH`,cause:e})}else if(e.name===`UnknownError`)return new $({message:`The authenticator was unable to process the specified options, or could not create a new credential`,code:`ERROR_AUTHENTICATOR_GENERAL_ERROR`,cause:e});return new $({message:`a Non-Webauthn related error has occurred`,code:`ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY`,cause:e})}function jr({error:e,options:t}){let{publicKey:n}=t;if(!n)throw Error(`options was missing required publicKey property`);if(e.name===`AbortError`){if(t.signal instanceof AbortSignal)return new $({message:`Authentication ceremony was sent an abort signal`,code:`ERROR_CEREMONY_ABORTED`,cause:e})}else if(e.name===`NotAllowedError`)return new $({message:e.message,code:`ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY`,cause:e});else if(e.name===`SecurityError`){let t=window.location.hostname;if(Lr(t)){if(n.rpId!==t)return new $({message:`The RP ID "${n.rpId}" is invalid for this domain`,code:`ERROR_INVALID_RP_ID`,cause:e})}else return new $({message:`${window.location.hostname} is an invalid domain`,code:`ERROR_INVALID_DOMAIN`,cause:e})}else if(e.name===`UnknownError`)return new $({message:`The authenticator was unable to process the specified options, or could not create a new assertion signature`,code:`ERROR_AUTHENTICATOR_GENERAL_ERROR`,cause:e});return new $({message:`a Non-Webauthn related error has occurred`,code:`ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY`,cause:e})}let Mr=new class{createNewAbortSignal(){if(this.controller){let e=Error(`Cancelling existing WebAuthn API call for new one`);e.name=`AbortError`,this.controller.abort(e)}let e=new AbortController;return this.controller=e,e.signal}cancelCeremony(){if(this.controller){let e=Error(`Manually cancelling existing WebAuthn API call`);e.name=`AbortError`,this.controller.abort(e),this.controller=void 0}}};function Nr(e){if(!e)throw Error(`Credential creation options are required`);if(typeof PublicKeyCredential<`u`&&`parseCreationOptionsFromJSON`in PublicKeyCredential&&typeof PublicKeyCredential.parseCreationOptionsFromJSON==`function`)return PublicKeyCredential.parseCreationOptionsFromJSON(e);let{challenge:n,user:r,excludeCredentials:i}=e,a=t(e,[`challenge`,`user`,`excludeCredentials`]),o=B(n).buffer,s=Object.assign(Object.assign({},r),{id:B(r.id).buffer}),c=Object.assign(Object.assign({},a),{challenge:o,user:s});if(i&&i.length>0){c.excludeCredentials=Array(i.length);for(let e=0;e<i.length;e++){let t=i[e];c.excludeCredentials[e]=Object.assign(Object.assign({},t),{id:B(t.id).buffer,type:t.type||`public-key`,transports:t.transports})}}return c}function Pr(e){if(!e)throw Error(`Credential request options are required`);if(typeof PublicKeyCredential<`u`&&`parseRequestOptionsFromJSON`in PublicKeyCredential&&typeof PublicKeyCredential.parseRequestOptionsFromJSON==`function`)return PublicKeyCredential.parseRequestOptionsFromJSON(e);let{challenge:n,allowCredentials:r}=e,i=t(e,[`challenge`,`allowCredentials`]),a=B(n).buffer,o=Object.assign(Object.assign({},i),{challenge:a});if(r&&r.length>0){o.allowCredentials=Array(r.length);for(let e=0;e<r.length;e++){let t=r[e];o.allowCredentials[e]=Object.assign(Object.assign({},t),{id:B(t.id).buffer,type:t.type||`public-key`,transports:t.transports})}}return o}function Fr(e){if(`toJSON`in e&&typeof e.toJSON==`function`)return e.toJSON();let t=e;return{id:e.id,rawId:e.id,response:{attestationObject:V(new Uint8Array(e.response.attestationObject)),clientDataJSON:V(new Uint8Array(e.response.clientDataJSON))},type:`public-key`,clientExtensionResults:e.getClientExtensionResults(),authenticatorAttachment:t.authenticatorAttachment??void 0}}function Ir(e){if(`toJSON`in e&&typeof e.toJSON==`function`)return e.toJSON();let t=e,n=e.getClientExtensionResults(),r=e.response;return{id:e.id,rawId:e.id,response:{authenticatorData:V(new Uint8Array(r.authenticatorData)),clientDataJSON:V(new Uint8Array(r.clientDataJSON)),signature:V(new Uint8Array(r.signature)),userHandle:r.userHandle?V(new Uint8Array(r.userHandle)):void 0},type:`public-key`,clientExtensionResults:n,authenticatorAttachment:t.authenticatorAttachment??void 0}}function Lr(e){return e===`localhost`||/^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i.test(e)}function Rr(){return!!(H()&&`PublicKeyCredential`in window&&window.PublicKeyCredential&&`credentials`in navigator&&typeof(navigator==null?void 0:navigator.credentials)?.create==`function`&&typeof(navigator==null?void 0:navigator.credentials)?.get==`function`)}async function zr(e){try{let t=await navigator.credentials.create(e);return t?t instanceof PublicKeyCredential?{data:t,error:null}:{data:null,error:new kr(`Browser returned unexpected credential type`,t)}:{data:null,error:new kr(`Empty credential response`,t)}}catch(t){return{data:null,error:Ar({error:t,options:e})}}}async function Br(e){try{let t=await navigator.credentials.get(e);return t?t instanceof PublicKeyCredential?{data:t,error:null}:{data:null,error:new kr(`Browser returned unexpected credential type`,t)}:{data:null,error:new kr(`Empty credential response`,t)}}catch(t){return{data:null,error:jr({error:t,options:e})}}}let Vr={hints:[`security-key`],authenticatorSelection:{authenticatorAttachment:`cross-platform`,requireResidentKey:!1,userVerification:`preferred`,residentKey:`discouraged`},attestation:`direct`},Hr={userVerification:`preferred`,hints:[`security-key`],attestation:`direct`};function Ur(...e){let t=e=>typeof e==`object`&&!!e&&!Array.isArray(e),n=e=>e instanceof ArrayBuffer||ArrayBuffer.isView(e),r={};for(let i of e)if(i)for(let e in i){let a=i[e];if(a!==void 0)if(Array.isArray(a))r[e]=a;else if(n(a))r[e]=a;else if(t(a)){let n=r[e];t(n)?r[e]=Ur(n,a):r[e]=Ur(a)}else r[e]=a}return r}function Wr(e,t){return Ur(Vr,e,t||{})}function Gr(e,t){return Ur(Hr,e,t||{})}var Kr=class{constructor(e){this.client=e,this.enroll=this._enroll.bind(this),this.challenge=this._challenge.bind(this),this.verify=this._verify.bind(this),this.authenticate=this._authenticate.bind(this),this.register=this._register.bind(this)}async _enroll(e){return this.client.mfa.enroll(Object.assign(Object.assign({},e),{factorType:`webauthn`}))}async _challenge({factorId:e,webauthn:t,friendlyName:n,signal:r},i){try{let{data:a,error:o}=await this.client.mfa.challenge({factorId:e,webauthn:t});if(!a)return{data:null,error:o};let s=r??Mr.createNewAbortSignal();if(a.webauthn.type===`create`){let{user:e}=a.webauthn.credential_options.publicKey;if(!e.name){let t=n;if(t)e.name=`${e.id}:${t}`;else{let t=(await this.client.getUser()).data.user,n=t?.user_metadata?.name||t?.email||t?.id||`User`;e.name=`${e.id}:${n}`}}e.displayName||=e.name}switch(a.webauthn.type){case`create`:{let{data:t,error:n}=await zr({publicKey:Wr(a.webauthn.credential_options.publicKey,i?.create),signal:s});return t?{data:{factorId:e,challengeId:a.id,webauthn:{type:a.webauthn.type,credential_response:t}},error:null}:{data:null,error:n}}case`request`:{let t=Gr(a.webauthn.credential_options.publicKey,i?.request),{data:n,error:r}=await Br(Object.assign(Object.assign({},a.webauthn.credential_options),{publicKey:t,signal:s}));return n?{data:{factorId:e,challengeId:a.id,webauthn:{type:a.webauthn.type,credential_response:n}},error:null}:{data:null,error:r}}}}catch(e){return F(e)?{data:null,error:e}:{data:null,error:new I(`Unexpected error in challenge`,e)}}}async _verify({challengeId:e,factorId:t,webauthn:n}){return this.client.mfa.verify({factorId:t,challengeId:e,webauthn:n})}async _authenticate({factorId:e,webauthn:{rpId:t=typeof window<`u`?window.location.hostname:void 0,rpOrigins:n=typeof window<`u`?[window.location.origin]:void 0,signal:r}={}},i){if(!t)return{data:null,error:new P(`rpId is required for WebAuthn authentication`)};try{if(!Rr())return{data:null,error:new I(`Browser does not support WebAuthn`,null)};let{data:a,error:o}=await this.challenge({factorId:e,webauthn:{rpId:t,rpOrigins:n},signal:r},{request:i});if(!a)return{data:null,error:o};let{webauthn:s}=a;return this._verify({factorId:e,challengeId:a.challengeId,webauthn:{type:s.type,rpId:t,rpOrigins:n,credential_response:s.credential_response}})}catch(e){return F(e)?{data:null,error:e}:{data:null,error:new I(`Unexpected error in authenticate`,e)}}}async _register({friendlyName:e,webauthn:{rpId:t=typeof window<`u`?window.location.hostname:void 0,rpOrigins:n=typeof window<`u`?[window.location.origin]:void 0,signal:r}={}},i){if(!t)return{data:null,error:new P(`rpId is required for WebAuthn registration`)};try{if(!Rr())return{data:null,error:new I(`Browser does not support WebAuthn`,null)};let{data:a,error:o}=await this._enroll({friendlyName:e});if(!a)return await this.client.mfa.listFactors().then(t=>t.data?.all.find(t=>t.factor_type===`webauthn`&&t.friendly_name===e&&t.status!==`unverified`)).then(e=>e?this.client.mfa.unenroll({factorId:e?.id}):void 0),{data:null,error:o};let{data:s,error:c}=await this._challenge({factorId:a.id,friendlyName:a.friendly_name,webauthn:{rpId:t,rpOrigins:n},signal:r},{create:i});return s?this._verify({factorId:a.id,challengeId:s.challengeId,webauthn:{rpId:t,rpOrigins:n,type:s.webauthn.type,credential_response:s.webauthn.credential_response}}):{data:null,error:c}}catch(e){return F(e)?{data:null,error:e}:{data:null,error:new I(`Unexpected error in register`,e)}}}};wr();let qr={url:`http://localhost:9999`,storageKey:`supabase.auth.token`,autoRefreshToken:!0,persistSession:!0,detectSessionInUrl:!0,headers:ln,flowType:`implicit`,debug:!1,hasCustomAuthorizationHeader:!1,throwOnError:!1,lockAcquireTimeout:5e3,skipAutoInitialize:!1};async function Jr(e,t,n){return await n()}let Yr={};var Xr=class e{get jwks(){return Yr[this.storageKey]?.jwks??{keys:[]}}set jwks(e){Yr[this.storageKey]=Object.assign(Object.assign({},Yr[this.storageKey]),{jwks:e})}get jwks_cached_at(){return Yr[this.storageKey]?.cachedAt??-(2**53-1)}set jwks_cached_at(e){Yr[this.storageKey]=Object.assign(Object.assign({},Yr[this.storageKey]),{cachedAt:e})}constructor(t){var n;this.userStorage=null,this.memoryStorage=null,this.stateChangeEmitters=new Map,this.autoRefreshTicker=null,this.autoRefreshTickTimeout=null,this.visibilityChangedCallback=null,this.refreshingDeferred=null,this.initializePromise=null,this.detectSessionInUrl=!0,this.hasCustomAuthorizationHeader=!1,this.suppressGetSessionWarning=!1,this.lockAcquired=!1,this.pendingInLock=[],this.broadcastChannel=null,this.logger=console.log;let r=Object.assign(Object.assign({},qr),t);if(this.storageKey=r.storageKey,this.instanceID=e.nextInstanceID[this.storageKey]??0,e.nextInstanceID[this.storageKey]=this.instanceID+1,this.logDebugMessages=!!r.debug,typeof r.debug==`function`&&(this.logger=r.debug),this.instanceID>0&&H()){let e=`${this._logPrefix()} Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.`;console.warn(e),this.logDebugMessages&&console.trace(e)}if(this.persistSession=r.persistSession,this.autoRefreshToken=r.autoRefreshToken,this.admin=new gr({url:r.url,headers:r.headers,fetch:r.fetch}),this.url=r.url,this.headers=r.headers,this.fetch=Vn(r.fetch),this.lock=r.lock||Jr,this.detectSessionInUrl=r.detectSessionInUrl,this.flowType=r.flowType,this.hasCustomAuthorizationHeader=r.hasCustomAuthorizationHeader,this.throwOnError=r.throwOnError,this.lockAcquireTimeout=r.lockAcquireTimeout,r.lock?this.lock=r.lock:this.persistSession&&H()&&(globalThis==null?void 0:globalThis.navigator)?.locks?this.lock=xr:this.lock=Jr,this.jwks||(this.jwks={keys:[]},this.jwks_cached_at=-(2**53-1)),this.mfa={verify:this._verify.bind(this),enroll:this._enroll.bind(this),unenroll:this._unenroll.bind(this),challenge:this._challenge.bind(this),listFactors:this._listFactors.bind(this),challengeAndVerify:this._challengeAndVerify.bind(this),getAuthenticatorAssuranceLevel:this._getAuthenticatorAssuranceLevel.bind(this),webauthn:new Kr(this)},this.oauth={getAuthorizationDetails:this._getAuthorizationDetails.bind(this),approveAuthorization:this._approveAuthorization.bind(this),denyAuthorization:this._denyAuthorization.bind(this),listGrants:this._listOAuthGrants.bind(this),revokeGrant:this._revokeOAuthGrant.bind(this)},this.persistSession?(r.storage?this.storage=r.storage:zn()?this.storage=globalThis.localStorage:(this.memoryStorage={},this.storage=_r(this.memoryStorage)),r.userStorage&&(this.userStorage=r.userStorage)):(this.memoryStorage={},this.storage=_r(this.memoryStorage)),H()&&globalThis.BroadcastChannel&&this.persistSession&&this.storageKey){try{this.broadcastChannel=new globalThis.BroadcastChannel(this.storageKey)}catch(e){console.error(`Failed to create a new BroadcastChannel, multi-tab state changes will not be available`,e)}(n=this.broadcastChannel)==null||n.addEventListener(`message`,async e=>{this._debug(`received broadcast notification from other tab or client`,e);try{await this._notifyAllSubscribers(e.data.event,e.data.session,!1)}catch(e){this._debug(`#broadcastChannel`,`error`,e)}})}r.skipAutoInitialize||this.initialize().catch(e=>{this._debug(`#initialize()`,`error`,e)})}isThrowOnErrorEnabled(){return this.throwOnError}_returnResult(e){if(this.throwOnError&&e&&e.error)throw e.error;return e}_logPrefix(){return`GoTrueClient@${this.storageKey}:${this.instanceID} (${sn}) ${new Date().toISOString()}`}_debug(...e){return this.logDebugMessages&&this.logger(this._logPrefix(),...e),this}async initialize(){return this.initializePromise||=(async()=>await this._acquireLock(this.lockAcquireTimeout,async()=>await this._initialize()))(),await this.initializePromise}async _initialize(){try{let e={},t=`none`;if(H()&&(e=Bn(window.location.href),this._isImplicitGrantCallback(e)?t=`implicit`:await this._isPKCECallback(e)&&(t=`pkce`)),H()&&this.detectSessionInUrl&&t!==`none`){let{data:n,error:r}=await this._getSessionFromURL(e,t);if(r){if(this._debug(`#_initialize()`,`error detecting session from URL`,r),vn(r)){let e=r.details?.code;if(e===`identity_already_exists`||e===`identity_not_found`||e===`single_identity_not_deletable`)return{error:r}}return{error:r}}let{session:i,redirectType:a}=n;return this._debug(`#_initialize()`,`detected session in URL`,i,`redirect type`,a),await this._saveSession(i),setTimeout(async()=>{a===`recovery`?await this._notifyAllSubscribers(`PASSWORD_RECOVERY`,i):await this._notifyAllSubscribers(`SIGNED_IN`,i)},0),{error:null}}return await this._recoverAndRefresh(),{error:null}}catch(e){return F(e)?this._returnResult({error:e}):this._returnResult({error:new I(`Unexpected error during initialization`,e)})}finally{await this._handleVisibilityChange(),this._debug(`#_initialize()`,`end`)}}async signInAnonymously(e){try{let{data:t,error:n}=await Y(this.fetch,`POST`,`${this.url}/signup`,{headers:this.headers,body:{data:e?.options?.data??{},gotrue_meta_security:{captcha_token:e?.options?.captchaToken}},xform:X});if(n||!t)return this._returnResult({data:{user:null,session:null},error:n});let r=t.session,i=t.user;return t.session&&(await this._saveSession(t.session),await this._notifyAllSubscribers(`SIGNED_IN`,r)),this._returnResult({data:{user:i,session:r},error:null})}catch(e){if(F(e))return this._returnResult({data:{user:null,session:null},error:e});throw e}}async signUp(e){try{let t;if(`email`in e){let{email:n,password:r,options:i}=e,a=null,o=null;this.flowType===`pkce`&&([a,o]=await q(this.storage,this.storageKey)),t=await Y(this.fetch,`POST`,`${this.url}/signup`,{headers:this.headers,redirectTo:i?.emailRedirectTo,body:{email:n,password:r,data:i?.data??{},gotrue_meta_security:{captcha_token:i?.captchaToken},code_challenge:a,code_challenge_method:o},xform:X})}else if(`phone`in e){let{phone:n,password:r,options:i}=e;t=await Y(this.fetch,`POST`,`${this.url}/signup`,{headers:this.headers,body:{phone:n,password:r,data:i?.data??{},channel:i?.channel??`sms`,gotrue_meta_security:{captcha_token:i?.captchaToken}},xform:X})}else throw new gn(`You must provide either an email or phone number and a password`);let{data:n,error:r}=t;if(r||!n)return await K(this.storage,`${this.storageKey}-code-verifier`),this._returnResult({data:{user:null,session:null},error:r});let i=n.session,a=n.user;return n.session&&(await this._saveSession(n.session),await this._notifyAllSubscribers(`SIGNED_IN`,i)),this._returnResult({data:{user:a,session:i},error:null})}catch(e){if(await K(this.storage,`${this.storageKey}-code-verifier`),F(e))return this._returnResult({data:{user:null,session:null},error:e});throw e}}async signInWithPassword(e){try{let t;if(`email`in e){let{email:n,password:r,options:i}=e;t=await Y(this.fetch,`POST`,`${this.url}/token?grant_type=password`,{headers:this.headers,body:{email:n,password:r,gotrue_meta_security:{captcha_token:i?.captchaToken}},xform:ur})}else if(`phone`in e){let{phone:n,password:r,options:i}=e;t=await Y(this.fetch,`POST`,`${this.url}/token?grant_type=password`,{headers:this.headers,body:{phone:n,password:r,gotrue_meta_security:{captcha_token:i?.captchaToken}},xform:ur})}else throw new gn(`You must provide either an email or phone number and a password`);let{data:n,error:r}=t;if(r)return this._returnResult({data:{user:null,session:null},error:r});if(!n||!n.session||!n.user){let e=new z;return this._returnResult({data:{user:null,session:null},error:e})}return n.session&&(await this._saveSession(n.session),await this._notifyAllSubscribers(`SIGNED_IN`,n.session)),this._returnResult({data:Object.assign({user:n.user,session:n.session},n.weak_password?{weakPassword:n.weak_password}:null),error:r})}catch(e){if(F(e))return this._returnResult({data:{user:null,session:null},error:e});throw e}}async signInWithOAuth(e){return await this._handleProviderSignIn(e.provider,{redirectTo:e.options?.redirectTo,scopes:e.options?.scopes,queryParams:e.options?.queryParams,skipBrowserRedirect:e.options?.skipBrowserRedirect})}async exchangeCodeForSession(e){return await this.initializePromise,this._acquireLock(this.lockAcquireTimeout,async()=>this._exchangeCodeForSession(e))}async signInWithWeb3(e){let{chain:t}=e;switch(t){case`ethereum`:return await this.signInWithEthereum(e);case`solana`:return await this.signInWithSolana(e);default:throw Error(`@supabase/auth-js: Unsupported chain "${t}"`)}}async signInWithEthereum(e){let t,n;if(`message`in e)t=e.message,n=e.signature;else{let{chain:r,wallet:i,statement:a,options:o}=e,s;if(H())if(typeof i==`object`)s=i;else{let e=window;if(`ethereum`in e&&typeof e.ethereum==`object`&&`request`in e.ethereum&&typeof e.ethereum.request==`function`)s=e.ethereum;else throw Error(`@supabase/auth-js: No compatible Ethereum wallet interface on the window object (window.ethereum) detected. Make sure the user already has a wallet installed and connected for this app. Prefer passing the wallet interface object directly to signInWithWeb3({ chain: 'ethereum', wallet: resolvedUserWallet }) instead.`)}else{if(typeof i!=`object`||!o?.url)throw Error(`@supabase/auth-js: Both wallet and url must be specified in non-browser environments.`);s=i}let c=new URL(o?.url??window.location.href),l=await s.request({method:`eth_requestAccounts`}).then(e=>e).catch(()=>{throw Error(`@supabase/auth-js: Wallet method eth_requestAccounts is missing or invalid`)});if(!l||l.length===0)throw Error(`@supabase/auth-js: No accounts available. Please ensure the wallet is connected.`);let u=Tr(l[0]),d=o?.signInWithEthereum?.chainId;d||=Er(await s.request({method:`eth_chainId`})),t=Or({domain:c.host,address:u,statement:a,uri:c.href,version:`1`,chainId:d,nonce:o?.signInWithEthereum?.nonce,issuedAt:o?.signInWithEthereum?.issuedAt??new Date,expirationTime:o?.signInWithEthereum?.expirationTime,notBefore:o?.signInWithEthereum?.notBefore,requestId:o?.signInWithEthereum?.requestId,resources:o?.signInWithEthereum?.resources}),n=await s.request({method:`personal_sign`,params:[Dr(t),u]})}try{let{data:r,error:i}=await Y(this.fetch,`POST`,`${this.url}/token?grant_type=web3`,{headers:this.headers,body:Object.assign({chain:`ethereum`,message:t,signature:n},e.options?.captchaToken?{gotrue_meta_security:{captcha_token:e.options?.captchaToken}}:null),xform:X});if(i)throw i;if(!r||!r.session||!r.user){let e=new z;return this._returnResult({data:{user:null,session:null},error:e})}return r.session&&(await this._saveSession(r.session),await this._notifyAllSubscribers(`SIGNED_IN`,r.session)),this._returnResult({data:Object.assign({},r),error:i})}catch(e){if(F(e))return this._returnResult({data:{user:null,session:null},error:e});throw e}}async signInWithSolana(e){let t,n;if(`message`in e)t=e.message,n=e.signature;else{let{chain:r,wallet:i,statement:a,options:o}=e,s;if(H())if(typeof i==`object`)s=i;else{let e=window;if(`solana`in e&&typeof e.solana==`object`&&(`signIn`in e.solana&&typeof e.solana.signIn==`function`||`signMessage`in e.solana&&typeof e.solana.signMessage==`function`))s=e.solana;else throw Error(`@supabase/auth-js: No compatible Solana wallet interface on the window object (window.solana) detected. Make sure the user already has a wallet installed and connected for this app. Prefer passing the wallet interface object directly to signInWithWeb3({ chain: 'solana', wallet: resolvedUserWallet }) instead.`)}else{if(typeof i!=`object`||!o?.url)throw Error(`@supabase/auth-js: Both wallet and url must be specified in non-browser environments.`);s=i}let c=new URL(o?.url??window.location.href);if(`signIn`in s&&s.signIn){let e=await s.signIn(Object.assign(Object.assign(Object.assign({issuedAt:new Date().toISOString()},o?.signInWithSolana),{version:`1`,domain:c.host,uri:c.href}),a?{statement:a}:null)),r;if(Array.isArray(e)&&e[0]&&typeof e[0]==`object`)r=e[0];else if(e&&typeof e==`object`&&`signedMessage`in e&&`signature`in e)r=e;else throw Error(`@supabase/auth-js: Wallet method signIn() returned unrecognized value`);if(`signedMessage`in r&&`signature`in r&&(typeof r.signedMessage==`string`||r.signedMessage instanceof Uint8Array)&&r.signature instanceof Uint8Array)t=typeof r.signedMessage==`string`?r.signedMessage:new TextDecoder().decode(r.signedMessage),n=r.signature;else throw Error(`@supabase/auth-js: Wallet method signIn() API returned object without signedMessage and signature fields`)}else{if(!(`signMessage`in s)||typeof s.signMessage!=`function`||!(`publicKey`in s)||typeof s!=`object`||!s.publicKey||!(`toBase58`in s.publicKey)||typeof s.publicKey.toBase58!=`function`)throw Error(`@supabase/auth-js: Wallet does not have a compatible signMessage() and publicKey.toBase58() API`);t=[`${c.host} wants you to sign in with your Solana account:`,s.publicKey.toBase58(),...a?[``,a,``]:[``],`Version: 1`,`URI: ${c.href}`,`Issued At: ${o?.signInWithSolana?.issuedAt??new Date().toISOString()}`,...o?.signInWithSolana?.notBefore?[`Not Before: ${o.signInWithSolana.notBefore}`]:[],...o?.signInWithSolana?.expirationTime?[`Expiration Time: ${o.signInWithSolana.expirationTime}`]:[],...o?.signInWithSolana?.chainId?[`Chain ID: ${o.signInWithSolana.chainId}`]:[],...o?.signInWithSolana?.nonce?[`Nonce: ${o.signInWithSolana.nonce}`]:[],...o?.signInWithSolana?.requestId?[`Request ID: ${o.signInWithSolana.requestId}`]:[],...o?.signInWithSolana?.resources?.length?[`Resources`,...o.signInWithSolana.resources.map(e=>`- ${e}`)]:[]].join(`
+`);let e=await s.signMessage(new TextEncoder().encode(t),`utf8`);if(!e||!(e instanceof Uint8Array))throw Error(`@supabase/auth-js: Wallet signMessage() API returned an recognized value`);n=e}}try{let{data:r,error:i}=await Y(this.fetch,`POST`,`${this.url}/token?grant_type=web3`,{headers:this.headers,body:Object.assign({chain:`solana`,message:t,signature:V(n)},e.options?.captchaToken?{gotrue_meta_security:{captcha_token:e.options?.captchaToken}}:null),xform:X});if(i)throw i;if(!r||!r.session||!r.user){let e=new z;return this._returnResult({data:{user:null,session:null},error:e})}return r.session&&(await this._saveSession(r.session),await this._notifyAllSubscribers(`SIGNED_IN`,r.session)),this._returnResult({data:Object.assign({},r),error:i})}catch(e){if(F(e))return this._returnResult({data:{user:null,session:null},error:e});throw e}}async _exchangeCodeForSession(e){let[t,n]=(await G(this.storage,`${this.storageKey}-code-verifier`)??``).split(`/`);try{if(!t&&this.flowType===`pkce`)throw new bn;let{data:r,error:i}=await Y(this.fetch,`POST`,`${this.url}/token?grant_type=pkce`,{headers:this.headers,body:{auth_code:e,code_verifier:t},xform:X});if(await K(this.storage,`${this.storageKey}-code-verifier`),i)throw i;if(!r||!r.session||!r.user){let e=new z;return this._returnResult({data:{user:null,session:null,redirectType:null},error:e})}return r.session&&(await this._saveSession(r.session),await this._notifyAllSubscribers(`SIGNED_IN`,r.session)),this._returnResult({data:Object.assign(Object.assign({},r),{redirectType:n??null}),error:i})}catch(e){if(await K(this.storage,`${this.storageKey}-code-verifier`),F(e))return this._returnResult({data:{user:null,session:null,redirectType:null},error:e});throw e}}async signInWithIdToken(e){try{let{options:t,provider:n,token:r,access_token:i,nonce:a}=e,{data:o,error:s}=await Y(this.fetch,`POST`,`${this.url}/token?grant_type=id_token`,{headers:this.headers,body:{provider:n,id_token:r,access_token:i,nonce:a,gotrue_meta_security:{captcha_token:t?.captchaToken}},xform:X});if(s)return this._returnResult({data:{user:null,session:null},error:s});if(!o||!o.session||!o.user){let e=new z;return this._returnResult({data:{user:null,session:null},error:e})}return o.session&&(await this._saveSession(o.session),await this._notifyAllSubscribers(`SIGNED_IN`,o.session)),this._returnResult({data:o,error:s})}catch(e){if(F(e))return this._returnResult({data:{user:null,session:null},error:e});throw e}}async signInWithOtp(e){try{if(`email`in e){let{email:t,options:n}=e,r=null,i=null;this.flowType===`pkce`&&([r,i]=await q(this.storage,this.storageKey));let{error:a}=await Y(this.fetch,`POST`,`${this.url}/otp`,{headers:this.headers,body:{email:t,data:n?.data??{},create_user:n?.shouldCreateUser??!0,gotrue_meta_security:{captcha_token:n?.captchaToken},code_challenge:r,code_challenge_method:i},redirectTo:n?.emailRedirectTo});return this._returnResult({data:{user:null,session:null},error:a})}if(`phone`in e){let{phone:t,options:n}=e,{data:r,error:i}=await Y(this.fetch,`POST`,`${this.url}/otp`,{headers:this.headers,body:{phone:t,data:n?.data??{},create_user:n?.shouldCreateUser??!0,gotrue_meta_security:{captcha_token:n?.captchaToken},channel:n?.channel??`sms`}});return this._returnResult({data:{user:null,session:null,messageId:r?.message_id},error:i})}throw new gn(`You must provide either an email or phone number.`)}catch(e){if(await K(this.storage,`${this.storageKey}-code-verifier`),F(e))return this._returnResult({data:{user:null,session:null},error:e});throw e}}async verifyOtp(e){try{let t,n;`options`in e&&(t=e.options?.redirectTo,n=e.options?.captchaToken);let{data:r,error:i}=await Y(this.fetch,`POST`,`${this.url}/verify`,{headers:this.headers,body:Object.assign(Object.assign({},e),{gotrue_meta_security:{captcha_token:n}}),redirectTo:t,xform:X});if(i)throw i;if(!r)throw Error(`An error occurred on token verification.`);let a=r.session,o=r.user;return a?.access_token&&(await this._saveSession(a),await this._notifyAllSubscribers(e.type==`recovery`?`PASSWORD_RECOVERY`:`SIGNED_IN`,a)),this._returnResult({data:{user:o,session:a},error:null})}catch(e){if(F(e))return this._returnResult({data:{user:null,session:null},error:e});throw e}}async signInWithSSO(e){try{let t=null,n=null;this.flowType===`pkce`&&([t,n]=await q(this.storage,this.storageKey));let r=await Y(this.fetch,`POST`,`${this.url}/sso`,{body:Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({},`providerId`in e?{provider_id:e.providerId}:null),`domain`in e?{domain:e.domain}:null),{redirect_to:e.options?.redirectTo??void 0}),e?.options?.captchaToken?{gotrue_meta_security:{captcha_token:e.options.captchaToken}}:null),{skip_http_redirect:!0,code_challenge:t,code_challenge_method:n}),headers:this.headers,xform:dr});return r.data?.url&&H()&&!e.options?.skipBrowserRedirect&&window.location.assign(r.data.url),this._returnResult(r)}catch(e){if(await K(this.storage,`${this.storageKey}-code-verifier`),F(e))return this._returnResult({data:null,error:e});throw e}}async reauthenticate(){return await this.initializePromise,await this._acquireLock(this.lockAcquireTimeout,async()=>await this._reauthenticate())}async _reauthenticate(){try{return await this._useSession(async e=>{let{data:{session:t},error:n}=e;if(n)throw n;if(!t)throw new R;let{error:r}=await Y(this.fetch,`GET`,`${this.url}/reauthenticate`,{headers:this.headers,jwt:t.access_token});return this._returnResult({data:{user:null,session:null},error:r})})}catch(e){if(F(e))return this._returnResult({data:{user:null,session:null},error:e});throw e}}async resend(e){try{let t=`${this.url}/resend`;if(`email`in e){let{email:n,type:r,options:i}=e,{error:a}=await Y(this.fetch,`POST`,t,{headers:this.headers,body:{email:n,type:r,gotrue_meta_security:{captcha_token:i?.captchaToken}},redirectTo:i?.emailRedirectTo});return this._returnResult({data:{user:null,session:null},error:a})}else if(`phone`in e){let{phone:n,type:r,options:i}=e,{data:a,error:o}=await Y(this.fetch,`POST`,t,{headers:this.headers,body:{phone:n,type:r,gotrue_meta_security:{captcha_token:i?.captchaToken}}});return this._returnResult({data:{user:null,session:null,messageId:a?.message_id},error:o})}throw new gn(`You must provide either an email or phone number and a type`)}catch(e){if(F(e))return this._returnResult({data:{user:null,session:null},error:e});throw e}}async getSession(){return await this.initializePromise,await this._acquireLock(this.lockAcquireTimeout,async()=>this._useSession(async e=>e))}async _acquireLock(e,t){this._debug(`#_acquireLock`,`begin`,e);try{if(this.lockAcquired){let e=this.pendingInLock.length?this.pendingInLock[this.pendingInLock.length-1]:Promise.resolve(),n=(async()=>(await e,await t()))();return this.pendingInLock.push((async()=>{try{await n}catch{}})()),n}return await this.lock(`lock:${this.storageKey}`,e,async()=>{this._debug(`#_acquireLock`,`lock acquired for storage key`,this.storageKey);try{this.lockAcquired=!0;let e=t();for(this.pendingInLock.push((async()=>{try{await e}catch{}})()),await e;this.pendingInLock.length;){let e=[...this.pendingInLock];await Promise.all(e),this.pendingInLock.splice(0,e.length)}return await e}finally{this._debug(`#_acquireLock`,`lock released for storage key`,this.storageKey),this.lockAcquired=!1}})}finally{this._debug(`#_acquireLock`,`end`)}}async _useSession(e){this._debug(`#_useSession`,`begin`);try{return await e(await this.__loadSession())}finally{this._debug(`#_useSession`,`end`)}}async __loadSession(){this._debug(`#__loadSession()`,`begin`),this.lockAcquired||this._debug(`#__loadSession()`,`used outside of an acquired lock!`,Error().stack);try{let e=null,t=await G(this.storage,this.storageKey);if(this._debug(`#getSession()`,`session from storage`,t),t!==null&&(this._isValidSession(t)?e=t:(this._debug(`#getSession()`,`session from storage is not valid`),await this._removeSession())),!e)return{data:{session:null},error:null};let n=e.expires_at?e.expires_at*1e3-Date.now()<cn:!1;if(this._debug(`#__loadSession()`,`session has${n?``:` not`} expired`,`expires_at`,e.expires_at),!n){if(this.userStorage){let t=await G(this.userStorage,this.storageKey+`-user`);t?.user?e.user=t.user:e.user=rr()}if(this.storage.isServer&&e.user&&!e.user.__isUserNotAvailableProxy){let t={value:this.suppressGetSessionWarning};e.user=ir(e.user,t),t.value&&(this.suppressGetSessionWarning=!0)}return{data:{session:e},error:null}}let{data:r,error:i}=await this._callRefreshToken(e.refresh_token);return i?this._returnResult({data:{session:null},error:i}):this._returnResult({data:{session:r},error:null})}finally{this._debug(`#__loadSession()`,`end`)}}async getUser(e){if(e)return await this._getUser(e);await this.initializePromise;let t=await this._acquireLock(this.lockAcquireTimeout,async()=>await this._getUser());return t.data.user&&(this.suppressGetSessionWarning=!0),t}async _getUser(e){try{return e?await Y(this.fetch,`GET`,`${this.url}/user`,{headers:this.headers,jwt:e,xform:Z}):await this._useSession(async e=>{let{data:t,error:n}=e;if(n)throw n;return!t.session?.access_token&&!this.hasCustomAuthorizationHeader?{data:{user:null},error:new R}:await Y(this.fetch,`GET`,`${this.url}/user`,{headers:this.headers,jwt:t.session?.access_token??void 0,xform:Z})})}catch(e){if(F(e))return hn(e)&&(await this._removeSession(),await K(this.storage,`${this.storageKey}-code-verifier`)),this._returnResult({data:{user:null},error:e});throw e}}async updateUser(e,t={}){return await this.initializePromise,await this._acquireLock(this.lockAcquireTimeout,async()=>await this._updateUser(e,t))}async _updateUser(e,t={}){try{return await this._useSession(async n=>{let{data:r,error:i}=n;if(i)throw i;if(!r.session)throw new R;let a=r.session,o=null,s=null;this.flowType===`pkce`&&e.email!=null&&([o,s]=await q(this.storage,this.storageKey));let{data:c,error:l}=await Y(this.fetch,`PUT`,`${this.url}/user`,{headers:this.headers,redirectTo:t?.emailRedirectTo,body:Object.assign(Object.assign({},e),{code_challenge:o,code_challenge_method:s}),jwt:a.access_token,xform:Z});if(l)throw l;return a.user=c.user,await this._saveSession(a),await this._notifyAllSubscribers(`USER_UPDATED`,a),this._returnResult({data:{user:a.user},error:null})})}catch(e){if(await K(this.storage,`${this.storageKey}-code-verifier`),F(e))return this._returnResult({data:{user:null},error:e});throw e}}async setSession(e){return await this.initializePromise,await this._acquireLock(this.lockAcquireTimeout,async()=>await this._setSession(e))}async _setSession(e){try{if(!e.access_token||!e.refresh_token)throw new R;let t=Date.now()/1e3,n=t,r=!0,i=null,{payload:a}=Wn(e.access_token);if(a.exp&&(n=a.exp,r=n<=t),r){let{data:t,error:n}=await this._callRefreshToken(e.refresh_token);if(n)return this._returnResult({data:{user:null,session:null},error:n});if(!t)return{data:{user:null,session:null},error:null};i=t}else{let{data:r,error:a}=await this._getUser(e.access_token);if(a)return this._returnResult({data:{user:null,session:null},error:a});i={access_token:e.access_token,refresh_token:e.refresh_token,user:r.user,token_type:`bearer`,expires_in:n-t,expires_at:n},await this._saveSession(i),await this._notifyAllSubscribers(`SIGNED_IN`,i)}return this._returnResult({data:{user:i.user,session:i},error:null})}catch(e){if(F(e))return this._returnResult({data:{session:null,user:null},error:e});throw e}}async refreshSession(e){return await this.initializePromise,await this._acquireLock(this.lockAcquireTimeout,async()=>await this._refreshSession(e))}async _refreshSession(e){try{return await this._useSession(async t=>{if(!e){let{data:n,error:r}=t;if(r)throw r;e=n.session??void 0}if(!e?.refresh_token)throw new R;let{data:n,error:r}=await this._callRefreshToken(e.refresh_token);return r?this._returnResult({data:{user:null,session:null},error:r}):n?this._returnResult({data:{user:n.user,session:n},error:null}):this._returnResult({data:{user:null,session:null},error:null})})}catch(e){if(F(e))return this._returnResult({data:{user:null,session:null},error:e});throw e}}async _getSessionFromURL(e,t){try{if(!H())throw new _n(`No browser detected.`);if(e.error||e.error_description||e.error_code)throw new _n(e.error_description||`Error in URL with unspecified error_description`,{error:e.error||`unspecified_error`,code:e.error_code||`unspecified_code`});switch(t){case`implicit`:if(this.flowType===`pkce`)throw new yn(`Not a valid PKCE flow url.`);break;case`pkce`:if(this.flowType===`implicit`)throw new _n(`Not a valid implicit grant flow url.`);break;default:}if(t===`pkce`){if(this._debug(`#_initialize()`,`begin`,`is PKCE flow`,!0),!e.code)throw new yn(`No code detected.`);let{data:t,error:n}=await this._exchangeCodeForSession(e.code);if(n)throw n;let r=new URL(window.location.href);return r.searchParams.delete(`code`),window.history.replaceState(window.history.state,``,r.toString()),{data:{session:t.session,redirectType:null},error:null}}let{provider_token:n,provider_refresh_token:r,access_token:i,refresh_token:a,expires_in:o,expires_at:s,token_type:c}=e;if(!i||!o||!a||!c)throw new _n(`No session defined in URL`);let l=Math.round(Date.now()/1e3),u=parseInt(o),d=l+u;s&&(d=parseInt(s));let f=d-l;f*1e3<=N&&console.warn(`@supabase/gotrue-js: Session as retrieved from URL expires in ${f}s, should have been closer to ${u}s`);let p=d-u;l-p>=120?console.warn(`@supabase/gotrue-js: Session as retrieved from URL was issued over 120s ago, URL could be stale`,p,d,l):l-p<0&&console.warn(`@supabase/gotrue-js: Session as retrieved from URL was issued in the future? Check the device clock for skew`,p,d,l);let{data:m,error:h}=await this._getUser(i);if(h)throw h;let ee={provider_token:n,provider_refresh_token:r,access_token:i,expires_in:u,expires_at:d,refresh_token:a,token_type:c,user:m.user};return window.location.hash=``,this._debug(`#_getSessionFromURL()`,`clearing window.location.hash`),this._returnResult({data:{session:ee,redirectType:e.type},error:null})}catch(e){if(F(e))return this._returnResult({data:{session:null,redirectType:null},error:e});throw e}}_isImplicitGrantCallback(e){return typeof this.detectSessionInUrl==`function`?this.detectSessionInUrl(new URL(window.location.href),e):!!(e.access_token||e.error_description)}async _isPKCECallback(e){let t=await G(this.storage,`${this.storageKey}-code-verifier`);return!!(e.code&&t)}async signOut(e={scope:`global`}){return await this.initializePromise,await this._acquireLock(this.lockAcquireTimeout,async()=>await this._signOut(e))}async _signOut({scope:e}={scope:`global`}){return await this._useSession(async t=>{let{data:n,error:r}=t;if(r&&!hn(r))return this._returnResult({error:r});let i=n.session?.access_token;if(i){let{error:t}=await this.admin.signOut(i,e);if(t&&!(mn(t)&&(t.status===404||t.status===401||t.status===403)||hn(t)))return this._returnResult({error:t})}return e!==`others`&&(await this._removeSession(),await K(this.storage,`${this.storageKey}-code-verifier`)),this._returnResult({error:null})})}onAuthStateChange(e){let t=Rn(),n={id:t,callback:e,unsubscribe:()=>{this._debug(`#unsubscribe()`,`state change callback with id removed`,t),this.stateChangeEmitters.delete(t)}};return this._debug(`#onAuthStateChange()`,`registered callback with id`,t),this.stateChangeEmitters.set(t,n),(async()=>{await this.initializePromise,await this._acquireLock(this.lockAcquireTimeout,async()=>{this._emitInitialSession(t)})})(),{data:{subscription:n}}}async _emitInitialSession(e){return await this._useSession(async t=>{try{let{data:{session:n},error:r}=t;if(r)throw r;await this.stateChangeEmitters.get(e)?.callback(`INITIAL_SESSION`,n),this._debug(`INITIAL_SESSION`,`callback id`,e,`session`,n)}catch(t){await this.stateChangeEmitters.get(e)?.callback(`INITIAL_SESSION`,null),this._debug(`INITIAL_SESSION`,`callback id`,e,`error`,t),hn(t)?console.warn(t):console.error(t)}})}async resetPasswordForEmail(e,t={}){let n=null,r=null;this.flowType===`pkce`&&([n,r]=await q(this.storage,this.storageKey,!0));try{return await Y(this.fetch,`POST`,`${this.url}/recover`,{body:{email:e,code_challenge:n,code_challenge_method:r,gotrue_meta_security:{captcha_token:t.captchaToken}},headers:this.headers,redirectTo:t.redirectTo})}catch(e){if(await K(this.storage,`${this.storageKey}-code-verifier`),F(e))return this._returnResult({data:null,error:e});throw e}}async getUserIdentities(){try{let{data:e,error:t}=await this.getUser();if(t)throw t;return this._returnResult({data:{identities:e.user.identities??[]},error:null})}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}}async linkIdentity(e){return`token`in e?this.linkIdentityIdToken(e):this.linkIdentityOAuth(e)}async linkIdentityOAuth(e){try{let{data:t,error:n}=await this._useSession(async t=>{let{data:n,error:r}=t;if(r)throw r;let i=await this._getUrlForProvider(`${this.url}/user/identities/authorize`,e.provider,{redirectTo:e.options?.redirectTo,scopes:e.options?.scopes,queryParams:e.options?.queryParams,skipBrowserRedirect:!0});return await Y(this.fetch,`GET`,i,{headers:this.headers,jwt:n.session?.access_token??void 0})});if(n)throw n;return H()&&!e.options?.skipBrowserRedirect&&window.location.assign(t?.url),this._returnResult({data:{provider:e.provider,url:t?.url},error:null})}catch(t){if(F(t))return this._returnResult({data:{provider:e.provider,url:null},error:t});throw t}}async linkIdentityIdToken(e){return await this._useSession(async t=>{try{let{error:n,data:{session:r}}=t;if(n)throw n;let{options:i,provider:a,token:o,access_token:s,nonce:c}=e,{data:l,error:u}=await Y(this.fetch,`POST`,`${this.url}/token?grant_type=id_token`,{headers:this.headers,jwt:r?.access_token??void 0,body:{provider:a,id_token:o,access_token:s,nonce:c,link_identity:!0,gotrue_meta_security:{captcha_token:i?.captchaToken}},xform:X});return u?this._returnResult({data:{user:null,session:null},error:u}):!l||!l.session||!l.user?this._returnResult({data:{user:null,session:null},error:new z}):(l.session&&(await this._saveSession(l.session),await this._notifyAllSubscribers(`USER_UPDATED`,l.session)),this._returnResult({data:l,error:u}))}catch(e){if(await K(this.storage,`${this.storageKey}-code-verifier`),F(e))return this._returnResult({data:{user:null,session:null},error:e});throw e}})}async unlinkIdentity(e){try{return await this._useSession(async t=>{let{data:n,error:r}=t;if(r)throw r;return await Y(this.fetch,`DELETE`,`${this.url}/user/identities/${e.identity_id}`,{headers:this.headers,jwt:n.session?.access_token??void 0})})}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}}async _refreshAccessToken(e){let t=`#_refreshAccessToken(${e.substring(0,5)}...)`;this._debug(t,`begin`);try{let n=Date.now();return await Kn(async n=>(n>0&&await Gn(200*2**(n-1)),this._debug(t,`refreshing attempt`,n),await Y(this.fetch,`POST`,`${this.url}/token?grant_type=refresh_token`,{body:{refresh_token:e},headers:this.headers,xform:X})),(e,t)=>{let r=200*2**e;return t&&Cn(t)&&Date.now()+r-n<N})}catch(e){if(this._debug(t,`error`,e),F(e))return this._returnResult({data:{session:null,user:null},error:e});throw e}finally{this._debug(t,`end`)}}_isValidSession(e){return typeof e==`object`&&!!e&&`access_token`in e&&`refresh_token`in e&&`expires_at`in e}async _handleProviderSignIn(e,t){let n=await this._getUrlForProvider(`${this.url}/authorize`,e,{redirectTo:t.redirectTo,scopes:t.scopes,queryParams:t.queryParams});return this._debug(`#_handleProviderSignIn()`,`provider`,e,`options`,t,`url`,n),H()&&!t.skipBrowserRedirect&&window.location.assign(n),{data:{provider:e,url:n},error:null}}async _recoverAndRefresh(){let e=`#_recoverAndRefresh()`;this._debug(e,`begin`);try{let t=await G(this.storage,this.storageKey);if(t&&this.userStorage){let e=await G(this.userStorage,this.storageKey+`-user`);!this.storage.isServer&&Object.is(this.storage,this.userStorage)&&!e&&(e={user:t.user},await W(this.userStorage,this.storageKey+`-user`,e)),t.user=e?.user??rr()}else if(t&&!t.user&&!t.user){let e=await G(this.storage,this.storageKey+`-user`);e&&e?.user?(t.user=e.user,await K(this.storage,this.storageKey+`-user`),await W(this.storage,this.storageKey,t)):t.user=rr()}if(this._debug(e,`session from storage`,t),!this._isValidSession(t)){this._debug(e,`session is not valid`),t!==null&&await this._removeSession();return}let n=(t.expires_at??1/0)*1e3-Date.now()<cn;if(this._debug(e,`session has${n?``:` not`} expired with margin of ${cn}s`),n){if(this.autoRefreshToken&&t.refresh_token){let{error:n}=await this._callRefreshToken(t.refresh_token);n&&(console.error(n),Cn(n)||(this._debug(e,`refresh failed with a non-retryable error, removing the session`,n),await this._removeSession()))}}else if(t.user&&t.user.__isUserNotAvailableProxy===!0)try{let{data:n,error:r}=await this._getUser(t.access_token);!r&&n?.user?(t.user=n.user,await this._saveSession(t),await this._notifyAllSubscribers(`SIGNED_IN`,t)):this._debug(e,`could not get user data, skipping SIGNED_IN notification`)}catch(t){console.error(`Error getting user data:`,t),this._debug(e,`error getting user data, skipping SIGNED_IN notification`,t)}else await this._notifyAllSubscribers(`SIGNED_IN`,t)}catch(t){this._debug(e,`error`,t),console.error(t);return}finally{this._debug(e,`end`)}}async _callRefreshToken(e){var t,n;if(!e)throw new R;if(this.refreshingDeferred)return this.refreshingDeferred.promise;let r=`#_callRefreshToken(${e.substring(0,5)}...)`;this._debug(r,`begin`);try{this.refreshingDeferred=new Un;let{data:t,error:n}=await this._refreshAccessToken(e);if(n)throw n;if(!t.session)throw new R;await this._saveSession(t.session),await this._notifyAllSubscribers(`TOKEN_REFRESHED`,t.session);let r={data:t.session,error:null};return this.refreshingDeferred.resolve(r),r}catch(e){if(this._debug(r,`error`,e),F(e)){let n={data:null,error:e};return Cn(e)||await this._removeSession(),(t=this.refreshingDeferred)==null||t.resolve(n),n}throw(n=this.refreshingDeferred)==null||n.reject(e),e}finally{this.refreshingDeferred=null,this._debug(r,`end`)}}async _notifyAllSubscribers(e,t,n=!0){let r=`#_notifyAllSubscribers(${e})`;this._debug(r,`begin`,t,`broadcast = ${n}`);try{this.broadcastChannel&&n&&this.broadcastChannel.postMessage({event:e,session:t});let r=[],i=Array.from(this.stateChangeEmitters.values()).map(async n=>{try{await n.callback(e,t)}catch(e){r.push(e)}});if(await Promise.all(i),r.length>0){for(let e=0;e<r.length;e+=1)console.error(r[e]);throw r[0]}}finally{this._debug(r,`end`)}}async _saveSession(e){this._debug(`#_saveSession()`,e),this.suppressGetSessionWarning=!0,await K(this.storage,`${this.storageKey}-code-verifier`);let t=Object.assign({},e),n=t.user&&t.user.__isUserNotAvailableProxy===!0;if(this.userStorage){!n&&t.user&&await W(this.userStorage,this.storageKey+`-user`,{user:t.user});let e=Object.assign({},t);delete e.user;let r=ar(e);await W(this.storage,this.storageKey,r)}else{let e=ar(t);await W(this.storage,this.storageKey,e)}}async _removeSession(){this._debug(`#_removeSession()`),this.suppressGetSessionWarning=!1,await K(this.storage,this.storageKey),await K(this.storage,this.storageKey+`-code-verifier`),await K(this.storage,this.storageKey+`-user`),this.userStorage&&await K(this.userStorage,this.storageKey+`-user`),await this._notifyAllSubscribers(`SIGNED_OUT`,null)}_removeVisibilityChangedCallback(){this._debug(`#_removeVisibilityChangedCallback()`);let e=this.visibilityChangedCallback;this.visibilityChangedCallback=null;try{e&&H()&&window!=null&&window.removeEventListener&&window.removeEventListener(`visibilitychange`,e)}catch(e){console.error(`removing visibilitychange callback failed`,e)}}async _startAutoRefresh(){await this._stopAutoRefresh(),this._debug(`#_startAutoRefresh()`);let e=setInterval(()=>this._autoRefreshTokenTick(),N);this.autoRefreshTicker=e,e&&typeof e==`object`&&typeof e.unref==`function`?e.unref():typeof Deno<`u`&&typeof Deno.unrefTimer==`function`&&Deno.unrefTimer(e);let t=setTimeout(async()=>{await this.initializePromise,await this._autoRefreshTokenTick()},0);this.autoRefreshTickTimeout=t,t&&typeof t==`object`&&typeof t.unref==`function`?t.unref():typeof Deno<`u`&&typeof Deno.unrefTimer==`function`&&Deno.unrefTimer(t)}async _stopAutoRefresh(){this._debug(`#_stopAutoRefresh()`);let e=this.autoRefreshTicker;this.autoRefreshTicker=null,e&&clearInterval(e);let t=this.autoRefreshTickTimeout;this.autoRefreshTickTimeout=null,t&&clearTimeout(t)}async startAutoRefresh(){this._removeVisibilityChangedCallback(),await this._startAutoRefresh()}async stopAutoRefresh(){this._removeVisibilityChangedCallback(),await this._stopAutoRefresh()}async _autoRefreshTokenTick(){this._debug(`#_autoRefreshTokenTick()`,`begin`);try{await this._acquireLock(0,async()=>{try{let e=Date.now();try{return await this._useSession(async t=>{let{data:{session:n}}=t;if(!n||!n.refresh_token||!n.expires_at){this._debug(`#_autoRefreshTokenTick()`,`no session`);return}let r=Math.floor((n.expires_at*1e3-e)/N);this._debug(`#_autoRefreshTokenTick()`,`access token expires in ${r} ticks, a tick lasts ${N}ms, refresh threshold is 3 ticks`),r<=3&&await this._callRefreshToken(n.refresh_token)})}catch(e){console.error(`Auto refresh tick failed with error. This is likely a transient error.`,e)}}finally{this._debug(`#_autoRefreshTokenTick()`,`end`)}})}catch(e){if(e.isAcquireTimeout||e instanceof vr)this._debug(`auto refresh token tick lock not available`);else throw e}}async _handleVisibilityChange(){if(this._debug(`#_handleVisibilityChange()`),!H()||!(window!=null&&window.addEventListener))return this.autoRefreshToken&&this.startAutoRefresh(),!1;try{this.visibilityChangedCallback=async()=>{try{await this._onVisibilityChanged(!1)}catch(e){this._debug(`#visibilityChangedCallback`,`error`,e)}},window==null||window.addEventListener(`visibilitychange`,this.visibilityChangedCallback),await this._onVisibilityChanged(!0)}catch(e){console.error(`_handleVisibilityChange`,e)}}async _onVisibilityChanged(e){let t=`#_onVisibilityChanged(${e})`;this._debug(t,`visibilityState`,document.visibilityState),document.visibilityState===`visible`?(this.autoRefreshToken&&this._startAutoRefresh(),e||(await this.initializePromise,await this._acquireLock(this.lockAcquireTimeout,async()=>{if(document.visibilityState!==`visible`){this._debug(t,`acquired the lock to recover the session, but the browser visibilityState is no longer visible, aborting`);return}await this._recoverAndRefresh()}))):document.visibilityState===`hidden`&&this.autoRefreshToken&&this._stopAutoRefresh()}async _getUrlForProvider(e,t,n){let r=[`provider=${encodeURIComponent(t)}`];if(n?.redirectTo&&r.push(`redirect_to=${encodeURIComponent(n.redirectTo)}`),n?.scopes&&r.push(`scopes=${encodeURIComponent(n.scopes)}`),this.flowType===`pkce`){let[e,t]=await q(this.storage,this.storageKey),n=new URLSearchParams({code_challenge:`${encodeURIComponent(e)}`,code_challenge_method:`${encodeURIComponent(t)}`});r.push(n.toString())}if(n?.queryParams){let e=new URLSearchParams(n.queryParams);r.push(e.toString())}return n?.skipBrowserRedirect&&r.push(`skip_http_redirect=${n.skipBrowserRedirect}`),`${e}?${r.join(`&`)}`}async _unenroll(e){try{return await this._useSession(async t=>{let{data:n,error:r}=t;return r?this._returnResult({data:null,error:r}):await Y(this.fetch,`DELETE`,`${this.url}/factors/${e.factorId}`,{headers:this.headers,jwt:n?.session?.access_token})})}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}}async _enroll(e){try{return await this._useSession(async t=>{let{data:n,error:r}=t;if(r)return this._returnResult({data:null,error:r});let i=Object.assign({friendly_name:e.friendlyName,factor_type:e.factorType},e.factorType===`phone`?{phone:e.phone}:e.factorType===`totp`?{issuer:e.issuer}:{}),{data:a,error:o}=await Y(this.fetch,`POST`,`${this.url}/factors`,{body:i,headers:this.headers,jwt:n?.session?.access_token});return o?this._returnResult({data:null,error:o}):(e.factorType===`totp`&&a.type===`totp`&&a?.totp?.qr_code&&(a.totp.qr_code=`data:image/svg+xml;utf-8,${a.totp.qr_code}`),this._returnResult({data:a,error:null}))})}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}}async _verify(e){return this._acquireLock(this.lockAcquireTimeout,async()=>{try{return await this._useSession(async t=>{let{data:n,error:r}=t;if(r)return this._returnResult({data:null,error:r});let i=Object.assign({challenge_id:e.challengeId},`webauthn`in e?{webauthn:Object.assign(Object.assign({},e.webauthn),{credential_response:e.webauthn.type===`create`?Fr(e.webauthn.credential_response):Ir(e.webauthn.credential_response)})}:{code:e.code}),{data:a,error:o}=await Y(this.fetch,`POST`,`${this.url}/factors/${e.factorId}/verify`,{body:i,headers:this.headers,jwt:n?.session?.access_token});return o?this._returnResult({data:null,error:o}):(await this._saveSession(Object.assign({expires_at:Math.round(Date.now()/1e3)+a.expires_in},a)),await this._notifyAllSubscribers(`MFA_CHALLENGE_VERIFIED`,a),this._returnResult({data:a,error:o}))})}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}})}async _challenge(e){return this._acquireLock(this.lockAcquireTimeout,async()=>{try{return await this._useSession(async t=>{let{data:n,error:r}=t;if(r)return this._returnResult({data:null,error:r});let i=await Y(this.fetch,`POST`,`${this.url}/factors/${e.factorId}/challenge`,{body:e,headers:this.headers,jwt:n?.session?.access_token});if(i.error)return i;let{data:a}=i;if(a.type!==`webauthn`)return{data:a,error:null};switch(a.webauthn.type){case`create`:return{data:Object.assign(Object.assign({},a),{webauthn:Object.assign(Object.assign({},a.webauthn),{credential_options:Object.assign(Object.assign({},a.webauthn.credential_options),{publicKey:Nr(a.webauthn.credential_options.publicKey)})})}),error:null};case`request`:return{data:Object.assign(Object.assign({},a),{webauthn:Object.assign(Object.assign({},a.webauthn),{credential_options:Object.assign(Object.assign({},a.webauthn.credential_options),{publicKey:Pr(a.webauthn.credential_options.publicKey)})})}),error:null}}})}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}})}async _challengeAndVerify(e){let{data:t,error:n}=await this._challenge({factorId:e.factorId});return n?this._returnResult({data:null,error:n}):await this._verify({factorId:e.factorId,challengeId:t.id,code:e.code})}async _listFactors(){let{data:{user:e},error:t}=await this.getUser();if(t)return{data:null,error:t};let n={all:[],phone:[],totp:[],webauthn:[]};for(let t of e?.factors??[])n.all.push(t),t.status===`verified`&&n[t.factor_type].push(t);return{data:n,error:null}}async _getAuthenticatorAssuranceLevel(e){if(e)try{let{payload:t}=Wn(e),n=null;t.aal&&(n=t.aal);let r=n,{data:{user:i},error:a}=await this.getUser(e);if(a)return this._returnResult({data:null,error:a});((i?.factors)?.filter(e=>e.status===`verified`)??[]).length>0&&(r=`aal2`);let o=t.amr||[];return{data:{currentLevel:n,nextLevel:r,currentAuthenticationMethods:o},error:null}}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}let{data:{session:t},error:n}=await this.getSession();if(n)return this._returnResult({data:null,error:n});if(!t)return{data:{currentLevel:null,nextLevel:null,currentAuthenticationMethods:[]},error:null};let{payload:r}=Wn(t.access_token),i=null;r.aal&&(i=r.aal);let a=i;(t.user.factors?.filter(e=>e.status===`verified`)??[]).length>0&&(a=`aal2`);let o=r.amr||[];return{data:{currentLevel:i,nextLevel:a,currentAuthenticationMethods:o},error:null}}async _getAuthorizationDetails(e){try{return await this._useSession(async t=>{let{data:{session:n},error:r}=t;return r?this._returnResult({data:null,error:r}):n?await Y(this.fetch,`GET`,`${this.url}/oauth/authorizations/${e}`,{headers:this.headers,jwt:n.access_token,xform:e=>({data:e,error:null})}):this._returnResult({data:null,error:new R})})}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}}async _approveAuthorization(e,t){try{return await this._useSession(async n=>{let{data:{session:r},error:i}=n;if(i)return this._returnResult({data:null,error:i});if(!r)return this._returnResult({data:null,error:new R});let a=await Y(this.fetch,`POST`,`${this.url}/oauth/authorizations/${e}/consent`,{headers:this.headers,jwt:r.access_token,body:{action:`approve`},xform:e=>({data:e,error:null})});return a.data&&a.data.redirect_url&&H()&&!t?.skipBrowserRedirect&&window.location.assign(a.data.redirect_url),a})}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}}async _denyAuthorization(e,t){try{return await this._useSession(async n=>{let{data:{session:r},error:i}=n;if(i)return this._returnResult({data:null,error:i});if(!r)return this._returnResult({data:null,error:new R});let a=await Y(this.fetch,`POST`,`${this.url}/oauth/authorizations/${e}/consent`,{headers:this.headers,jwt:r.access_token,body:{action:`deny`},xform:e=>({data:e,error:null})});return a.data&&a.data.redirect_url&&H()&&!t?.skipBrowserRedirect&&window.location.assign(a.data.redirect_url),a})}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}}async _listOAuthGrants(){try{return await this._useSession(async e=>{let{data:{session:t},error:n}=e;return n?this._returnResult({data:null,error:n}):t?await Y(this.fetch,`GET`,`${this.url}/user/oauth/grants`,{headers:this.headers,jwt:t.access_token,xform:e=>({data:e,error:null})}):this._returnResult({data:null,error:new R})})}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}}async _revokeOAuthGrant(e){try{return await this._useSession(async t=>{let{data:{session:n},error:r}=t;return r?this._returnResult({data:null,error:r}):n?(await Y(this.fetch,`DELETE`,`${this.url}/user/oauth/grants`,{headers:this.headers,jwt:n.access_token,query:{client_id:e.clientId},noResolveJson:!0}),{data:{},error:null}):this._returnResult({data:null,error:new R})})}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}}async fetchJwk(e,t={keys:[]}){let n=t.keys.find(t=>t.kid===e);if(n)return n;let r=Date.now();if(n=this.jwks.keys.find(t=>t.kid===e),n&&this.jwks_cached_at+6e5>r)return n;let{data:i,error:a}=await Y(this.fetch,`GET`,`${this.url}/.well-known/jwks.json`,{headers:this.headers});if(a)throw a;return!i.keys||i.keys.length===0||(this.jwks=i,this.jwks_cached_at=r,n=i.keys.find(t=>t.kid===e),!n)?null:n}async getClaims(e,t={}){try{let n=e;if(!n){let{data:e,error:t}=await this.getSession();if(t||!e.session)return this._returnResult({data:null,error:t});n=e.session.access_token}let{header:r,payload:i,signature:a,raw:{header:o,payload:s}}=Wn(n);t?.allowExpired||$n(i.exp);let c=!r.alg||r.alg.startsWith(`HS`)||!r.kid||!(`crypto`in globalThis&&`subtle`in globalThis.crypto)?null:await this.fetchJwk(r.kid,t?.keys?{keys:t.keys}:t?.jwks);if(!c){let{error:e}=await this.getUser(n);if(e)throw e;return{data:{claims:i,header:r,signature:a},error:null}}let l=er(r.alg),u=await crypto.subtle.importKey(`jwk`,c,l,!0,[`verify`]);if(!await crypto.subtle.verify(l,u,a,In(`${o}.${s}`)))throw new En(`Invalid JWT signature`);return{data:{claims:i,header:r,signature:a},error:null}}catch(e){if(F(e))return this._returnResult({data:null,error:e});throw e}}};Xr.nextInstanceID={};var Zr=Xr,Qr=gr,$r=Zr,ei=class extends $r{constructor(e){super(e)}},ti=class{constructor(e,t,n){this.supabaseUrl=e,this.supabaseKey=t;let r=on(e);if(!t)throw Error(`supabaseKey is required.`);this.realtimeUrl=new URL(`realtime/v1`,r),this.realtimeUrl.protocol=this.realtimeUrl.protocol.replace(`http`,`ws`),this.authUrl=new URL(`auth/v1`,r),this.storageUrl=new URL(`storage/v1`,r),this.functionsUrl=new URL(`functions/v1`,r);let i=`sb-${r.hostname.split(`.`)[0]}-auth-token`,a={db:Zt,realtime:$t,auth:{...Qt,storageKey:i},global:Xt},o=an(n??{},a);this.storageKey=o.auth.storageKey??``,this.headers=o.global.headers??{},o.accessToken?(this.accessToken=o.accessToken,this.auth=new Proxy({},{get:(e,t)=>{throw Error(`@supabase/supabase-js: Supabase Client is configured with the accessToken option, accessing supabase.auth.${String(t)} is not possible`)}})):this.auth=this._initSupabaseAuthClient(o.auth??{},this.headers,o.global.fetch),this.fetch=nn(t,this._getAccessToken.bind(this),o.global.fetch),this.realtime=this._initRealtimeClient({headers:this.headers,accessToken:this._getAccessToken.bind(this),...o.realtime}),this.accessToken&&Promise.resolve(this.accessToken()).then(e=>this.realtime.setAuth(e)).catch(e=>console.warn(`Failed to set initial Realtime auth token:`,e)),this.rest=new le(new URL(`rest/v1`,r).href,{headers:this.headers,schema:o.db.schema,fetch:this.fetch,timeout:o.db.timeout,urlLengthLimit:o.db.urlLengthLimit}),this.storage=new Jt(this.storageUrl.href,this.headers,this.fetch,n?.storage),o.accessToken||this._listenForAuthEvents()}get functions(){return new l(this.functionsUrl.href,{headers:this.headers,customFetch:this.fetch})}from(e){return this.rest.from(e)}schema(e){return this.rest.schema(e)}rpc(e,t={},n={head:!1,get:!1,count:void 0}){return this.rest.rpc(e,t,n)}channel(e,t={config:{}}){return this.realtime.channel(e,t)}getChannels(){return this.realtime.getChannels()}removeChannel(e){return this.realtime.removeChannel(e)}removeAllChannels(){return this.realtime.removeAllChannels()}async _getAccessToken(){if(this.accessToken)return await this.accessToken();let{data:e}=await this.auth.getSession();return e.session?.access_token??this.supabaseKey}_initSupabaseAuthClient({autoRefreshToken:e,persistSession:t,detectSessionInUrl:n,storage:r,userStorage:i,storageKey:a,flowType:o,lock:s,debug:c,throwOnError:l},u,d){let f={Authorization:`Bearer ${this.supabaseKey}`,apikey:`${this.supabaseKey}`};return new ei({url:this.authUrl.href,headers:{...f,...u},storageKey:a,autoRefreshToken:e,persistSession:t,detectSessionInUrl:n,storage:r,userStorage:i,flowType:o,lock:s,debug:c,throwOnError:l,fetch:d,hasCustomAuthorizationHeader:Object.keys(this.headers).some(e=>e.toLowerCase()===`authorization`)})}_initRealtimeClient(e){return new tt(this.realtimeUrl.href,{...e,params:{apikey:this.supabaseKey,...e?.params}})}_listenForAuthEvents(){return this.auth.onAuthStateChange((e,t)=>{this._handleTokenChanged(e,`CLIENT`,t?.access_token)})}_handleTokenChanged(e,t,n){(e===`TOKEN_REFRESHED`||e===`SIGNED_IN`)&&this.changedAccessToken!==n?(this.changedAccessToken=n,this.realtime.setAuth(n)):e===`SIGNED_OUT`&&(this.realtime.setAuth(),t==`STORAGE`&&this.auth.signOut(),this.changedAccessToken=void 0)}};let ni=(e,t,n)=>new ti(e,t,n);function ri(){if(typeof window<`u`)return!1;let e=globalThis.process;if(!e)return!1;let t=e.version;if(t==null)return!1;let n=t.match(/^v(\d+)\./);return n?parseInt(n[1],10)<=18:!1}return ri()&&console.warn(`⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217`),e.AuthAdminApi=Qr,e.AuthApiError=pn,e.AuthClient=$r,e.AuthError=P,e.AuthImplicitGrantRedirectError=_n,e.AuthInvalidCredentialsError=gn,e.AuthInvalidJwtError=En,e.AuthInvalidTokenResponseError=z,e.AuthPKCECodeVerifierMissingError=bn,e.AuthPKCEGrantCodeExchangeError=yn,e.AuthRetryableFetchError=Sn,e.AuthSessionMissingError=R,e.AuthUnknownError=I,e.AuthWeakPasswordError=wn,e.CustomAuthError=L,Object.defineProperty(e,`FunctionRegion`,{enumerable:!0,get:function(){return c}}),e.FunctionsError=i,e.FunctionsFetchError=a,e.FunctionsHttpError=s,e.FunctionsRelayError=o,e.GoTrueAdminApi=gr,e.GoTrueClient=Zr,e.NavigatorLockAcquireTimeoutError=yr,e.PostgrestError=p,e.REALTIME_CHANNEL_STATES=Xe,Object.defineProperty(e,`REALTIME_LISTEN_TYPES`,{enumerable:!0,get:function(){return E}}),Object.defineProperty(e,`REALTIME_POSTGRES_CHANGES_LISTEN_EVENT`,{enumerable:!0,get:function(){return Ye}}),Object.defineProperty(e,`REALTIME_PRESENCE_LISTEN_EVENTS`,{enumerable:!0,get:function(){return Ge}}),Object.defineProperty(e,`REALTIME_SUBSCRIBE_STATES`,{enumerable:!0,get:function(){return D}}),e.RealtimeChannel=Ze,e.RealtimeClient=tt,e.RealtimePresence=Ke,e.SIGN_OUT_SCOPES=hr,e.StorageApiError=ft,e.SupabaseClient=ti,e.WebSocketFactory=ue,e.createClient=ni,e.isAuthApiError=mn,e.isAuthError=F,e.isAuthImplicitGrantRedirectError=vn,e.isAuthPKCECodeVerifierMissingError=xn,e.isAuthRetryableFetchError=Cn,e.isAuthSessionMissingError=hn,e.isAuthWeakPasswordError=Tn,e.lockInternals=Q,e.navigatorLock=xr,e.processLock=Cr,e})({});
+</script>
+<script>
+/* Clair account sync. Supabase JS 2.102.0. No service-role key belongs here. */
+(function(root){
+  'use strict';
+  class ClairCloud {
+    constructor(config, hooks, sdk=root.supabase){
+      this.config=config;this.hooks=hooks;this.enabled=!!config;this.user=null;
+      this.client=null;this.ready=!this.enabled;this.status=this.enabled?'loading':'local';
+      this.record=null;this.conflict=null;this.busy=false;this.timer=null;this.epoch=0;
+      this.displayName='';this.error='';this.disposed=false;
+      if(this.enabled){
+        if(!/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(config.url)||!/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.key))throw Error('Configuration des comptes invalide.');
+        this.client=sdk.createClient(config.url,config.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'clair-account-session-v1'}});
+      }
+    }
+    key(uid=this.user?.id){return uid?'clair-account-budget-v1-'+uid:null;}
+    emit(){this.hooks.status?.(this);}
+    decode(raw,uid){
+      if(!raw)return null;const value=JSON.parse(raw),m=value._cloud;
+      if(!m||m.userId!==uid||!Number.isSafeInteger(m.revision)||m.revision<0||typeof m.dirty!=='boolean'||typeof m.operationId!=='string')throw Error('La copie locale du compte est invalide. Elle est conservée.');
+      const payload={...value};delete payload._cloud;
+      return {payload:this.hooks.normalize(payload),meta:m};
+    }
+    pack(payload){
+      if(!this.user)throw Error('Connecte-toi pour enregistrer dans ton compte.');
+      const meta={userId:this.user.id,revision:this.record?.meta.revision||0,dirty:true,operationId:crypto.randomUUID()};
+      return JSON.stringify({...payload,_cloud:meta});
+    }
+    saved(raw){this.record=this.decode(raw,this.user.id);this.status='pending';this.emit();this.schedule();}
+    schedule(){clearTimeout(this.timer);if(this.user&&!this.conflict&&!this.disposed)this.timer=setTimeout(()=>this.sync(),900);}
+    async init(){
+      if(!this.enabled)return;
+      this.client.auth.onAuthStateChange((event,session)=>{
+        if(event==='PASSWORD_RECOVERY'){
+          this.hooks.recovery?.(session?.user);
+          if(session?.user.id&&session.user.id!==this.user?.id){this.ready=false;this.status='loading';}
+          this.emit();
+        }
+        if(event==='SIGNED_OUT'||(session?.user.id&&session.user.id!==this.user?.id))setTimeout(()=>this.attach(session?.user||null),0);
+      });
+      const {data,error}=await this.client.auth.getSession();
+      if(error){this.error='La session n’a pas pu être restaurée.';this.ready=true;this.status='signed-out';this.emit();return;}
+      await this.attach(data.session?.user||null);
+    }
+    async attach(user){
+      if(user?.id===this.user?.id&&(this.ready||(this.user&&this.status==='loading')))return;
+      const epoch=++this.epoch;clearTimeout(this.timer);this.record=null;this.conflict=null;this.error='';this.ready=false;this.user=user;
+      if(!user){this.status='signed-out';this.ready=true;this.hooks.leave?.();this.emit();return;}
+      this.displayName=String(user.user_metadata?.display_name||'').slice(0,64);
+      this.status='loading';this.emit();
+      try{
+        this.hooks.enter?.(user,null);
+        this.record=this.decode(localStorage.getItem(this.key()),user.id);
+        this.hooks.enter?.(user,this.record);
+        this.ready=true;
+        await this.sync(epoch);
+        if(epoch!==this.epoch)return;
+        this.hooks.opened?.();
+        if(!this.record&&!this.conflict&&this.status==='synced')this.hooks.empty?.(user);
+      }catch(error){if(epoch!==this.epoch)return;this.hooks.badCache?.(error,localStorage.getItem(this.key()));this.error=error.message;this.status='error';this.ready=true;this.emit();}
+    }
+    async read(){
+      const {data,error}=await this.client.from('clair_budgets').select('payload,revision,operation_id,display_name,updated_at').eq('user_id',this.user.id).maybeSingle();
+      if(error)throw error;return data;
+    }
+    wire(payload){
+      const clean=structuredClone(payload);delete clean._cloud;
+      // Keep large wallpaper photos on each device instead of retransmitting them with each purchase.
+      if(clean.preferences){clean.preferences.photo=null;if(clean.preferences.wallpaper==='photo')clean.preferences.wallpaper='plain';}
+      return clean;
+    }
+    adopt(row, expectedEpoch=this.epoch){
+      if(expectedEpoch!==this.epoch)return;
+      const payload=this.hooks.normalize(row.payload);
+      if(this.record?.payload.preferences?.photo){payload.preferences.photo=this.record.payload.preferences.photo;if(this.record.payload.preferences.wallpaper==='photo')payload.preferences.wallpaper='photo';}
+      const meta={userId:this.user.id,revision:row.revision,dirty:false,operationId:row.operation_id};
+      const raw=JSON.stringify({...payload,_cloud:meta});
+      localStorage.setItem(this.key(),raw);this.record={payload,meta};this.displayName=row.display_name||this.displayName;this.conflict=null;
+      this.status='synced';this.error='';this.hooks.apply?.(payload,raw);this.emit();
+    }
+    async sync(expectedEpoch=this.epoch){
+      if(!this.enabled||!this.user||this.busy||this.conflict||this.disposed)return;
+      this.busy=true;const userId=this.user.id;
+      try{
+        if(navigator.onLine===false)throw Error('offline');
+        const remote=await this.read();if(expectedEpoch!==this.epoch)return;
+        const raw=localStorage.getItem(this.key(userId));this.record=this.decode(raw,userId);
+        if(this.record?.meta.dirty){
+          const pending=this.record;
+          if(remote&&JSON.stringify(this.wire(pending.payload))===JSON.stringify(this.wire(this.hooks.normalize(remote.payload)))){this.adopt(remote,expectedEpoch);return;}
+          if((remote?.revision||0)!==pending.meta.revision&&remote?.operation_id!==pending.meta.operationId){this.setConflict(remote);return;}
+          const {data,error}=await this.client.rpc('save_clair_budget',{p_payload:this.wire(pending.payload),p_expected_revision:pending.meta.revision,p_operation_id:pending.meta.operationId,p_display_name:this.displayName});
+          if(expectedEpoch!==this.epoch)return;if(error)throw error;
+          if(!data?.saved){this.setConflict(data?.row||null);return;}
+          const latest=this.decode(localStorage.getItem(this.key(userId)),userId);
+          if(latest?.meta.operationId!==pending.meta.operationId){
+            // A new edit arrived while saving. Advance its base revision without replacing the edit.
+            if(latest){latest.meta.revision=data.row.revision;localStorage.setItem(this.key(userId),JSON.stringify({...latest.payload,_cloud:latest.meta}));this.record=latest;this.hooks.apply?.(latest.payload,JSON.stringify({...latest.payload,_cloud:latest.meta}));this.status='pending';this.schedule();}
+          }else this.adopt(data.row,expectedEpoch);
+        }else if(remote){
+          if(!this.record||remote.revision!==this.record.meta.revision)this.adopt(remote,expectedEpoch);
+          else{this.status='synced';this.error='';this.emit();}
+        }else if(this.record?.meta.revision){this.setConflict(null);}
+        else{this.status='synced';this.error='';this.emit();}
+      }catch(error){
+        if(expectedEpoch!==this.epoch)return;
+        this.status=navigator.onLine===false?'offline':'error';
+        this.error=this.status==='offline'?'Tes modifications restent sur cet appareil.':'Synchronisation indisponible. Tes modifications restent sur cet appareil.';this.emit();
+      }finally{this.busy=false;if(expectedEpoch!==this.epoch&&this.user)this.schedule();}
+    }
+    setConflict(remote){
+      this.conflict={remote};this.status='conflict';this.error='Deux appareils ont modifié ton budget. Choisis la copie à conserver.';this.emit();
+    }
+    resolve(useRemote){
+      if(!this.conflict)return;
+      if(useRemote){
+        if(!this.conflict.remote)throw Error('Aucune copie en ligne n’est disponible.');
+        this.adopt(this.conflict.remote);return;
+      }
+      // The conflict UI exports the device copy before asking the user to choose.
+      this.record.meta.revision=this.conflict.remote?.revision||0;this.record.meta.operationId=crypto.randomUUID();this.record.meta.dirty=true;
+      const raw=JSON.stringify({...this.record.payload,_cloud:this.record.meta});localStorage.setItem(this.key(),raw);this.conflict=null;this.hooks.apply?.(this.record.payload,raw);this.status='pending';this.emit();this.schedule();
+    }
+    async logout(){
+      if(this.record?.meta.dirty){await this.sync();if(this.record?.meta.dirty)throw Error('Enregistre les modifications en ligne avant de te déconnecter, ou exporte une sauvegarde.');}
+      const uid=this.user?.id;const {error}=await this.client.auth.signOut({scope:'local'});if(error)throw Error('Déconnexion indisponible. Réessaie.');
+      if(uid)localStorage.removeItem(this.key(uid));await this.attach(null);
+    }
+  }
+  root.ClairCloud=ClairCloud;
+})(window);
+
+</script>
+<script>
+(function () {
+  'use strict';
+  /* Configuration du serveur de rappels (version hébergée uniquement). Clé publique anon seulement. */
+  window.CLAIR_PUSH_CONFIG = window.CLAIR_PUSH_CONFIG || null;
+  const E=window.ClairEngine, LOCAL_KEY='clair-github-money-v3', OLD_KEY='clair-github-money-v1';
+  let KEY=LOCAL_KEY,BACKUP='clair-github-before-upgrade-v3',REMINDED='clair-github-reminded-v1',PUSH_KEY='clair-github-push-v1';
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const euro = n => new Intl.NumberFormat('fr-FR', {style:'currency',currency:'EUR'}).format(n / 100);
+  const amount = n => (n / 100).toFixed(2).replace('.', ',');
+  const dateLabel = s => new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(s+'T12:00:00Z'));
+  const shortDate = s => new Intl.DateTimeFormat('fr-FR',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'}).format(new Date(s+'T12:00:00Z'));
+  const monthLabel = s => new Intl.DateTimeFormat('fr-FR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(s+'-01T12:00:00Z'));
+  const id = prefix => prefix + '-' + crypto.randomUUID().replace(/-/g,'');
+  const nextDay = () => E.addDays(E.today(),1);
+  const INFINITE = '2100-12-31';
+  const categories = [{id:'alimentation',label:'Alimentation',icon:'◒'},{id:'logement',label:'Logement',icon:'⌂'},{id:'transport',label:'Transport',icon:'↗'},{id:'telephone',label:'Téléphone',icon:'▯'},{id:'etudes',label:'Études',icon:'▤'},{id:'hygiene',label:'Hygiène',icon:'◇'},{id:'vetements',label:'Vêtements',icon:'♧'},{id:'famille',label:'Famille',icon:'♡'},{id:'loisirs',label:'Loisirs',icon:'✧'},{id:'abonnements',label:'Abonnements',icon:'↻'},{id:'epargne',label:'Épargne',icon:'◎'},{id:'imprevus',label:'Imprévus',icon:'!'},{id:'autre',label:'Autre',icon:'·'}];
+  const icon = name => `<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${{home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1Z"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',settings:'<path d="m9 3-.6 2.2-2 .9-2.1-.6-2 3.5 1.6 1.6v2.8L2.3 15l2 3.5 2.1-.6 2 .9L9 21h4l.6-2.2 2-.9 2.1.6 2-3.5-1.6-1.6v-2.8l1.6-1.6-2-3.5-2.1.6-2-.9L13 3Z"/><circle cx="11" cy="12" r="3"/>',bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',plus:'<path d="M12 5v14M5 12h14"/>',arrow:'<path d="m9 5 7 7-7 7"/>'}[name]||''}</svg>`;
+  const navs = [{id:'home',label:'Accueil',icon:'home'},{id:'journal',label:'Historique',icon:'clock'},{id:'settings',label:'Réglages',icon:'settings'}];
+  const dayNames = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'], dayOrder = [1,2,3,4,5,6,0];
+  let data = E.empty(), snapshot = null, loadError = null, rawRecovery = '', page = 'home', month = E.today().slice(0,7), wizard = null, modal = null, undo = null, toastTimer, recovery = null, pushBusy = false, pushTimer = null;
+  const cat = k => [...categories,...data.customCategories].find(c=>c.id===k)||categories.at(-1);
+  const options = selected => [...categories,...data.customCategories.filter(c=>!categories.some(x=>x.id===c.id))].map(c=>`<option value="${esc(c.id)}" ${c.id===selected?'selected':''}>${esc(c.label)}</option>`).join('');
+  const num = (s, allowZero=false) => { const n = E.cents(s || '0'); if (n < 0 || (!allowZero && n===0)) throw Error('Indique un montant supérieur à zéro.'); return n; };
+  function readStorage() {
+    snapshot = localStorage.getItem(KEY);
+    const legacy = localStorage.getItem(OLD_KEY);
+    rawRecovery = snapshot || legacy || '';
+    if (rawRecovery) data = E.normalize(JSON.parse(rawRecovery));
+    if (!snapshot && legacy && !localStorage.getItem(BACKUP)) localStorage.setItem(BACKUP, legacy);
+  }
+  try { readStorage(); } catch(err) { loadError = 'Les données existantes n’ont pas pu être lues. Elles n’ont pas été effacées. ' + err.message; }
+  function notify(message, callback=null) {
+    clearTimeout(toastTimer); undo=callback;
+    $('#toast').innerHTML=`<div class="toast">${esc(message)}${callback?'<button data-action="undo">Annuler</button>':''}</div>`;
+    toastTimer=setTimeout(()=>{$('#toast').innerHTML='';undo=null;},9000);
+  }
+  function download(content, filename, mime='application/json') {
+    const url=URL.createObjectURL(new Blob([content],{type:mime})), a=document.createElement('a');
+    a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  function commit(change, message='') {
+    if (cloud.enabled&&(!cloud.user||!cloud.ready||cloud.status==='loading')) { notify('Connecte-toi avant de modifier ton budget.'); return false; }
+    if (cloud.conflict) { notify('Choisis d’abord la copie à conserver.'); conflictDialog(); return false; }
+    if (loadError) { notify('Récupère ou importe tes données avant de continuer.'); return false; }
+    const before=structuredClone(data);
+    try {
+      const current=localStorage.getItem(KEY);
+      if (current!==snapshot) {
+        snapshot=current; data=current?E.normalize(JSON.parse(current)):E.empty();
+        close();render();notify('Un autre onglet a modifié les données. Vérifie-les puis recommence.');return false;
+      }
+      change(data);E.sync(data);
+      const serialized=saveData(data);localStorage.setItem(KEY,serialized);snapshot=serialized;afterLocalSave();
+      recovery=null;render();if(message)notify(message);queuePushSync();return true;
+    } catch(err) {
+      recovery=structuredClone(data);data=before;render();
+      const quota=/quota/i.test(err.name+' '+err.message);
+      $('#alert').innerHTML=`<div class="notice error">La modification n’a pas été enregistrée : ${esc(quota?'l’espace de stockage du navigateur est plein (une photo de fond trop lourde ?).':err.message)} <button class="link" data-action="recovery">Exporter la copie de secours</button></div>`;
+      return false;
+    }
+  }
+  function catchUp() {
+    if(loadError || !data.initialized || !data.setupDone)return;
+    try {
+      const draft=structuredClone(data), count=E.sync(draft);
+      if(count)commit(d=>{d.transactions=draft.transactions;},`${count} dépense${count>1?'s':''} automatique${count>1?'s':''} ajoutée${count>1?'s':''}.`);
+    } catch(err) { $('#alert').innerHTML=`<div class="notice error">Le rattrapage n’a pas pu être effectué : ${esc(err.message)} Tes données sont conservées.</div>`; }
+  }
+  /* ---------- Compte et synchronisation ---------- */
+  window.CLAIR_ACCOUNT_CONFIG=location.protocol==='file:'?null:(window.CLAIR_ACCOUNT_CONFIG===undefined?{"url":"https://hkssnbvktfscizojhftl.supabase.co","key":"sb_publishable_qJeSyD7E0cbi8V--qyJJkw_8M4oOKr8"}:window.CLAIR_ACCOUNT_CONFIG);
+  const recoveryParams=new URLSearchParams((location.hash||'').slice(1));
+  const recoveryQuery=new URLSearchParams(location.search||'');
+  const recoveryError=recoveryParams.get('error_code')||recoveryQuery.get('error_code')||recoveryParams.get('error')||recoveryQuery.get('error');
+  let accountMode='login',accountBusy=false,accountRecovery=recoveryParams.get('type')==='recovery',accountStarted=false;
+  let accountResetStep=accountRecovery?'checking':recoveryError?'expired':null;
+  let accountResetEmail='',accountResetUntil=0,accountRecoveryUserId=null,accountDeferredSetup=false,accountResetTimer=null;
+  const cloud=new window.ClairCloud(window.CLAIR_ACCOUNT_CONFIG,{
+    normalize: value=>E.normalize(value),
+    status:()=>{
+      if(accountResetStep){
+        if(cloud.ready&&cloud.status!=='loading'&&
+          (accountResetStep==='checking'||(accountResetStep==='password'&&cloud.user?.id!==accountRecoveryUserId)))
+          accountResetStep=cloud.user?.id===accountRecoveryUserId&&accountRecoveryUserId?'password':'expired';
+        const editing=(accountResetStep==='email'&&$('#account-forgot-form'))||
+          (accountResetStep==='password'&&$('#account-password-form'));
+        if(!editing)render();
+        return;
+      }
+      if(!cloud.user||!cloud.ready||cloud.status==='loading'||$('#account-form')||$('#account-loading'))render();
+      else renderAccountStatus();
+    },
+    recovery:user=>{accountRecovery=true;accountRecoveryUserId=user?.id||null;accountResetStep='password';close();},
+    opened:()=>{if(!accountResetStep)catchUp();},
+    enter:(user,record)=>{
+      close();wizard=null;undo=null;recovery=null;page='home';
+      KEY=cloud.key(user.id);BACKUP=KEY+'-backup';REMINDED=KEY+'-reminded';PUSH_KEY=KEY+'-push';
+      data=record?record.payload:E.empty();snapshot=localStorage.getItem(KEY);loadError=null;rawRecovery='';
+    },
+    leave:()=>{close();wizard=null;undo=null;data=E.empty();snapshot=null;page='home';loadError=null;rawRecovery='';},
+    badCache:(error,raw)=>{loadError=error.message;rawRecovery=raw||'';render();},
+    apply:(next,raw)=>{
+      const changed=JSON.stringify(next)!==JSON.stringify(data);
+      if(changed){close();wizard=null;undo=null;}
+      data=next;snapshot=raw;loadError=null;if(accountResetStep)return;render();catchUp();
+      if(changed&&data.initialized)notify('Budget actualisé depuis ton compte.');
+    },
+    empty:()=>{
+      if(accountResetStep){accountDeferredSetup=true;return;}
+      const legacy=legacyBudget();
+      if(legacy?.initialized)dialog('Retrouver ton budget actuel',`<p>Ce navigateur contient déjà ${legacy.transactions.length} opérations. Tu peux les transférer vers ton compte.</p><p class="help">Le compte connecté : ${esc(cloud.user.email)}.</p><div class="actions"><button class="button primary" data-action="account-import">Transférer mon budget</button><button class="button" data-action="account-start-empty">Commencer un nouveau budget</button></div>`,'account-import');
+      else if(!data.initialized)beginSetup();
+    }
+  });
+  function legacyBudget(){
+    try{const owner=localStorage.getItem('clair-local-owner-v1');if(owner&&owner!==cloud.user?.id)return null;const raw=localStorage.getItem(LOCAL_KEY)||localStorage.getItem(OLD_KEY);return raw?E.normalize(JSON.parse(raw)):null;}catch{return null;}
+  }
+  function storedData(raw){const value=JSON.parse(raw);return E.normalize(value);}
+  function saveData(value){return cloud.enabled&&cloud.user?cloud.pack(value):JSON.stringify(value);}
+  function afterLocalSave(){if(cloud.enabled&&cloud.user)cloud.saved(snapshot);}
+  function accountGate(){
+    if(!cloud.ready||cloud.status==='loading')return '<section class="card" id="account-loading"><h1>Ouverture de ton compte…</h1><p class="help">Ta copie locale est conservée.</p></section>';
+    const signup=accountMode==='signup';
+    return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div>${mascot(signup?1:0,signup?"Préparons ton espace, à ton rythme.":"Heureuse de te retrouver.")}<h1>${signup?"Créons ton espace.":"Ton budget, partout."}</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}${signup?'<p class="help">12 caractères minimum. Ton adresse e-mail devra être confirmée.</p>':''}<p id="account-error" class="help negative" role="alert"></p><button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié ?</button>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
+  }
+  function accountCard(){
+    if(!cloud.enabled||!cloud.user)return '';
+    return `<section class="card"><h2>Mon compte</h2><p>${esc(cloud.displayName||'Mon espace')}</p><p class="help">${esc(cloud.user.email)}</p><p class="help">${esc(accountStatus())}</p><div class="actions"><button class="button" data-action="account-sync" ${cloud.busy?'disabled':''}>Synchroniser</button><button class="link" data-action="account-logout">Me déconnecter</button></div><details class="settings-more"><summary>Ancien budget sur cet appareil</summary><p class="help">Le transfert demande confirmation et conserve une copie de secours.</p><button class="button" data-action="account-import">Transférer mon ancien budget</button></details></section>`;
+  }
+  function accountStatus(){return {loading:'Connexion…','signed-out':'Connexion requise',synced:'Synchronisé',pending:'À synchroniser',offline:'Hors ligne · enregistré ici',error:'Synchronisation à reprendre',conflict:'Deux copies à départager'}[cloud.status]||'Sur cet appareil';}
+  function renderAccountStatus(){
+    if(!cloud.enabled)return;
+    const target=$('#sync-alert');
+    if(!cloud.user){target.innerHTML='';return;}
+    $('#status-label').textContent=accountStatus();
+    target.innerHTML=cloud.conflict?'<div class="notice"><p>Deux appareils ont modifié ton budget. Les deux copies sont conservées.</p><button class="button" data-action="account-conflict">Choisir une copie</button></div>':cloud.error?`<div class="notice">${esc(cloud.error)} <button class="link" data-action="account-sync">Réessayer</button></div>`:'';
+  }
+  function recoveryView(){
+    let body='';
+    const error='<p id="account-error" class="help negative" role="alert"></p>';
+    const back='<button class="link" data-action="account-reset-back">Retour à la connexion</button>';
+    if(accountResetStep==='checking'||(accountResetStep==='password'&&(!cloud.ready||!cloud.user))){
+      body='<h1>Vérification du lien…</h1><p class="muted" role="status">Un instant, nous ouvrons la récupération de ton compte.</p>';
+    }else if(accountResetStep==='email'){
+      const wait=Math.max(0,Math.ceil((accountResetUntil-Date.now())/1000));
+      body='<h1>Retrouver mon compte</h1><p class="muted">Reçois un lien pour choisir un nouveau mot de passe.</p>'+
+        '<form id="account-forgot-form">'+field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="email" autocapitalize="none" spellcheck="false"')+error+
+        '<button class="button primary" id="account-reset-send" type="submit" '+(wait?'disabled':'')+'>'+(wait?'Réessayer dans '+wait+' s':'Envoyer le lien')+'</button></form>'+back;
+    }else if(accountResetStep==='sent'){
+      const wait=Math.max(0,Math.ceil((accountResetUntil-Date.now())/1000));
+      body='<h1>Vérifie tes e-mails</h1><p class="muted">Si un compte utilise cette adresse, tu recevras un lien pour changer ton mot de passe.</p>'+
+        '<p class="recovery-email">'+esc(accountResetEmail)+'</p><p class="help">Ouvre le lien reçu. Pense à vérifier les indésirables.</p>'+error+
+        '<div class="recovery-actions"><button class="button primary" id="account-reset-resend" data-action="account-reset-resend" '+(wait?'disabled':'')+'>'+(wait?'Renvoyer dans '+wait+' s':'Renvoyer le lien')+'</button>'+
+        '<button class="link" data-action="account-reset-edit">Corriger mon adresse</button>'+back+'</div>';
+    }else if(accountResetStep==='password'){
+      body='<h1>Nouveau mot de passe</h1><p class="muted">Choisis le mot de passe de ton compte Clair.</p>'+
+        '<form id="account-password-form"><label class="field"><span>Nouveau mot de passe</span><input id="account-new-password" name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="account-password-help"></label>'+
+        '<button type="button" class="link password-toggle" data-action="account-password-toggle" aria-controls="account-new-password" aria-pressed="false">Afficher le mot de passe</button>'+
+        '<p class="help" id="account-password-help">12 caractères minimum. Tu peux utiliser une phrase.</p>'+error+
+        '<button class="button primary" type="submit">Enregistrer mon mot de passe</button></form>';
+    }else if(accountResetStep==='done'){
+      body='<h1>Mot de passe modifié</h1><p class="muted" role="status">Ton nouveau mot de passe est enregistré.</p>'+
+        '<button class="button primary" data-action="account-reset-finish">Accéder à mon budget</button>';
+    }else{
+      body='<h1>Ce lien ne fonctionne plus</h1><p class="muted">Il a expiré, a déjà été utilisé ou est incomplet. Demande un nouveau lien pour récupérer ton compte.</p>'+
+        '<button class="button primary" data-action="account-reset-edit">Demander un nouveau lien</button>'+back;
+    }
+    return '<section class="card account-card account-recovery" aria-labelledby="recovery-title"><div class="brand-mark" aria-hidden="true">c</div>'+
+      body.replace('<h1>','<h1 id="recovery-title" tabindex="-1">')+'</section>';
+  }
+  function focusRecovery(){setTimeout(()=>$('#recovery-title')?.focus({preventScroll:true}),0);}
+  function resetCooldown(){
+    clearTimeout(accountResetTimer);
+    const wait=Math.max(0,Math.ceil((accountResetUntil-Date.now())/1000));
+    const button=$('#account-reset-resend')||$('#account-reset-send');
+    if(button){button.disabled=accountBusy||wait>0;button.textContent=accountBusy?'Envoi en cours…':wait?(accountResetStep==='sent'?'Renvoyer dans ':'Réessayer dans ')+wait+' s':accountResetStep==='sent'?'Renvoyer le lien':'Envoyer le lien';}
+    if(wait&&['email','sent'].includes(accountResetStep))accountResetTimer=setTimeout(resetCooldown,1000);
+  }
+  function clearRecoveryAddress(){
+    if(!accountRecovery&&!recoveryError)return;
+    // The SDK has already consumed the return from Auth. Never store its URL tokens.
+    try{const search=new URLSearchParams(location.search||'');for(const key of ['error','error_code','error_description'])search.delete(key);history.replaceState(null,'',location.pathname+(search.size?'?'+search.toString():''));}catch{}
+  }
+  function finishRecovery(){
+    if(accountBusy)return;
+    clearRecoveryAddress();accountResetStep=null;accountRecovery=false;accountRecoveryUserId=null;clearTimeout(accountResetTimer);
+    close();render();
+    if(cloud.user){catchUp();if(accountDeferredSetup){accountDeferredSetup=false;cloud.hooks.empty();}}
+  }
+  function accountMessage(message){
+    const target=($('#dialog').open?$('#form-error'):null)||$('#account-error');
+    if(target){target.textContent=message;if(message)target.scrollIntoView({block:'nearest'});}else notify(message);
+  }
+  async function sendRecovery(email){
+    if(accountResetUntil>Date.now())throw Error('Attends la fin du délai avant de demander un autre lien.');
+    if(!email)throw Error('Indique l’adresse e-mail de ton compte.');
+    accountResetEmail=email;
+    const {error}=await cloud.client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    if(error){
+      if(error.status===429||['over_email_send_rate_limit','over_request_rate_limit'].includes(error.code)){
+        accountResetUntil=Date.now()+60000;resetCooldown();
+        throw Error('L’envoi est temporairement limité. Réessaie plus tard.');
+      }
+      if(navigator.onLine===false||error.name==='AuthRetryableFetchError')
+        throw Error('Vérifie ta connexion Internet, puis réessaie.');
+      throw Error('Le lien ne peut pas être envoyé pour le moment. Réessaie plus tard.');
+    }
+    accountResetUntil=Date.now()+60000;accountResetStep='sent';render();focusRecovery();
+  }
+  function attempts(){try{return JSON.parse(localStorage.getItem('clair-auth-attempts-v1')||'{"count":0,"until":0}');}catch{return {count:0,until:0};}}
+  async function accountSubmit(form){
+    if(accountBusy)return;accountBusy=true;const button=form.querySelector('button[type=submit]');if(button)button.disabled=true;
+    accountMessage('');if(form.id==='account-forgot-form')resetCooldown();
+    try{
+      const f=new FormData(form),email=String(f.get('email')||'').trim(),password=String(f.get('password')||'');
+      if(form.id==='account-form'){
+        const guard=attempts();if(guard.until>Date.now())throw Error('Attends une minute avant de réessayer.');
+        const signup=form.dataset.mode==='signup';let response;
+        if(signup){
+          const name=String(f.get('displayName')||'').trim();if(!name||name.length>64||password.length<12)throw Error('Indique ton prénom et un mot de passe d’au moins 12 caractères.');
+          response=await cloud.client.auth.signUp({email,password,options:{data:{display_name:name},emailRedirectTo:location.origin+location.pathname}});
+        }else response=await cloud.client.auth.signInWithPassword({email,password});
+        if(response.error){
+          if(response.error.code==='invalid_credentials'){
+            const count=(guard.until&&guard.until<=Date.now()?0:Number(guard.count)||0)+1;
+            localStorage.setItem('clair-auth-attempts-v1',JSON.stringify({count,until:count>=3?Date.now()+60000:0}));
+            throw Error(count>=3?'Trois essais incorrects. Réessaie dans une minute.':'Adresse e-mail ou mot de passe incorrect.');
+          }
+          if(response.error.status===429)throw Error('Trop de tentatives. Attends un moment avant de réessayer.');
+          if(response.error.code==='email_not_confirmed')throw Error('Confirme ton adresse e-mail avant de te connecter.');
+          throw Error('Connexion indisponible. Vérifie ta connexion Internet et réessaie.');
+        }
+        localStorage.removeItem('clair-auth-attempts-v1');
+        if(signup&&!response.data.session){form.reset();accountMessage('Vérifie tes e-mails pour confirmer ton compte, puis connecte-toi ici.');return;}
+        await cloud.attach(response.data.user||response.data.session?.user);
+      }
+      if(form.id==='account-forgot-form')await sendRecovery(email);
+      if(form.id==='account-password-form'){
+        if(!accountRecoveryUserId||cloud.user?.id!==accountRecoveryUserId){accountResetStep='expired';render();focusRecovery();return;}
+        if(password.length<12||password.length>128)throw Error('Utilise entre 12 et 128 caractères.');
+        const {error}=await cloud.client.auth.updateUser({password});
+        if(error){
+          if(error.status===401||['session_not_found','refresh_token_not_found','refresh_token_already_used','bad_jwt','user_not_found'].includes(error.code)){
+            accountResetStep='expired';render();focusRecovery();return;
+          }
+          if(error.code==='same_password')throw Error('Choisis un mot de passe différent du précédent.');
+          if(error.code==='weak_password')throw Error('Ce mot de passe est trop facile à deviner. Choisis une phrase plus longue.');
+          if(error.status===429)throw Error('Trop de demandes. Attends un moment avant de réessayer.');
+          throw Error(navigator.onLine===false?'Vérifie ta connexion Internet, puis réessaie.':'Le mot de passe n’a pas pu être enregistré. Réessaie.');
+        }
+        accountResetStep='done';accountRecovery=false;accountRecoveryUserId=null;render();focusRecovery();
+      }
+    }catch(error){accountMessage(error.message||'La connexion n’a pas abouti.');}
+    finally{accountBusy=false;if(button)button.disabled=false;resetCooldown();}
+  }
+  function transferLegacy(){
+    const legacy=legacyBudget();if(!legacy){notify('Aucun ancien budget à transférer sur cet appareil.');return;}
+    if(cloud.conflict){notify('Résous d’abord le conflit entre les appareils.');return;}
+    confirm('Transférer ce budget vers ton compte ?',`${legacy.transactions.length} opérations et ${legacy.rules.length} habitudes remplaceront le budget de ${cloud.user.email}. Une copie de secours sera conservée.`,()=>{
+      try{
+        localStorage.setItem(BACKUP,JSON.stringify(data));
+        const owner=localStorage.getItem('clair-local-owner-v1');
+        if(owner&&owner!==cloud.user.id)throw Error('Cet ancien budget est déjà associé à un autre compte.');
+        const success=commit(d=>{for(const key of Object.keys(d))delete d[key];Object.assign(d,legacy);},'Budget transféré. Synchronisation en cours.');
+        if(success){localStorage.setItem('clair-local-owner-v1',cloud.user.id);close();}
+      }catch(error){notify(error.message);}
+    });
+  }
+  function conflictDialog(){
+    if(!cloud.conflict)return;
+    dialog('Deux copies de ton budget',`<p>Choisis celle à conserver pour tous tes appareils. Télécharge les deux copies avant de choisir si tu souhaites les comparer.</p><div class="actions"><button class="button" data-action="account-export-device">Sauvegarder cette copie</button>${cloud.conflict.remote?'<button class="button" data-action="account-export-online">Sauvegarder la copie en ligne</button>':''}</div><div class="actions"><button class="button primary" data-action="account-keep-device">Garder cet appareil</button>${cloud.conflict.remote?'<button class="button" data-action="account-keep-online">Garder la copie en ligne</button>':''}</div>`,'account-conflict');
+  }
+  async function accountAction(action){
+    if(action==='account-mode'){accountMode=accountMode==='login'?'signup':'login';render();}
+    if(action==='account-forgot'||action==='account-reset-edit'){
+      if(accountBusy)return;
+      if(action==='account-forgot')accountResetEmail=$('#account-form input[name="email"]')?.value?.trim()||accountResetEmail;
+      accountResetStep='email';close();clearRecoveryAddress();render();resetCooldown();focusRecovery();
+    }
+    if(action==='account-reset-back'||action==='account-reset-finish'){
+      if(action==='account-reset-back')accountMode='login';
+      finishRecovery();
+    }
+    if(action==='account-reset-resend'){
+      if(accountBusy)return;
+      accountBusy=true;accountMessage('');resetCooldown();
+      try{await sendRecovery(accountResetEmail);}catch(error){accountMessage(error.message);}
+      finally{accountBusy=false;resetCooldown();}
+    }
+    if(action==='account-password-toggle'){
+      const input=$('#account-new-password'),button=$('[data-action="account-password-toggle"]');
+      if(input&&button){const show=input.type==='password';input.type=show?'text':'password';button.textContent=show?'Masquer le mot de passe':'Afficher le mot de passe';button.setAttribute('aria-pressed',String(show));}
+    }
+    if(action==='account-import')transferLegacy();
+    if(action==='account-start-empty'){close();beginSetup();}
+    if(action==='account-sync')await cloud.sync();
+    if(action==='account-logout')try{await cloud.logout();}catch(error){notify(error.message);}
+    if(action==='account-conflict')conflictDialog();
+    if(action==='account-export-device')download(JSON.stringify(data,null,2),'Clair-copie-appareil.json');
+    if(action==='account-export-online'&&cloud.conflict?.remote)download(JSON.stringify(cloud.conflict.remote.payload,null,2),'Clair-copie-en-ligne.json');
+    if(action==='account-keep-device'||action==='account-keep-online'){
+      const useRemote=action==='account-keep-online';confirm('Conserver cette copie ?', 'L’autre copie sera téléchargée en sauvegarde avant le remplacement.',()=>{
+        const other=useRemote?data:cloud.conflict?.remote?.payload;if(other)download(JSON.stringify(other,null,2),'Clair-avant-resolution.json');
+        localStorage.setItem(BACKUP,JSON.stringify(other||data));cloud.resolve(useRemote);close();
+      });
+    }
+  }
+
+  /* ---------- Apparence ---------- */
+  function applyPrefs(){
+    const p=data.preferences||E.empty().preferences;
+    document.documentElement.dataset.theme=p.theme;
+    document.body.dataset.wall=p.wallpaper;
+    $('.wall').style.backgroundImage=p.wallpaper==='photo'&&p.photo?`url("${p.photo}")`:'';
+    const dark=p.theme==='dark'||(p.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);
+    document.querySelector('meta[name=theme-color]').content=dark?'#0b0b0d':'#f2f2f7';
+  }
+  async function photoToJpeg(file){
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Choisis une image JPG, PNG ou WebP.');
+    if(file.size>25*1024*1024)throw Error('Image trop lourde (maximum 25 Mo avant réduction).');
+    const url=URL.createObjectURL(file);
+    try{
+      const img=await new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ko(Error('Image illisible.'));i.src=url;});
+      const scale=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight));
+      let w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));
+      for(let attempt=0;attempt<8;attempt++){
+        const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+        for(const q of [0.82,0.7,0.58,0.46]){const out=c.toDataURL('image/jpeg',q);if(out.startsWith('data:image/jpeg;base64,')&&E.normPrefs({photo:out}).photo)return out;}
+        w=Math.round(w*0.8);h=Math.round(h*0.8);
+      }
+      throw Error('Impossible de réduire cette image sous 1,8 Mo.');
+    }finally{URL.revokeObjectURL(url);}
+  }
+  /* ---------- Rappels à l’écran ---------- */
+  function reminded(){try{const v=JSON.parse(localStorage.getItem(REMINDED)||'[]');return Array.isArray(v)?v.filter(x=>typeof x==='string'):[];}catch{return [];}}
+  function dueSoon(){if(!data.initialized||!data.preferences.reminders)return [];try{return E.upcoming(data).filter(c=>c.status==='future'&&c.reminderEnabled&&c.days<=2);}catch{return [];}}
+  function renderReminders(){
+    const list=loadError?[]:dueSoon();
+    $('#reminders').innerHTML=list.length?`<div class="notice remind"><strong>Bientôt :</strong> ${list.map(c=>`${esc(c.name)} · ${euro(c.amountCents)} · ${c.days===1?'demain':'dans '+c.days+' jours'} (${esc(shortDate(c.dueDate))})`).join(' — ')}</div>`:'';
+    const seen=reminded(),fresh=list.filter(c=>!seen.includes(c.autoKey));
+    if(fresh.length){try{localStorage.setItem(REMINDED,JSON.stringify([...seen,...fresh.map(c=>c.autoKey)].slice(-300)));}catch{}notify(fresh.length===1?`Rappel : ${fresh[0].name} (${euro(fresh[0].amountCents)}) le ${shortDate(fresh[0].dueDate)}.`:`${fresh.length} échéances arrivent dans 2 jours.`);}
+  }
+  /* ---------- Notifications push (serveur requis) ---------- */
+  const pushState=()=>{try{const v=JSON.parse(localStorage.getItem(PUSH_KEY)||'null');return v&&typeof v==='object'?v:null;}catch{return null;}};
+  const savePush=v=>{try{if(v)localStorage.setItem(PUSH_KEY,JSON.stringify(v));else localStorage.removeItem(PUSH_KEY);}catch{}};
+  function pushAvailability(){
+    if(location.protocol==='file:')return 'file';
+    const cfg=window.CLAIR_PUSH_CONFIG;
+    if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))return 'unsupported';
+    if(!cfg||typeof cfg.url!=='string'||!/^https:\/\//.test(cfg.url)||typeof cfg.anonKey!=='string')return 'unconfigured';
+    return 'ready';
+  }
+  async function pushApi(path,body){
+    const cfg=window.CLAIR_PUSH_CONFIG,ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),15000);
+    try{const r=await fetch(cfg.url.replace(/\/$/,'')+path,{method:'POST',signal:ctrl.signal,credentials:'omit',headers:{'content-type':'application/json',apikey:cfg.anonKey,authorization:'Bearer '+cfg.anonKey},body:JSON.stringify(body)});
+      const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||('erreur '+r.status));return j;}
+    finally{clearTimeout(t);}
+  }
+  const randomHex=n=>[...crypto.getRandomValues(new Uint8Array(n))].map(b=>b.toString(16).padStart(2,'0')).join('');
+  const b64u=s=>{const b=atob(s.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((s.length+3)%4));return Uint8Array.from(b,c=>c.charCodeAt(0));};
+  async function enablePush(){
+    if(pushAvailability()!=='ready')return;pushBusy=true;render();
+    try{
+      const perm=await Notification.requestPermission();
+      if(perm!=='granted')throw Error('Autorisation refusée par le navigateur. Tu peux la modifier dans les réglages du site.');
+      const reg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
+      const {publicKey}=await pushApi('/vapid',{});if(typeof publicKey!=='string')throw Error('Clé du serveur manquante.');
+      const prev=pushState(),device={deviceId:prev?.deviceId||randomHex(16),secret:prev?.secret||randomHex(32)};
+      let sub=await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe();
+      sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(publicKey)});
+      await pushApi('/subscribe',{...device,subscription:sub.toJSON(),...E.pushPayload(data)});
+      savePush({...device,active:true,lastSync:new Date().toISOString(),error:null});notify('Rappels en arrière-plan activés sur cet appareil.');
+    }catch(e){const s=pushState();if(s)savePush({...s,active:false,error:e.message});notify('Rappels non activés : '+e.message);}
+    finally{pushBusy=false;render();}
+  }
+  async function disablePush(){
+    const s=pushState();if(!s)return;pushBusy=true;render();
+    try{
+      if(s.active)await pushApi('/unsubscribe',{deviceId:s.deviceId,secret:s.secret});
+      const reg=await navigator.serviceWorker.getRegistration();const sub=await reg?.pushManager.getSubscription();if(sub)await sub.unsubscribe();
+      savePush({deviceId:s.deviceId,secret:s.secret,active:false,error:null});notify('Rappels en arrière-plan désactivés. Le serveur a supprimé cet appareil.');
+    }catch(e){savePush({...s,error:'Désactivation non confirmée : '+e.message});notify('La désactivation a échoué : '+e.message+' Les rappels peuvent encore arriver.');}
+    finally{pushBusy=false;render();}
+  }
+  async function syncPush(){
+    const s=pushState();if(!s?.active||pushAvailability()!=='ready')return;
+    try{await pushApi('/schedule',{deviceId:s.deviceId,secret:s.secret,...E.pushPayload(data)});savePush({...s,lastSync:new Date().toISOString(),error:null});}
+    catch(e){savePush({...s,error:'Dernière mise à jour des rappels échouée : '+e.message});notify('Les rappels du serveur n’ont pas pu être mis à jour : '+e.message);}
+    if(page==='settings')render();
+  }
+  function queuePushSync(){if(!pushState()?.active)return;clearTimeout(pushTimer);pushTimer=setTimeout(syncPush,800);}
+  function field(label,name,value='',type='text',extra='') {return `<label class="field"><span>${label}</span><input name="${name}" type="${type}" value="${esc(value)}" ${type==='text'?'autocomplete="off"':''} ${extra}></label>`;}
+  function dialog(title,body,kind,state={}) {
+    modal={kind,...state};$('#dialog').innerHTML=`<div class="dialog-inner"><div class="dialog-head"><h2 id="dialog-title">${title}</h2><button class="close" data-action="close" aria-label="Fermer">×</button></div>${kind==='wizard'?'':'<div id="form-error" class="notice error" role="alert"></div>'}${body}</div>`;
+    if(!$('#dialog').open)$('#dialog').showModal();
+  }
+  function close(){ modal=null;if($('#dialog').open)$('#dialog').close(); }
+  const formActions = (save='Enregistrer') => `<div class="dialog-actions"><button type="button" class="button" data-action="close">Annuler</button><button class="button primary" type="submit">${save}</button></div>`;
+  const monthNav = () => `<div class="month-nav"><button data-action="month-prev" aria-label="Mois précédent">‹</button><span>${esc(monthLabel(month))}</span><button data-action="month-next" aria-label="Mois suivant">›</button></div>`;
+  function txRow(t, controls=true) {const c=cat(t.categoryId);return `<div class="row"><span class="row-icon" aria-hidden="true">${t.type==='income'?'+':esc(c.icon)}</span><div class="row-info"><div class="row-name">${esc(t.name || c.label)}${t.autoKey?'<span class="badge">Auto</span>':''}${t.paymentConfirmed?'<span class="badge ok">Payé (confirmé par toi)</span>':''}</div><div class="row-meta">${esc(dateLabel(t.date))} · ${t.type==='income'?'Argent reçu':esc(c.label)}${t.corrected?' · corrigée':''}${t.earlyPaid?' · payé en avance pour le '+esc(dateLabel(t.autoKey.slice(-10))):''}${t.date>E.today()?' · à venir':''}${t.note?' · '+esc(t.note):''}</div></div><span class="row-amount ${t.type==='income'?'income':''}">${t.type==='income'?'+':'−'}${euro(t.amountCents)}</span>${controls?`<button class="button small" data-action="edit-tx" data-id="${esc(t.id)}" aria-label="Modifier ${esc(t.name)}">Modifier</button>`:''}</div>`;}
+  function heading(eye,title,desc='',right=''){return `<div class="page-heading"><div><p class="eyebrow">${eye}</p><h1>${title}</h1>${desc?`<p class="muted">${desc}</p>`:''}</div>${right}</div>`;}
+  function whenLabel(c){if(c.days<0)return 'À confirmer';if(c.days===0)return 'Aujourd’hui';if(c.days===1)return 'Demain';return `Dans ${c.days} jours`;}
+  function paymentArtwork(c){
+    const name=String(c.name||'').toLowerCase();
+    const kind=c.categoryId==='logement'?'home':/deezer|spotify|music|musique/.test(name)?'music':/disney|netflix|cinéma|cinema|vidéo|video/.test(name)?'tv':c.categoryId==='telephone'?'phone':c.categoryId==='transport'?'transport':'subscription';
+    const paths={home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1Z"/>',music:'<path d="M9 18V5l12-2v13M9 9l12-2"/><ellipse cx="6" cy="18" rx="3" ry="3"/><ellipse cx="18" cy="16" rx="3" ry="3"/>',tv:'<rect x="3" y="5" width="18" height="13" rx="3"/><path d="M8 22h8M12 18v4m-2-12 5 3-5 3Z"/>',phone:'<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4M11 19h2"/>',transport:'<rect x="4" y="3" width="16" height="16" rx="4"/><path d="M4 11h16M8 3v8M16 3v8M7 19v3M17 19v3M8 15h.01M16 15h.01"/>',subscription:'<rect x="3" y="5" width="18" height="15" rx="3"/><path d="M7 2v6M17 2v6M3 11h18m6 5 2 2 4-4"/>'};
+    return {kind,svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+paths[kind]+'</svg>'};
+  }
+  function payCard(c){
+    const art=paymentArtwork(c),urgent=c.days<=2,reminder=Boolean(data.preferences.reminders&&c.reminderEnabled);
+    return `<article class="pay-card ${urgent?'pay-urgent':''}" aria-label="${esc(c.name)}, ${esc(euro(c.amountCents))}, ${esc(whenLabel(c))}">
+      <button class="payment-detail pay-art-${art.kind}" data-action="payment-detail" data-key="${esc(c.autoKey)}" aria-label="Voir ${esc(c.name)}">
+        <span class="pay-card-top"><span class="pay-symbol">${art.svg}</span><span class="pay-status">${esc(whenLabel(c))}</span></span>
+        <span class="pay-heading"><strong class="pay-title">${esc(c.name)}</strong><strong class="pay-amount">${euro(c.amountCents)}</strong></span>
+      </button>
+      <div class="pay-controls"><p class="pay-date">${esc(shortDate(c.dueDate))}</p><p class="pay-reminder">${reminder?icon('bell')+'Rappel dans Clair à J−2':'Rappel désactivé'}</p></div>
+    </article>`;
+  }
+  function home() {
+    if(!data.initialized)return `<div class="big-empty"><div class="brand-mark">c</div><h1>Clair</h1><p class="muted">Ton argent, simplement.</p><button class="button primary" data-action="setup">Configurer mon suivi</button><p class="help">Déjà une sauvegarde ?</p><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label></div>`;
+    const now=E.today(), balance=E.balance(data), reserve=E.reserve(data), free=balance-reserve.cents, cards=E.upcoming(data);
+    const end=now.slice(0,7)+'-'+E.lastDay(now.slice(0,7));
+    return `<section class="balance-section" aria-labelledby="balance-title"><div class="balance-top"><h1 id="balance-title">Mon solde</h1><button class="icon-button" data-action="notifications" aria-label="Notifications" title="Notifications">${icon('bell')}</button></div><div class="balance ${balance<0?'negative':''}">${euro(balance)}</div><details class="balance-help"><summary aria-label="Comprendre le solde calculé">Comment est-il calculé ?</summary><p>Aujourd’hui · solde de départ, opérations saisies et dépenses automatiques déjà comptées. Ce n’est pas un relevé bancaire.</p></details><div class="balance-summary"><div><h2>Dépenses prévues d’ici le ${esc(dateLabel(end))}</h2><strong>${euro(reserve.cents)}</strong></div><div class="forecast-result"><h2>${free<0?'Il manque':'Il restera'}</h2><strong class="${free<0?'negative':''}">${euro(Math.abs(free))}</strong><p>${free<0?'pour couvrir les dépenses prévues':'après les dépenses prévues'}</p></div></div><details class="balance-help"><summary>Voir le calcul</summary><p>${euro(balance)} de solde − ${euro(reserve.cents)} de dépenses prévues = ${euro(free)}.</p><p>Les dépenses prévues ne sont pas encore déduites. Les revenus à venir ne sont pas inclus.</p></details><div class="quick"><button class="button primary" data-action="add">${icon('plus')}Ajouter</button></div></section>`+
+      (!data.setupDone?'<div class="notice">Tes anciennes données sont conservées. <button class="link" data-action="setup">Terminer la configuration</button></div>':'')+
+      `<section class="payments" aria-labelledby="up-title"><div class="section-head"><h2 id="up-title">Paiements à venir</h2><button class="link" data-nav="rules">Mes habitudes</button></div>${cards.length?`<div class="shelf" tabindex="0" role="region" aria-label="Échéances, de la plus urgente à la plus lointaine">${cards.map(payCard).join('')}</div>`:'<p class="help">Aucune échéance de loyer ou d’abonnement à afficher.</p>'}<details class="settings-more"><summary>À propos des échéances</summary><p class="help">Les prochains paiements et les opérations à confirmer sont classés par date. Les opérations passées sont déjà comptées : confirmer leur paiement ne les déduit pas de nouveau.</p></details><button class="link" data-nav="budget">Voir mon bilan du mois ${icon('arrow')}</button></section>`;
+  }
+  function ruleCopy(r){if(r.kind==='weekly')return dayOrder.filter(i=>r.amounts[i]>0).map(i=>dayNames[i].slice(0,3)+' '+euro(r.amounts[i])).join(' · ');return euro(r.amountCents)+' · '+(r.kind==='yearly'?'chaque année':'chaque mois')+' · '+(r.day==='last'?'dernier jour du mois':'le '+r.day)+(r.kind==='yearly'?' · mois '+r.month:'');}
+  const isSuspended = r => r.pauses.some(p=>p.start<=nextDay()&&p.end>=nextDay());
+  function rules(){const active=data.rules.filter(r=>!r.end||r.end>=E.today()),old=data.rules.filter(r=>r.end&&r.end<E.today());return heading('Au quotidien','Mes habitudes', 'Repas, loyer et abonnements, comptés automatiquement.',`<div class="actions"><button class="button primary" data-action="new-rule">+ Une habitude</button></div>`)+
+    '<details class="settings-more"><summary>Comment ça fonctionne ?</summary><p class="help">Clair compte les dépenses prévues selon tes habitudes. Tu peux corriger une occurrence dans l’historique.</p></details>'+
+    (active.length?active.map(r=>ruleCard(r)).join(''):'<section class="card"><h2>Qu’est-ce qui revient souvent ?</h2><p class="muted">Un repas à 3 € certains jours, un abonnement ou ton loyer en fin de mois.</p><div class="actions"><button class="button primary" data-action="new-weekly">+ Repas réguliers</button><button class="button" data-action="new-rule">+ Loyer ou abonnement</button></div></section>')+
+    (old.length?`<details><summary class="help">${old.length} ancienne${old.length>1?'s':''} règle${old.length>1?'s':''} — historique conservé</summary><div style="margin-top:14px">${old.map(r=>ruleCard(r,true)).join('')}</div></details>`:'')+
+    (!data.setupDone?'<button class="button" data-action="setup">Terminer la configuration guidée</button>':'');}
+  function ruleCard(r,archived=false){const susp=isSuspended(r);return `<section class="rule-card ${archived?'archived':''}"><div class="rule-head"><span class="row-icon" aria-hidden="true">${esc(cat(r.categoryId).icon)}</span><div class="row-info"><h3><button class="rule-title" data-action="edit-rule" data-id="${esc(r.id)}">${esc(r.name)}</button></h3><p class="help">${esc(ruleCopy(r))}</p></div><span class="badge">${archived?'Terminée':susp?'En pause':r.start>E.today()?'À venir':r.end?'Arrêt prévu':'Automatique'}</span></div><p class="schedule">À partir du ${esc(dateLabel(r.start))}${r.end?' · jusqu’au '+esc(dateLabel(r.end)):''}</p>${r.pauses.map((p,i)=>`<p class="help" style="margin:8px 0 0">Pause : ${esc(dateLabel(p.start))} → ${p.end===INFINITE?'jusqu’à reprise':esc(dateLabel(p.end))}${p.end>=nextDay()&&!archived?` <button class="link" data-action="resume" data-id="${esc(r.id)}" data-index="${i}">Reprendre dès demain</button>`:''}</p>`).join('')}${!archived?`<div class="rule-switches"><label class="switch"><input type="checkbox" role="switch" data-suspend="${esc(r.id)}" ${susp?'':'checked'}>${susp?'En pause · reprendre dès demain':'Active · suspendre dès demain'}</label>${r.kind!=='weekly'?`<label class="switch"><input type="checkbox" role="switch" data-reminder="${esc(r.id)}" ${r.reminderEnabled?'checked':''}>Rappel 2 jours avant</label>`:''}</div><div class="rule-actions"><button class="button small" data-action="edit-rule" data-id="${esc(r.id)}">Modifier</button><button class="button small" data-action="pause-rule" data-id="${esc(r.id)}">Vacances / pause</button><button class="button small" data-action="skip-today" data-id="${esc(r.id)}">Annuler aujourd’hui</button><button class="button small danger" data-action="stop-rule" data-id="${esc(r.id)}">Arrêter</button></div>`:''}</section>`;}
+  function journal(){return heading('Toutes tes opérations','Historique','Automatiques ou saisies, tes dépenses restent modifiables.',monthNav())+`<div class="toolbar"><label class="sr-only" for="search">Rechercher</label><input id="search" placeholder="Rechercher une opération…" maxlength="100"><label class="sr-only" for="kind-filter">Type d’opération</label><select id="kind-filter"><option value="all">Tout</option><option value="auto">Automatiques</option><option value="manual">Saisies</option><option value="income">Argent reçu</option></select><button class="button" data-action="expense">+ Dépense</button></div><section class="card" id="journal-results"></section>`;}
+  function journalResults(){const query=($('#search')?.value||'').toLocaleLowerCase('fr'),kind=$('#kind-filter')?.value||'all';const list=data.transactions.filter(t=>t.date.slice(0,7)===month && (!query || (t.name+' '+t.note+' '+cat(t.categoryId).label).toLocaleLowerCase('fr').includes(query)) && (kind==='all'||(kind==='auto'&&t.autoKey)||(kind==='manual'&&!t.autoKey)||(kind==='income'&&t.type==='income'))).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));$('#journal-results').innerHTML=list.length?list.map(t=>txRow(t)).join(''):'<div class="empty">Aucune opération pour cette sélection.</div>';}
+  const budgetFor = categoryId => E.own(data.budgetOverrides[month]||{},categoryId)?E.cents(data.budgetOverrides[month][categoryId]):E.cents(data.budgets[categoryId]||0);
+  function budget(){const list=data.transactions.filter(t=>t.date.slice(0,7)===month&&t.date<=E.today()),income=list.filter(t=>t.type==='income').reduce((n,t)=>n+t.amountCents,0),spent=list.filter(t=>t.type==='expense'&&t.categoryId!=='epargne').reduce((n,t)=>n+t.amountCents,0),savings=data.transactions.filter(t=>t.type==='expense'&&t.categoryId==='epargne'&&t.date<=E.today()).reduce((n,t)=>n+t.amountCents,0);const by=new Map();list.filter(t=>t.type==='expense'&&t.categoryId!=='epargne').forEach(t=>by.set(t.categoryId,(by.get(t.categoryId)||0)+t.amountCents));const ids=[...new Set([...Object.keys(data.budgets),...Object.keys(data.budgetOverrides[month]||{}),...by.keys()])].filter(k=>k!=='epargne');return heading('Tes repères','Chaque euro a sa place.','Les enveloppes servent de limites. Elles ne créent pas de dépenses.',monthNav())+`<div class="stat-grid"><div class="stat"><small>Reçu ce mois</small><strong>${euro(income)}</strong></div><div class="stat"><small>Dépensé ce mois</small><strong>${euro(spent)}</strong></div><div class="stat"><small>Épargne suivie</small><strong>${euro(savings)}</strong></div></div><div class="grid"><section class="card"><div class="section-head"><h2>Mes enveloppes</h2><button class="link" data-action="budget-edit">Ajouter</button></div>${ids.length?ids.map(k=>{const planned=budgetFor(k),used=by.get(k)||0;return `<div class="budget-row"><div class="budget-row-top"><strong>${esc(cat(k).label)}</strong><button class="link" data-action="budget-edit" data-id="${esc(k)}">${planned?euro(planned):'Définir'}</button></div><p>${euro(used)} dépensés${planned?' · <span class="'+(used>planned?'negative':'')+'">'+euro(planned-used)+' restants</span>':''}${E.own(data.budgetOverrides[month]||{},k)?' · ajustement de ce mois':''}</p>${planned?`<div class="progress ${used>planned?'over':''}"><span style="width:${Math.min(100,Math.round(used/planned*100))}%"></span></div>`:''}</div>`;}).join(''):'<p class="help">Fixe une limite pour l’alimentation, les loisirs ou une autre catégorie.</p>'}</section><section class="card soft"><h2>Petit à petit.</h2><p class="muted">Ton objectif d’épargne : <strong>${data.savingsGoal?euro(E.cents(data.savingsGoal)):'à définir'}</strong></p><div class="actions"><button class="button" data-action="savings-goal">Modifier l’objectif</button><button class="button primary" data-action="savings">+ Mettre de côté</button></div><p class="help" style="margin:18px 0 0">Une somme mise de côté est retirée du solde disponible. Elle reste suivie dans ton épargne.</p></section></div>`;}
+  function pushSection(){
+    const av=pushAvailability(),s=pushState();
+    let body='';
+    if(av==='file')body='<p class="help">Tu utilises le fichier téléchargé. Les rappels quand l’app est fermée demandent la version hébergée de Clair (adresse https). Les rappels à l’écran et le calendrier fonctionnent ici.</p>';
+    else if(av==='unsupported')body='<p class="help">Ce navigateur ne gère pas les notifications push. Sur iPhone (iOS 16.4 ou plus), ajoute d’abord Clair à l’écran d’accueil via Partager → « Sur l’écran d’accueil », puis ouvre-le depuis l’icône.</p>';
+    else if(av==='unconfigured')body='<p class="help"><strong>Pas encore disponible sur ce site :</strong> le service de rappels n’est pas encore branché. Rien n’est actif en arrière-plan. Utilise le calendrier ci-dessous en attendant.</p>';
+    else body=`<p class="help">État : <strong>${s?.active?'actifs sur cet appareil':'désactivés'}</strong>${s?.lastSync&&s.active?' · mis à jour le '+esc(new Date(s.lastSync).toLocaleString('fr-FR',{timeZone:'Europe/Paris'})):''}</p>${s?.error?`<div class="notice error">${esc(s.error)} <button class="link" data-action="push-retry">Réessayer</button></div>`:''}<div class="actions">${s?.active?`<button class="button danger" data-action="push-off" ${pushBusy?'disabled':''}>Désactiver sur cet appareil</button>`:`<button class="button primary" data-action="push-on" ${pushBusy?'disabled':''}>${pushBusy?'Activation…':'Activer les notifications'}</button>`}</div>`;
+    return `<h3 style="margin-top:4px">Quand l’app est fermée</h3>${body}<p class="help" style="margin-top:10px">Ce qui est envoyé au serveur : uniquement le nom, le montant et les dates des loyers/abonnements dont le rappel est coché, plus un identifiant anonyme de l’appareil. Jamais ton solde, ton journal, tes budgets ni ta photo. Envoi à 9 h (Paris), 2 jours avant.</p>`;
+  }
+  let installPrompt=null,installBusy=false,downloadBusy=false,chargeDraft=null;
+function isInstalled(){return Boolean(navigator.standalone||matchMedia('(display-mode: standalone)').matches);}
+async function installClair(){
+ if(isInstalled()){notify('Clair est déjà ouvert comme une application.');return;}if(installBusy)return;
+ if(installPrompt){const prompt=installPrompt;installPrompt=null;installBusy=true;try{await prompt.prompt();const result=await prompt.userChoice;notify(result.outcome==='accepted'?'Installation demandée au navigateur.':'Tu pourras installer Clair plus tard.');}catch{notify('Ouvre le menu de ton navigateur pour installer Clair.');}finally{installBusy=false;if(page==='settings')render();}return;}
+ const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ dialog('Installer Clair',location.protocol==='file:'?'<p>Ouvre la version en ligne pour installer Clair.</p><a class="button primary" href="https://j2947djt9g-sketch.github.io/mon-djai/clair/">Ouvrir Clair en ligne</a>':ios?'<ol class="install-steps"><li>Ouvre Clair dans Safari.</li><li>Ouvre le menu de partage.</li><li>Choisis « Sur l’écran d’accueil », puis « Ajouter ».</li></ol>':'<p>Dans le menu de ton navigateur, cherche « Installer Clair », « Installer cette page comme application » ou « Ajouter à l’écran d’accueil ».</p><p class="help">Si cette commande est absente, tu peux utiliser Clair dans ton navigateur ou télécharger le fichier.</p>','install');
+}
+async function downloadClair(){
+ if(downloadBusy)return;downloadBusy=true;if(page==='settings')render();
+ try{const response=await fetch(new URL('index.html',location.href),{cache:'no-cache'});if(!response.ok)throw Error('Téléchargement indisponible. Réessaie avec une connexion Internet.');let source=await response.text();if(!source.includes('root.ClairEngine =')||!source.includes('<html'))throw Error('Le fichier reçu ne correspond pas à Clair.');source=source.replace(/<link rel="(?:manifest|icon|apple-touch-icon)"[^>]*>/g,'');download(source,'Clair.html','text/html;charset=utf-8');notify('Clair téléchargé. Pour transférer tes dépenses, sauvegarde aussi tes données.');}catch(error){notify(error.message||'Téléchargement impossible. Réessaie en ligne.');}finally{downloadBusy=false;if(page==='settings')render();}
+}
+function settings(){const p=data.preferences;return heading('Clair','Réglages')+accountCard()+
+`<div class="settings-links"><button class="settings-link" data-nav="rules"><span>Mes habitudes<small>Repas et abonnements</small></span>${icon('arrow')}</button><button class="settings-link" data-nav="budget"><span>Budget et épargne<small>Mes repères du mois</small></span>${icon('arrow')}</button></div><div class="settings-grid settings-simple">
+<section class="card install-card"><h2>Clair, à portée de main</h2><p class="help">${isInstalled()?'Ouvert comme une application.':'Un accès direct depuis ton écran d’accueil.'}</p><div class="actions"><button class="button primary" data-action="install" ${isInstalled()||installBusy?'disabled':''}>${isInstalled()?'Déjà installé':installBusy?'Installation…':'Installer Clair'}</button>${location.protocol!=='file:'?`<button class="button" data-action="download-app" ${downloadBusy?'disabled':''}>${downloadBusy?'Téléchargement…':'Télécharger le fichier'}</button>`:''}</div><details class="settings-more"><summary>Installation ou téléchargement ?</summary><p class="help">Installer ajoute Clair à ton écran d’accueil quand le navigateur le permet. Le fichier HTML est une copie à ouvrir dans un navigateur sur ordinateur. Les dépenses se transfèrent séparément avec « Sauvegarder mes données ».</p></details></section>
+<section class="card"><h2>Apparence</h2><p class="help" id="theme-l">Thème</p><div class="seg" role="radiogroup" aria-labelledby="theme-l">${[['light','Clair'],['dark','Sombre'],['auto','Auto']].map(([v,l])=>`<label><input type="radio" name="theme" value="${v}" data-pref="theme" ${p.theme===v?'checked':''}><span>${l}</span></label>`).join('')}</div><p class="help" id="wall-l" style="margin-top:18px">Fond d’écran</p><div class="walls" role="radiogroup" aria-labelledby="wall-l">${[['plain','Clair'],['aurora','Aurore'],['ocean','Océan'],['sunset','Couchant'],['forest','Forêt'],['photo','Ma photo']].map(([v,l])=>`<label><input type="radio" name="wallpaper" value="${v}" data-pref="wallpaper" ${p.wallpaper===v?'checked':''} ${v==='photo'&&!p.photo?'disabled':''}><span class="sw sw-${v}">${l}</span></label>`).join('')}</div><div class="actions"><label class="button small file">${p.photo?'Changer la photo':'Choisir une photo'}<input type="file" accept="image/jpeg,image/png,image/webp" data-photo></label>${p.photo?'<button class="link" data-action="photo-remove">Retirer</button>':''}</div></section>
+<section class="card" id="notification-settings"><h2>Rappels</h2><label class="switch"><input type="checkbox" role="switch" data-pref="reminders" ${p.reminders?'checked':''}>Me rappeler 2 jours avant</label><p class="help" style="margin-top:12px">À l’ouverture de Clair.${pushAvailability()!=='ready'?' Notifications app fermée : pas encore disponibles.':''}</p><button class="button" data-action="ics">Ajouter les échéances au calendrier</button><details class="settings-more"><summary>En savoir plus</summary><p class="help">Le calendrier contient les échéances des 12 prochains mois, avec une alerte 2 jours avant à 9 h. Importe le fichier dans un calendrier dédié « Clair ». Après une modification, remplace cet ancien calendrier : il ne se synchronise pas automatiquement.</p><button class="link" data-nav="rules">Choisir les habitudes à rappeler</button></details><details class="settings-more"><summary>Notifications app fermée</summary>${pushSection()}</details></section>
+<section class="card"><h2>Mes données</h2><p class="help">${cloud.enabled&&cloud.user?'Budget associé à ton compte. Une sauvegarde reste utile.':'Dans ce navigateur. Sauvegarde avant de changer d’appareil.'}</p><div class="actions"><button class="button primary" data-action="export">Sauvegarder mes données</button><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label></div><details class="settings-more"><summary>En savoir plus</summary><p class="help">${cloud.enabled?'Ton budget est envoyé au service de synchronisation de ton compte. La photo de fond reste sur cet appareil.':'Aucune connexion bancaire ni synchronisation entre appareils.'} L’import remplace les données actuelles après confirmation et conserve une copie précédente.</p></details></section>
+</div><details class="card settings-advanced"><summary>Réglages avancés</summary><div class="advanced-content"><h3>Ajuster mon solde</h3><p class="help">Solde de départ : ${euro(data.openingCents)} · ${esc(dateLabel(data.openingBalanceDate))}</p><div class="actions"><button class="button" data-action="reconcile">Ajuster le solde d’aujourd’hui</button><button class="button" data-action="opening">Corriger le solde de départ</button></div><h3>Exports et récupération</h3><div class="actions"><button class="button" data-action="csv">Télécharger le journal CSV</button><button class="button" data-action="backup">Récupérer la copie précédente</button></div><details class="settings-more"><summary>Comprendre les calculs</summary><p class="help">Les dépenses automatiques sont rattrapées à l’ouverture. Les dates suivent l’heure de Paris. Les échéances du 29 au 31 utilisent le dernier jour des mois plus courts. Les budgets sont des limites, pas des dépenses déduites.</p></details><hr class="sep"><button class="button danger" data-action="reset">Effacer et recommencer</button></div></details>`;}
+function paymentDetails(key){
+ const c=E.upcoming(data).find(x=>x.autoKey===key);if(!c){notify('Cette échéance n’est plus à afficher.');return;}
+ dialog(esc(c.name),`<p class="detail-amount">${euro(c.amountCents)}</p><p class="muted">${esc(dateLabel(c.dueDate))} · ${esc(whenLabel(c))}</p><p class="help">${c.status==='future'?'Cette dépense sera comptée à son échéance.':'Déjà compté dans ton solde. La confirmation ne retire rien de plus.'}</p><div class="dialog-actions"><button class="button" data-action="edit-rule" data-id="${esc(c.ruleId)}">Modifier l’habitude</button><button class="button primary" data-action="pay" data-key="${esc(c.autoKey)}">${c.status==='future'?'Noter un paiement anticipé':'Confirmer si payé'}</button></div>`,'payment',{key});
+}
+  function render(){
+    if(cloud.enabled&&accountResetStep){applyPrefs();if(!((accountResetStep==='email'&&$('#account-forgot-form'))||(accountResetStep==='password'&&cloud.ready&&cloud.user&&$('#account-password-form'))))$('#page').innerHTML=recoveryView();$('.nav').innerHTML='';$('.bottom-nav').innerHTML='';$('#reminders').innerHTML='';$('#sync-alert').innerHTML='';$('#status-label').textContent='Récupération du compte';resetCooldown();return;}
+    if(cloud.enabled&&(!cloud.user||!cloud.ready||cloud.status==='loading')){applyPrefs();$('#page').innerHTML=accountGate();$('.nav').innerHTML='';$('.bottom-nav').innerHTML='';$('#reminders').innerHTML='';$('#sync-alert').innerHTML='';$('#status-label').textContent=accountStatus();return;}
+    applyPrefs();
+    $('.nav').innerHTML=navs.map(n=>`<button data-nav="${n.id}" class="${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'active':''}" ${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'aria-current="page"':''}><span aria-hidden="true">${icon(n.icon)}</span>${n.label}</button>`).join('');
+    $('.bottom-nav').innerHTML=navs.map(n=>`<button data-nav="${n.id}" class="${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'active':''}" ${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'aria-current="page"':''}><span aria-hidden="true">${icon(n.icon)}</span>${n.label}</button>`).join('');
+    $('#today-label').textContent=new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',timeZone:'Europe/Paris'}).format(new Date());
+    if(loadError){$('#alert').innerHTML=`<div class="notice error">${esc(loadError)}</div>`;$('#page').innerHTML=`<section class="card"><h2>Préserver tes données</h2><p class="help">Télécharge les données brutes pour ne rien perdre, puis importe une sauvegarde valide ou recommence.</p><div class="actions"><button class="button" data-action="raw">Télécharger les données brutes</button><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label><button class="button danger" data-action="reset">Recommencer</button></div></section>`;return;}
+    $('#page').innerHTML=({home,rules,journal,budget,settings}[page]||home)();if(page==='journal')journalResults();
+    $('#status-label').textContent=data.setupDone?'Calculs à jour · cet appareil':'Sur cet appareil';
+    renderReminders();renderAccountStatus();
+  }
+  function dayFields(values=[0,300,300,300,300,300,0]){return `<div class="days">${dayOrder.map(i=>`<div class="day"><label><input type="checkbox" name="day-${i}" ${values[i]>0?'checked':''}>${dayNames[i].slice(0,3)}.</label><label class="sr-only" for="price-${i}">Montant le ${dayNames[i]}</label><input id="price-${i}" name="price-${i}" type="text" inputmode="decimal" value="${amount(values[i]||300)}" aria-label="Montant le ${dayNames[i]} en euros"></div>`).join('')}</div>`;}
+  function readDays(f){return dayNames.map((_,i)=>f.get('day-'+i)?num(f.get('price-'+i)):0);}
+  function beginSetup(){if(data.setupDone){close();page='rules';render();notify('Tes habitudes sont déjà configurées. Tu peux les modifier ici.');return;}wizard={step:0,existing:data.initialized,balance:amount(data.openingCents),start:nextDay(),days:[0,300,300,300,300,300,0],meals:false,charges:data.fixedExpenses.map(x=>({...x,enabled:false})),name:'Repas habituels'};wizardView();}
+  function chargeFields(c,i){return `<div class="wizard-charge"><label class="check"><input name="charge-on-${i}" type="checkbox" ${c.enabled?'checked':''}>Compter automatiquement cette charge</label><div class="form-grid">${field('Nom','charge-name-'+i,c.name,'text','maxlength="100"')}${field('Montant (€)','charge-amount-'+i,c.amount?String(c.amount):'','text','inputmode="decimal"')}<label class="field"><span>Catégorie</span><select name="charge-category-${i}">${options(c.categoryId||'abonnements')}</select></label>${field('Premier jour du suivi','charge-start-'+i,c.start||wizard.start,'date',`min="${data.initialized?data.openingBalanceDate:E.today()}"`)}<label class="field"><span>Échéance chaque mois</span><select name="charge-day-${i}"><option value="last" ${c.day==='last'?'selected':''}>Dernier jour du mois</option>${Array.from({length:31},(_,n)=>`<option value="${n+1}" ${Number(c.day)===n+1?'selected':''}>Le ${n+1}</option>`).join('')}</select></label></div><button type="button" class="link" data-action="wizard-remove-charge" data-index="${i}">Retirer cette ligne</button></div>`;}
+  // Approved artwork: four poses displayed directly, without altering the illustration.
+  function mascot(pose,message){return `<div class="mascot-guide"><span class="mascot-pose pose-${pose}" aria-hidden="true"></span><p class="mascot-copy">${esc(message)}</p></div>`;}
+  function wizardView(){const s=wizard.step;let body='';if(s===0)body=wizard.existing?`<p class="muted">Tes ${data.transactions.length} opérations et ton solde initial sont conservés. Ajoutons les habitudes qui te feront gagner du temps.</p><div class="notice">Les charges existantes ne deviendront automatiques que si tu les sélectionnes. Les règles déjà actives ne sont pas modifiées.</div>`:`<p class="muted">Combien as-tu réellement de disponible aujourd’hui, après tes dépenses déjà payées ?</p>${field('Mon solde actuel (€)','balance',wizard.balance==='0,00'?'':wizard.balance,'text','inputmode="decimal" required placeholder="Ex. 250,00"')}<p class="help">Le suivi démarre aujourd’hui. Par défaut, les automatismes commencent demain pour ne pas recompter ce que tu as déjà payé.</p>`;
+    if(s===1)body=`<p class="muted">Quels jours prends-tu ton repas habituel ? Tu peux fixer un montant différent pour chaque jour.</p><label class="check"><input name="meals" type="checkbox" ${wizard.meals?'checked':''}>Activer les repas automatiques</label>${dayFields(wizard.days)}${field('Commencer les repas le','start',wizard.start,'date',`min="${data.initialized?data.openingBalanceDate:E.today()}" required`)}<p class="help">Les jours décochés ne coûtent rien. Les jours cochés sont comptés automatiquement à partir de cette date.</p>`;
+    if(s===2)body=`<p class="muted">Ajoute ton loyer et tes abonnements. Saisis le montant réellement à ta charge, après les aides éventuelles.</p>${wizard.charges.length?wizard.charges.map(chargeFields).join(''):'<p class="help">Aucune charge ajoutée. Tu peux aussi les configurer plus tard.</p>'}<button type="button" class="button" data-action="wizard-add-charge">+ Loyer ou abonnement</button>`;
+    if(s===3){const enabled=wizard.charges.filter(c=>c.enabled);body=`<p class="muted">Tout est prêt. Tu pourras ajuster une dépense, changer les tarifs ou suspendre tes repas pendant les vacances.</p><section class="card soft"><h3>${wizard.meals?'Repas automatiques':'Repas : non activés'}</h3>${wizard.meals?`<p class="help">${esc(ruleCopy({kind:'weekly',amounts:wizard.days}))}<br>À partir du ${esc(dateLabel(wizard.start))}</p>`:''}<h3>${enabled.length} charge${enabled.length>1?'s':''} automatique${enabled.length>1?'s':''}</h3>${enabled.map(c=>`<p class="help" style="margin-bottom:8px">${esc(c.name)} · ${euro(num(c.amount))} · ${c.day==='last'?'fin de mois':'le '+c.day}<br>Suivi dès le ${esc(dateLabel(c.start||wizard.start))}</p>`).join('')}</section><div class="notice">Ce suivi estime tes dépenses selon tes réglages. Il ne lit pas ton compte bancaire. Les dates passées choisies seront rattrapées une seule fois.</div>`;}
+    dialog(['Un bon point de départ.','Tes repas, déjà prévus.','Les charges qui reviennent.','Ton quotidien est prêt.'][s],`<div class="wizard-step">ÉTAPE ${s+1} SUR 4</div><div class="wizard-progress">${[0,1,2,3].map(i=>`<span class="${i<=s?'on':''}"></span>`).join('')}</div>${mascot([2,1,2,3][s],["Indique l’argent dont tu disposes aujourd’hui.","Choisis les jours qui correspondent à tes habitudes.","Configure tes charges une fois, Clair suivra les suivantes.","Vérifie tes réglages avant d’activer ton suivi."][s])}<form id="wizard-form" ${s===2?'novalidate':''}>${body}<div id="form-error" class="notice error" role="alert" tabindex="-1"></div><div class="dialog-actions">${s>0?'<button type="button" class="button" data-action="wizard-back">Retour</button>':''}<button class="button primary" type="submit">${s===3?'Activer mon suivi':'Continuer →'}</button></div></form>`,'wizard');}
+  function wizardInvalid(message,field){const error=new Error(message);error.field=field;throw error;}
+  function collectWizard(validate=true){
+    const f=new FormData($('#wizard-form'));
+    if(wizard.step===0&&!wizard.existing)wizard.balance=amount(E.cents(f.get('balance')));
+    if(wizard.step===1){
+      wizard.meals=Boolean(f.get('meals'));wizard.days=wizard.meals?readDays(f):wizard.days;wizard.start=f.get('start');
+      if(validate&&(!E.validDate(wizard.start)||wizard.start<(wizard.existing?data.openingBalanceDate:E.today())))wizardInvalid('Choisis une date de début valide.','start');
+      if(validate&&wizard.meals&&!wizard.days.some(n=>n>0))throw Error('Choisis au moins un jour de repas.');
+    }
+    if(wizard.step===2){
+      wizard.charges=wizard.charges.map((c,i)=>({...c,enabled:Boolean(f.get('charge-on-'+i)),name:String(f.get('charge-name-'+i)||'').trim(),amount:String(f.get('charge-amount-'+i)||'').trim(),categoryId:f.get('charge-category-'+i)||c.categoryId,start:f.get('charge-start-'+i),day:f.get('charge-day-'+i)}));
+      if(validate)for(const [i,c] of wizard.charges.entries()){
+        if(!c.enabled)continue;
+        // Une ligne ajoutée puis laissée entièrement vide ne crée aucune règle.
+        if(!c.name&&!c.amount){c.enabled=false;continue;}
+        const label=c.name||'Charge '+(i+1);
+        if(!c.name)wizardInvalid('Charge '+(i+1)+' : indique un nom (par exemple Loyer).','charge-name-'+i);
+        try{num(c.amount);}catch(error){wizardInvalid(label+' : '+error.message,'charge-amount-'+i);}
+        if(!E.validDate(c.start)||c.start<(wizard.existing?data.openingBalanceDate:E.today()))wizardInvalid(label+' : choisis une date à partir du '+dateLabel(wizard.existing?data.openingBalanceDate:E.today())+'.','charge-start-'+i);
+        if(c.day!=='last'&&(!/^[0-9]+$/.test(c.day)||Number(c.day)<1||Number(c.day)>31))wizardInvalid(label+' : choisis une échéance du 1 au 31 ou la fin du mois.','charge-day-'+i);
+      }
+    }
+  }
+  function completeSetup(){const w=structuredClone(wizard);const success=commit(d=>{if(!w.existing){d.initialized=true;d.openingCents=E.cents(w.balance);d.openingBalanceDate=E.today();}if(w.meals)d.rules.push({id:id('rule'),name:'Repas habituels',categoryId:'alimentation',kind:'weekly',amounts:w.days,amountCents:0,start:w.start,end:null,pauses:[],day:1,month:1,originFixedId:null,reminderEnabled:false});for(const c of w.charges.filter(c=>c.enabled)){if(c.id&&d.rules.some(r=>r.originFixedId===c.id&&(!r.end||r.end>=c.start)))continue;d.rules.push({id:id('rule'),name:c.name,categoryId:c.categoryId||'abonnements',kind:'monthly',amountCents:num(c.amount),amounts:[],start:c.start,end:null,pauses:[],day:c.day==='last'?'last':Number(c.day),month:1,originFixedId:c.id||null,reminderEnabled:true});}d.setupDone=true;},'Tes automatismes sont prêts.');if(success){close();wizard=null;page='home';render();}}
+  function openTx(t=null,type='expense',categoryId='alimentation'){
+    if(!data.initialized){beginSetup();return;}const automatic=Boolean(t?.autoKey),mode=t?.type||type;
+    dialog(t?'Ajuster cette opération.':mode==='income'?'De l’argent reçu.':'Une dépense à ajouter.',`<form id="tx-form">${automatic?'<div class="notice">Tu modifies uniquement cette occurrence. La règle et les autres jours restent identiques.</div>':''}<div class="form-grid">${field('Montant (€)','amount',t?amount(t.amountCents):'','text','inputmode="decimal" required autofocus')}${field('Date','date',t?.date||E.today(),'date',`${automatic?'readonly':''} required`)}</div>${field(mode==='income'?'Source (parents, bourse, salaire…)':'Nom de la dépense','name',t?.name|| (categoryId==='epargne'?'Mise de côté':''),'text','maxlength="100" required')}<label class="field"><span>Catégorie</span><select name="categoryId">${options(t?.categoryId||categoryId)}</select></label>${field('Note (facultative)','note',t?.note||'','text','maxlength="300"')}${t?`<button type="button" class="button danger small" data-action="delete-tx" data-id="${esc(t.id)}">${t.earlyPaid?'Annuler ce paiement anticipé':automatic?'Annuler cette dépense automatique':'Supprimer cette opération'}</button>`:''}${formActions(t?'Enregistrer la correction':'Ajouter')}</form>`,'tx',{id:t?.id||null,type:mode});
+  }
+const chargePresets=[["Loyer","logement"],["Netflix","abonnements"],["Disney+","abonnements"],["Apple Music","abonnements"],["Spotify","abonnements"],["Deezer","abonnements"],["Prime Video","abonnements"],["Téléphone","telephone"],["Transport","transport"],["Autre charge","autre"]];
+function startCharge(){
+ if(!data.initialized){beginSetup();return;}
+ chargeDraft={step:0,name:'',amount:'',categoryId:'abonnements',day:'last',start:nextDay()};
+ chargeView();
+}
+function chargeView(){
+ const c=chargeDraft;
+ if(c.step===0){dialog('Quelle habitude ajouter ?',`<p class="help">Choisis une charge, puis indique ton propre tarif.</p><div class="preset-grid">${chargePresets.map(([name,categoryId],i)=>`<button class="preset-button" data-action="charge-preset" data-index="${i}"><span class="preset-symbol">${paymentArtwork({name,categoryId}).svg}</span><span>${esc(name)}</span></button>`).join('')}</div><div class="dialog-actions"><button class="link" data-action="new-weekly">Repas certains jours</button><button class="link" data-action="charge-advanced">Autre fréquence</button></div>`,'charge-flow');return;}
+ const isAmount=c.step===1;
+ dialog(isAmount?'Quel montant chaque mois ?':'Quel jour du mois ?',`<p class="eyebrow">${isAmount?'1 / 2':'2 / 2'} · ${esc(c.name||'Nouvelle charge')}</p><form id="charge-flow-form">${isAmount?`${field('Montant (€)','amount',c.amount,'text','inputmode="decimal" required autofocus placeholder="0,00"')}${field('Nom','name',c.name,'text','required maxlength="100"')}<details class="settings-more"><summary>Catégorie</summary><label class="field"><span>Ranger cette dépense dans</span><select name="categoryId">${options(c.categoryId)}</select></label></details>`:`<p class="detail-amount">${euro(num(c.amount))}</p><div class="date-grid" role="radiogroup" aria-label="Jour de l’échéance">${Array.from({length:31},(_,i)=>`<label><input type="radio" name="day" value="${i+1}" ${String(c.day)===String(i+1)?'checked':''}><span>${i+1}</span></label>`).join('')}<label class="last-day"><input type="radio" name="day" value="last" ${c.day==='last'?'checked':''}><span>Fin du mois</span></label></div>${field('À partir du','start',c.start,'date',`min="${data.openingBalanceDate}" required`)}<p class="help">Les mois plus courts utilisent leur dernier jour. Une dépense à cette date sera comptée automatiquement.</p>`}<div class="dialog-actions"><button type="button" class="button" data-action="charge-back">Retour</button><button type="submit" class="button primary">${isAmount?'Continuer':'Activer cette habitude'}</button></div></form>`,'charge-flow');
+}
+function collectCharge(f,validate=true){
+ if(chargeDraft.step===1){
+  chargeDraft.name=String(f.get('name')||'').trim().slice(0,100);chargeDraft.amount=String(f.get('amount')||'').trim();chargeDraft.categoryId=String(f.get('categoryId')||'abonnements');
+  if(validate){num(chargeDraft.amount);if(!chargeDraft.name)throw Error('Donne un nom à cette charge.');}
+ }else if(chargeDraft.step===2){
+  chargeDraft.day=f.get('day');chargeDraft.start=String(f.get('start')||'');
+  if(validate&&(!E.validDate(chargeDraft.start)||chargeDraft.start<data.openingBalanceDate))throw Error('Choisis une date à partir du début de ton suivi.');
+  if(validate&&chargeDraft.day!=='last'&&(!/^[0-9]+$/.test(chargeDraft.day)||Number(chargeDraft.day)<1||Number(chargeDraft.day)>31))throw Error('Choisis un jour ou la fin du mois.');
+ }
+}
+function submitCharge(f){
+ collectCharge(f);
+ if(chargeDraft.step===1){chargeDraft.step=2;chargeView();return;}
+ const c={...chargeDraft};
+ const ok=commit(d=>{d.rules.push({id:id('rule'),name:c.name,kind:'monthly',categoryId:c.categoryId,amountCents:num(c.amount),amounts:[],day:c.day==='last'?'last':Number(c.day),month:1,start:c.start,end:null,pauses:[],originFixedId:null,reminderEnabled:true});d.setupDone=true;},'Habitude activée.');
+ if(ok){chargeDraft=null;close();}
+}
+  function openRule(r=null,kind='monthly',draft=null){
+    if(!data.initialized){beginSetup();return;}const v=draft||r||{name:kind==='weekly'?'Repas habituels':'',categoryId:kind==='weekly'?'alimentation':'abonnements',kind,amounts:[0,300,300,300,300,300,0],amountCents:0,start:nextDay(),day:'last',month:1};
+    dialog(r?'Ajuster pour la suite.':'Une habitude en moins à saisir.',`<form id="rule-form">${r?'<div class="notice">La modification s’applique à partir de la date choisie. Les dépenses passées restent conservées.</div>':''}${field('Nom','name',v.name,'text','maxlength="100" required')}<div class="form-grid"><label class="field"><span>Fréquence</span><select name="kind" id="rule-kind"><option value="weekly" ${v.kind==='weekly'?'selected':''}>Certains jours de la semaine</option><option value="monthly" ${v.kind==='monthly'?'selected':''}>Chaque mois</option><option value="yearly" ${v.kind==='yearly'?'selected':''}>Chaque année</option></select></label><label class="field"><span>Catégorie</span><select name="categoryId">${options(v.categoryId)}</select></label></div>${v.kind==='weekly'?dayFields(v.amounts?.length===7?v.amounts:undefined):`<div class="form-grid">${field('Montant (€)','amount',v.amountCents?amount(v.amountCents):'','text','inputmode="decimal" required')}<label class="field"><span>Jour de l’échéance</span><select name="day"><option value="last" ${v.day==='last'?'selected':''}>Dernier jour du mois</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}" ${Number(v.day)===i+1?'selected':''}>Le ${i+1}</option>`).join('')}</select></label></div>${v.kind==='yearly'?`<label class="field"><span>Mois de l’échéance</span><select name="month">${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${Number(v.month)===i+1?'selected':''}>${esc(monthLabel('2026-'+String(i+1).padStart(2,'0')).split(' ')[0])}</option>`).join('')}</select></label>`:''}`}${field(r?'Appliquer le nouveau tarif à partir du':'Premier jour du suivi','start',draft?.start||(r?nextDay():v.start),'date',`min="${r?nextDay():data.openingBalanceDate}" required`)}<p class="help">Une date de début ne crée pas de paiement ce jour-là si ce n’est pas un jour d’échéance. Les mois courts utilisent leur dernier jour.</p>${formActions(r?'Appliquer la modification':'Activer cette règle')}</form>`,'rule',{id:r?.id||null});
+  }
+  function confirm(title,copy,callback,label='Confirmer'){dialog(title,`<p class="muted">${copy}</p><div class="dialog-actions"><button class="button" data-action="close">Annuler</button><button class="button primary" data-action="confirm">${label}</button></div>`,'confirm',{callback});}
+  function pauseDialog(r,stop=false){dialog(stop?'Arrêter cette règle.':'Une pause dans le quotidien.',`<p class="help">Les opérations déjà comptées sont conservées. Pour annuler un repas déjà compté aujourd’hui, utilise « Annuler aujourd’hui ».</p><form id="pause-form">${field(stop?'Premier jour sans dépense':'Début de la pause','start',nextDay(),'date',`min="${nextDay()}" required`)}${stop?'':field('Dernier jour de la pause (inclus)','end',E.addDays(E.today(),7),'date',`min="${nextDay()}" required`)}${formActions(stop?'Arrêter la règle':'Suspendre')}</form>`,'pause',{id:r.id,stop});}
+  function openBudget(categoryId='alimentation'){dialog('Une enveloppe pour le mois.',`<form id="budget-form"><label class="field"><span>Catégorie</span><select name="categoryId">${options(categoryId)}</select></label>${field('Limite (€) — 0 pour retirer la limite','amount',amount(budgetFor(categoryId)),'text','inputmode="decimal" required')}<label class="field"><span>Appliquer</span><select name="scope"><option value="recurring">Chaque mois</option><option value="month">Seulement ${esc(monthLabel(month))}</option><option value="reset">Revenir au montant habituel ce mois</option></select></label>${formActions()}</form>`,'budget');}
+  async function importFile(file){if(!file)return;if(file.size>8*1024*1024){notify('Sauvegarde trop volumineuse (maximum 8 Mo).');return;}try{const text=await file.text(), imported=E.normalize(JSON.parse(text));confirm('Importer cette sauvegarde ?',`${imported.transactions.length} opérations et ${imported.rules.length} règles remplaceront les données actuelles. Une copie précédente sera conservée.`,()=>{try{const old=localStorage.getItem(KEY)||localStorage.getItem(OLD_KEY)||rawRecovery;if(old)localStorage.setItem(BACKUP,old);const serialized=saveData(imported);localStorage.setItem(KEY,serialized);data=imported;snapshot=serialized;afterLocalSave();loadError=null;rawRecovery='';close();$('#alert').innerHTML='';page='home';catchUp();render();queuePushSync();notify('Sauvegarde importée.');if(!data.setupDone)beginSetup();}catch(e){notify('Import non enregistré : '+e.message+' Tes données actuelles sont conservées.');}});}catch(e){notify('Import refusé : '+e.message+' Tes données actuelles sont conservées.');}}
+  function switchPage(p){if(!['home','journal','settings','rules','budget'].includes(p))return;catchUp();page=p;render();window.scrollTo({top:0,behavior:'smooth'});}
+  function suspendRule(rid,on){const t=nextDay();commit(d=>{const r=d.rules.find(x=>x.id===rid);if(!r)return;if(on){if(!r.pauses.some(p=>p.start<=t&&p.end>=t))r.pauses.push({start:t,end:INFINITE});}else{r.pauses=r.pauses.flatMap(p=>{if(p.end<t)return [p];if(p.start>=t)return [];return [{start:p.start,end:E.today()}];});}},on?'Habitude en pause à partir de demain.':'Habitude reprise à partir de demain.');}
+  function pay(key){
+    const c=E.upcoming(data).find(x=>x.autoKey===key);if(!c){notify('Échéance introuvable.');return;}
+    if(c.status!=='future'){const before={paymentConfirmed:false,confirmedAt:null};if(commit(d=>{const t=d.transactions.find(t=>t.id===c.id);if(t){t.paymentConfirmed=true;t.confirmedAt=E.today();}},'')){close();notify(`Paiement de ${c.name} noté comme confirmé (déjà compté, rien n’est retiré en plus).`,()=>commit(d=>{const t=d.transactions.find(t=>t.id===c.id);if(t)Object.assign(t,before);},'Confirmation annulée.'));}return;}
+    confirm('Payer maintenant ?',`${esc(c.name)} · ${esc(euro(c.amountCents))} sera enregistré aujourd’hui et retiré de ton solde. L’échéance du ${esc(dateLabel(c.dueDate))} ne sera pas comptée une deuxième fois.`,()=>{const txId=id('tx');if(commit(d=>{d.transactions.push({id:txId,type:'expense',amountCents:c.amountCents,name:c.name,categoryId:c.categoryId,date:E.today(),note:'Payé en avance',autoKey:c.autoKey,ruleId:c.ruleId,fixedExpenseId:c.fixedExpenseId||null,fixedMonth:c.fixedMonth||null,corrected:false,paymentConfirmed:true,confirmedAt:E.today(),earlyPaid:true});},''))notify('Paiement anticipé enregistré.',()=>commit(d=>{d.transactions=d.transactions.filter(t=>t.id!==txId);},'Paiement anticipé annulé.'));},'Payer maintenant');
+  }
+  document.addEventListener('click',async event=>{const b=event.target.closest('button');if(!b)return;try{
+    if(b.dataset.nav){switchPage(b.dataset.nav);return;}const action=b.dataset.action, rid=b.dataset.id,r=data.rules.find(r=>r.id===rid),t=data.transactions.find(t=>t.id===rid);
+    if(action==='close'){close();return;}if(action==='undo'){const cb=undo;undo=null;$('#toast').innerHTML='';if(cb)cb();return;}
+    if(action==='setup')beginSetup();
+    if(action==='wizard-back'){collectWizard(false);wizard.step--;wizardView();}
+    if(action==='wizard-add-charge'){collectWizard(false);wizard.charges.push({name:'',amount:'',categoryId:'abonnements',day:'last',start:wizard.start,enabled:true});wizardView();}
+    if(action==='wizard-remove-charge'){collectWizard(false);wizard.charges.splice(Number(b.dataset.index),1);wizardView();}
+    if(action==='install'){installClair();return;}if(action==='download-app'){downloadClair();return;}
+    if(action==='payment-detail'){paymentDetails(b.dataset.key);return;}
+    if(action==='notifications'){switchPage('settings');$('#notification-settings')?.scrollIntoView({block:'start'});}
+    if(action==='add'){if(!data.initialized){beginSetup();return;}dialog('Ajouter',`<div class="add-options"><button class="button" data-action="income">Argent reçu</button><button class="button" data-action="expense">Dépense exceptionnelle</button></div>`,'add');}
+    if(action==='income')openTx(null,'income');if(action==='expense')openTx();if(action==='savings')openTx(null,'expense','epargne');
+    if(action==='edit-tx'&&t)openTx(t);
+    if(action?.startsWith('account-')){await accountAction(action);return;}
+    if(action==='pay')pay(b.dataset.key);
+    if(action==='delete-tx'&&t){confirm(t.earlyPaid?'Annuler ce paiement anticipé ?':t.autoKey?'Annuler cette occurrence ?':'Supprimer cette opération ?',t.earlyPaid?'L’échéance redeviendra prévue à sa date normale.':t.autoKey?'Elle ne sera pas recréée à la prochaine ouverture. La règle continue pour les autres dates.':'Elle sera retirée de tes totaux.',()=>{const tx=structuredClone(t);if(commit(d=>{if(tx.earlyPaid)d.transactions=d.transactions.filter(x=>x.id!==tx.id);else E.skip(d,tx.id);},'Opération retirée.')){close();notify('Opération retirée.',()=>commit(d=>{if(tx.autoKey)d.skipped=d.skipped.filter(k=>k!==tx.autoKey);if(!d.transactions.some(x=>x.id===tx.id||(tx.autoKey&&x.autoKey===tx.autoKey)))d.transactions.push(tx);},'Opération restaurée.'));}});}
+    if(action==='new-rule')startCharge();
+    if(action==='charge-advanced')openRule();
+    if(action==='charge-preset'){const preset=chargePresets[Number(b.dataset.index)];if(!preset||!chargeDraft)return;chargeDraft.name=preset[0]==='Autre charge'?'':preset[0];chargeDraft.categoryId=preset[1];chargeDraft.step=1;chargeView();}
+    if(action==='charge-back'){collectCharge(new FormData($('#charge-flow-form')),false);chargeDraft.step--;chargeView();}if(action==='new-weekly')openRule(null,'weekly');if(action==='edit-rule'&&r)openRule(r);if(action==='pause-rule'&&r)pauseDialog(r);if(action==='stop-rule'&&r)pauseDialog(r,true);
+    if(action==='skip-today'&&r){catchUp();const x=data.transactions.find(t=>t.ruleId===r.id&&t.date===E.today()&&!t.earlyPaid);if(x){if(commit(d=>E.skip(d,x.id),'La dépense d’aujourd’hui est annulée.'))notify('La dépense d’aujourd’hui est annulée.',()=>commit(d=>{d.skipped=d.skipped.filter(k=>k!==x.autoKey);d.transactions.push(x);},'Dépense restaurée.'));}else notify('Aucune dépense comptée pour cette règle aujourd’hui.');}
+    if(action==='resume'&&r){commit(d=>{const rule=d.rules.find(x=>x.id===r.id),p=rule.pauses[Number(b.dataset.index)];if(!p)return;if(p.start>=nextDay())rule.pauses.splice(Number(b.dataset.index),1);else p.end=E.today();},'La règle reprend dès demain.');}
+    if(action==='confirm'&&modal?.callback){const cb=modal.callback;close();cb();}
+    if(action==='month-prev'||action==='month-next'){month=E.monthOffset(month,action==='month-prev'?-1:1);render();}
+    if(action==='budget-edit')openBudget(rid||'alimentation');
+    if(action==='savings-goal')dialog('Ton prochain objectif.',`<form id="goal-form">${field('Objectif (€)','amount',String(data.savingsGoal||''),'text','inputmode="decimal" required')}${formActions()}</form>`,'goal');
+    if(action==='export')download(JSON.stringify(data,null,2),'clair-sauvegarde-'+E.today()+'.json');
+    if(action==='backup'){const v=localStorage.getItem(BACKUP);if(v)download(v,'clair-copie-precedente.json');else notify('Aucune copie précédente : exporte ta sauvegarde actuelle.');}
+    if(action==='raw')download(rawRecovery,'clair-donnees-brutes.json');if(action==='recovery'&&recovery)download(JSON.stringify(recovery,null,2),'clair-copie-de-secours.json');
+    if(action==='csv'){const cell=E.csvCell;download('\uFEFFDate;Nom;Type;Montant EUR;Catégorie;Automatique;Note\r\n'+data.transactions.map(t=>[t.date,t.name,t.type==='income'?'Revenu':'Dépense',amount(t.amountCents),cat(t.categoryId).label,t.autoKey?'Oui':'Non',t.note].map(cell).join(';')).join('\r\n'),'clair-journal-'+E.today()+'.csv','text/csv;charset=utf-8');}
+    if(action==='ics'){const {text,count}=E.ics(data,E.today(),new Date(),euro);if(!count){notify('Aucun loyer ni abonnement prévu dans les 12 prochains mois.');return;}download(text,'clair-echeances-'+E.today()+'.ics','text/calendar;charset=utf-8');notify(`${count} échéance${count>1?'s':''} exportée${count>1?'s':''}. Remplace l’ancien calendrier Clair après chaque changement.`);}
+    if(action==='photo-remove')commit(d=>{d.preferences.photo=null;if(d.preferences.wallpaper==='photo')d.preferences.wallpaper='plain';},'Photo retirée.');
+    if(action==='push-on')enablePush();if(action==='push-off')disablePush();if(action==='push-retry')syncPush();
+    if(action==='opening')dialog('Corriger le point de départ.',`<p class="help">Corrige uniquement le solde initial. Pour ton solde actuel, utilise le rapprochement.</p><form id="opening-form">${field('Solde initial (€)','amount',amount(data.openingCents),'text','inputmode="decimal" required')}${formActions()}</form>`,'opening');
+    if(action==='reconcile'){catchUp();dialog('Repartir du bon solde.',`<p class="help">Indique ce que tu as réellement de disponible aujourd’hui. Une opération d’ajustement expliquera l’écart dans ton journal.</p><form id="reconcile-form">${field('Mon solde réel aujourd’hui (€)','amount',amount(E.balance(data)),'text','inputmode="decimal" required')}${formActions('Rapprocher les soldes')}</form>`,'reconcile');}
+    if(action==='reset')dialog('Recommencer à zéro ?',`<p class="help">Exporte tes données avant de continuer. Une copie précédente sera conservée si le stockage est disponible.</p><form id="reset-form">${field('Écris EFFACER pour confirmer','confirmation','','text','required autocomplete="off"')}<button class="button" type="button" data-action="${loadError?'raw':'export'}">Exporter avant d’effacer</button>${formActions('Effacer et recommencer')}</form>`,'reset');
+  }catch(e){notify(e.message);}});
+  document.addEventListener('submit',async event=>{const form=event.target;if(form.id.startsWith('account-')){event.preventDefault();await accountSubmit(form);return;}if(!form.closest('#dialog'))return;event.preventDefault();try{const f=new FormData(form);let success=false;
+    if(form.id==='charge-flow-form'){submitCharge(f);return;}
+    if(form.id==='wizard-form'){collectWizard();if(wizard.step<3){wizard.step++;wizardView();}else completeSetup();return;}
+    if(form.id==='tx-form'){const old=data.transactions.find(t=>t.id===modal.id),mode=modal.type,date=String(f.get('date'));if(!E.validDate(date)||date<data.openingBalanceDate)throw Error('La date doit être valide et ne pas précéder le début du suivi.');const tx={...(old||{}),id:old?.id||id('tx'),name:String(f.get('name')||'').trim(),type:mode,amountCents:num(f.get('amount')),date:old?.autoKey?old.date:date,categoryId:mode==='income'?'income':String(f.get('categoryId')),note:String(f.get('note')||'').trim(),autoKey:old?.autoKey||null,ruleId:old?.ruleId||null,corrected:Boolean(old?.autoKey),paymentConfirmed:Boolean(old?.paymentConfirmed),confirmedAt:old?.confirmedAt||null,earlyPaid:Boolean(old?.earlyPaid)};if(!tx.name)throw Error('Ajoute un nom.');success=commit(d=>{const i=d.transactions.findIndex(t=>t.id===tx.id);if(i>=0)d.transactions[i]=tx;else d.transactions.push(tx);},old?'Opération corrigée.':'Opération ajoutée.');if(success){const previous=old?structuredClone(old):null;notify(old?'Opération corrigée.':'Opération ajoutée.',()=>{const current=data.transactions.find(t=>t.id===tx.id);if(!current||JSON.stringify(current)!==JSON.stringify(tx)){notify('Cette opération a changé depuis. Vérifie-la dans Historique.');return;}commit(d=>{if(previous){const i=d.transactions.findIndex(t=>t.id===tx.id);if(i>=0)d.transactions[i]=previous;}else d.transactions=d.transactions.filter(t=>t.id!==tx.id);},'Saisie annulée.');});}}
+    if(form.id==='rule-form'){const old=data.rules.find(r=>r.id===modal.id),start=String(f.get('start')),kind=String(f.get('kind'));if(!E.validDate(start)||start<(old?nextDay():data.openingBalanceDate))throw Error('Choisis une date de début valide.');const amounts=kind==='weekly'?readDays(f):[],name=String(f.get('name')||'').trim();if(!name||(kind==='weekly'&&!amounts.some(n=>n>0)))throw Error('Donne un nom et choisis au moins un jour actif.');const revision={id:id('rule'),name,kind,start,end:old?.end&&old.end>=start?old.end:null,categoryId:String(f.get('categoryId')),amounts,amountCents:kind==='weekly'?0:num(f.get('amount')),day:f.get('day')==='last'?'last':Number(f.get('day')||1),month:Number(f.get('month')||1),pauses:old?old.pauses.filter(p=>p.end>=start).map(p=>({...p})):[],originFixedId:old?.originFixedId||null,reminderEnabled:kind==='weekly'?false:(old&&old.kind!=='weekly'?old.reminderEnabled:true)};if(old?.end&&start>old.end)throw Error('Cette règle s’arrête avant la date choisie. Crée une nouvelle règle pour la reprendre.');success=commit(d=>{if(old){const prev=d.rules.find(r=>r.id===old.id);if(start<=prev.start)d.rules=d.rules.filter(r=>r.id!==prev.id);else prev.end=E.addDays(start,-1);}d.rules.push(revision);d.setupDone=true;},'Règle enregistrée.');}
+    if(form.id==='pause-form'){const start=String(f.get('start')),end=String(f.get('end')||'');if(!E.validDate(start)||start<nextDay()||(!modal.stop&&(!E.validDate(end)||end<start)))throw Error('Choisis des dates valides à partir de demain.');const rid=modal.id,stop=modal.stop;success=commit(d=>{const r=d.rules.find(r=>r.id===rid);if(stop){if(start<=r.start)d.rules=d.rules.filter(x=>x.id!==rid);else r.end=E.addDays(start,-1);}else r.pauses.push({start,end});},stop?'Arrêt programmé.':'Pause enregistrée.');}
+    if(form.id==='budget-form'){const categoryId=String(f.get('categoryId')),scope=f.get('scope'),n=num(f.get('amount'),true)/100;success=commit(d=>{if(scope==='recurring'){if(n)d.budgets[categoryId]=n;else delete d.budgets[categoryId];}else{d.budgetOverrides[month]||={};if(scope==='reset')delete d.budgetOverrides[month][categoryId];else d.budgetOverrides[month][categoryId]=n;}},'Enveloppe enregistrée.');}
+    if(form.id==='goal-form')success=commit(d=>{d.savingsGoal=num(f.get('amount'),true)/100;},'Objectif enregistré.');
+    if(form.id==='opening-form')success=commit(d=>{d.openingCents=E.cents(f.get('amount'));},'Solde initial corrigé.');
+    if(form.id==='reconcile-form'){const actual=E.cents(f.get('amount')),diff=actual-E.balance(data);success=commit(d=>{if(diff)d.transactions.push({id:id('tx'),type:diff>0?'income':'expense',amountCents:Math.abs(diff),date:E.today(),name:'Ajustement du solde',categoryId:'autre',note:'Rapprochement avec mon argent disponible',autoKey:null,ruleId:null});},diff?'Solde rapproché.':'Les soldes correspondent déjà.');}
+    if(form.id==='reset-form'){if(f.get('confirmation')!=='EFFACER')throw Error('Écris EFFACER pour confirmer.');const raw=localStorage.getItem(KEY)||localStorage.getItem(OLD_KEY)||rawRecovery;if(raw)localStorage.setItem(BACKUP,raw);const fresh=E.empty(),serialized=saveData(fresh);localStorage.setItem(KEY,serialized);data=fresh;snapshot=serialized;afterLocalSave();loadError=null;rawRecovery='';$('#alert').innerHTML='';page='home';close();render();queuePushSync();beginSetup();return;}
+    if(success)close();
+  }catch(e){const errorBox=$('#form-error');errorBox.textContent=e.message;errorBox.scrollIntoView({block:'nearest'});if(form.id==='wizard-form'){form.querySelectorAll('[aria-invalid]').forEach(el=>el.removeAttribute('aria-invalid'));const input=e.field?form.elements.namedItem(e.field):null;if(input){input.setAttribute('aria-invalid','true');input.setAttribute('aria-describedby','form-error');input.focus({preventScroll:true});}else errorBox.focus({preventScroll:true});}}});
+  document.addEventListener('input',event=>{if(event.target.id==='search')journalResults();});
+  document.addEventListener('change',async event=>{const el=event.target;try{
+    if(el.matches('[data-import]')){importFile(el.files?.[0]);el.value='';}
+    if(el.matches('[data-photo]')){const file=el.files?.[0];el.value='';if(!file)return;const photo=await photoToJpeg(file);commit(d=>{d.preferences.photo=photo;d.preferences.wallpaper='photo';},'Photo de fond enregistrée sur cet appareil.');return;}
+    if(el.dataset.pref==='theme'||el.dataset.pref==='wallpaper'){const k=el.dataset.pref,v=el.value;commit(d=>{d.preferences=E.normPrefs({...d.preferences,[k]:v});});return;}
+    if(el.dataset.pref==='reminders'){const on=el.checked;commit(d=>{d.preferences.reminders=on;},on?'Rappels activés.':'Rappels désactivés.');return;}
+    if(el.dataset.reminder){const rid=el.dataset.reminder,on=el.checked;commit(d=>{const r=d.rules.find(x=>x.id===rid);if(r&&r.kind!=='weekly')r.reminderEnabled=on;},on?'Rappel 2 jours avant activé.':'Rappel désactivé pour cette échéance.');return;}
+    if(el.dataset.suspend){suspendRule(el.dataset.suspend,!el.checked);return;}
+    if(el.id==='kind-filter')journalResults();if(el.id==='rule-kind'){const f=new FormData($('#rule-form')),r=data.rules.find(r=>r.id===modal.id),kind=el.value;openRule(r,kind,{name:String(f.get('name')),categoryId:String(f.get('categoryId')),kind,start:String(f.get('start')),amountCents:f.get('amount')?num(f.get('amount'),true):0,amounts:[0,300,300,300,300,300,0],day:f.get('day')||'last',month:f.get('month')||1});}
+  }catch(e){if($('#form-error')&&$('#dialog').open)$('#form-error').textContent=e.message;else{notify(e.message);render();}}});
+  // A previous native close event can arrive after this dialog has reopened.
+  $('#dialog').addEventListener('close',()=>{if(!$('#dialog').open)modal=null;});
+  window.addEventListener('storage',event=>{if(event.key!==KEY)return;if(cloud.enabled&&cloud.user){try{cloud.record=cloud.decode(event.newValue,cloud.user.id);}catch(error){notify(error.message);return;}} try{snapshot=event.newValue;data=snapshot?E.normalize(JSON.parse(snapshot)):E.empty();loadError=null;close();render();notify('Données actualisées depuis un autre onglet.');}catch(e){loadError=e.message;rawRecovery=event.newValue||'';render();}});
+  document.addEventListener('visibilitychange',async()=>{if(!document.hidden){if(cloud.enabled&&cloud.user)await cloud.sync();catchUp();render();}});
+  window.addEventListener('online',()=>cloud.sync());
+  setInterval(()=>{if(cloud.enabled&&cloud.user&&!document.hidden)cloud.sync();},60000);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',applyPrefs);
+  let lastDaySeen=E.today();
+  setInterval(()=>{const today=E.today();if(today!==lastDaySeen){lastDaySeen=today;month=today.slice(0,7);catchUp();render();}},30000);
+  if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+  window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;if(page==='settings'&&!$('#dialog').open)render();});
+  window.addEventListener('appinstalled',()=>{installPrompt=null;if(page==='settings')render();notify('Clair a été installé.');});
+  render();if(!cloud.enabled)catchUp();
+  function welcome(){
+    const intro=$('#welcome');
+    const ready=()=>{if(cloud.enabled){if(!accountStarted){accountStarted=true;cloud.init().catch(()=>{cloud.ready=true;cloud.status='error';cloud.error='Connexion indisponible. Réessaie.';render();});}}else if(!loadError&&!data.initialized)beginSetup();};
+    let seen=false;try{seen=sessionStorage.getItem('clair-welcome-v1')==='1';sessionStorage.setItem('clair-welcome-v1','1');}catch(_){}
+    if(accountResetStep||seen||matchMedia('(prefers-reduced-motion: reduce)').matches){ready();return;}
+    let timer;intro.addEventListener('close',()=>{clearTimeout(timer);ready();},{once:true});
+    let newcomer=!data.initialized;
+    try{if(localStorage.getItem('clair-account-session-v1'))newcomer=false;}catch(_){}
+    $('#welcome-skip').textContent=newcomer&&cloud.enabled?'Créer mon compte':'Ouvrir Clair';
+    $('#welcome-login').hidden=!newcomer||!cloud.enabled;
+    $('#welcome-skip').addEventListener('click',()=>{if(newcomer&&cloud.enabled)accountMode='signup';intro.close();render();},{once:true});
+    $('#welcome-login').addEventListener('click',()=>{accountMode='login';intro.close();render();},{once:true});
+    intro.showModal();if(!newcomer)timer=setTimeout(()=>{if(intro.open)intro.close();},1600);
+  }
+  welcome();
+  if(!loadError&&data.initialized)syncPush();
+})();
+
+</script>
+</body></html>
+
+
+
+````
+
+## clair/LISEZ-MOI.md
+
+- SHA-256 : afe4d33be6c0fe702b84fa8d5ae5a000cd69aa3ca609866d81d6570054270ee9
+- Taille : 2145 octets.
+
+````text
+# Clair — version autonome
+
+Application statique publiée dans le dossier clair du dépôt mon-djai.
+
+## Migrer son budget
+1. Dans Clair sur Lovable : Réglages → sauvegarde/export JSON.
+2. Ouvrir la nouvelle version GitHub : Réglages → import JSON, sélectionner la sauvegarde.
+3. Vérifier solde, historique et charges avant de supprimer l'ancienne sauvegarde.
+
+Le changement d'adresse ne transfère pas les données automatiquement. Les données sont propres au navigateur. Cette version utilise des clés distinctes afin de préserver l'application historique située à la racine du dépôt.
+
+## Utilisation
+Configurer le solde disponible, les jours de repas et les charges récurrentes. Ajouter manuellement revenus et dépenses exceptionnelles. Le solde est calculé, pas un relevé bancaire. Les dépenses automatiques rattrapent les dates écoulées à l'ouverture sans déduction en double.
+
+## Installation
+iPhone : Safari → Partager → Sur l'écran d'accueil. Android/PC : utiliser l'option d'installation proposée par le navigateur compatible. Les chemins du manifest et du service worker sont relatifs au dossier clair. Le cache ne couvre que les fichiers de cette application.
+
+## Notifications
+Les rappels visibles à l'ouverture et l'export calendrier sont disponibles. Les notifications push lorsque l'application est fermée ne sont pas connectées : aucun serveur de rappels n'est configuré. Aucune donnée de budget n'est envoyée à un serveur par cette version.
+
+## Vérifications de cette migration
+Syntaxe des deux scripts JavaScript vérifiée. Moteur comptable inchangé. Vérification de la déduction mensuelle et de son idempotence réussie. Manifest et cache isolés au sous-dossier ; le worker ne supprime pas les caches des autres applications. Le nouvel habillage et l'installation sur un vrai appareil restent à vérifier dans un navigateur.
+
+## Source
+Base : public/clair.html de Clair, révision Lovable 2bf0524fe80750ceb995eb16bd6f11dd1ecc0b59. Habillage des cartes, explications repliables, chemins PWA et stockage séparé adaptés pour GitHub Pages. Aucun secret ou budget personnel inclus.
+
+````
+
+## clair/manifest.webmanifest
+
+- SHA-256 : ef06570aa8ab3824022503eebfb33a0b48d8db43db6ff80c1834f4ef38bdf879
+- Taille : 610 octets.
+
+````text
+{
+  "name": "Clair — Mon argent, simplement",
+  "short_name": "Clair",
+  "lang": "fr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f2e4ed",
+  "theme_color": "#fa2d58",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "id": "./"
+}
+
+````
+
+## clair/sw.js
+
+- SHA-256 : c13d36d0aab6ab9ec44bbbc6053e4d12fa427a337256b95be38c4c3ba176859c
+- Taille : 1896 octets.
+
+````text
+/* Offline shell scoped to Clair only; financial data is not cached. */
+const BASE=new URL('./',self.location.href);
+const CACHE='clair-github-'+BASE.pathname+'v7';
+const ASSETS=['assets/mascotte-poses.png','index.html','manifest.webmanifest','icons/icon.svg','icons/icon-180.png','icons/icon-192.png','icons/icon-512.png'].map(p=>new URL(p,BASE).href);
+const HOME=new URL('index.html',BASE).href;
+self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('clair-github-'+BASE.pathname)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',e=>{
+ const u=new URL(e.request.url);
+ if(e.request.method!=='GET'||u.origin!==BASE.origin)return;
+ const isHome=u.href===BASE.href||u.pathname===new URL(HOME).pathname;
+ if(!isHome&&!ASSETS.includes(u.href))return;
+ if(isHome)e.respondWith(fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();e.waitUntil(caches.open(CACHE).then(c=>c.put(HOME,copy)));}return r}).catch(()=>caches.match(HOME)));
+ else e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
+});
+self.addEventListener('push',e=>{
+ let p={};try{p=e.data?e.data.json():{}}catch{}
+ e.waitUntil(self.registration.showNotification(String(p.title||'Clair — échéance').slice(0,120),{body:String(p.body||'').slice(0,300),tag:String(p.tag||'clair-reminder').slice(0,200),icon:new URL('icons/icon-192.png',BASE).href,data:{url:HOME}}));
+});
+self.addEventListener('notificationclick',e=>{
+ e.notification.close();e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(list=>{
+ for(const c of list)if(c.url.startsWith(BASE.href)&&'focus'in c){c.navigate?.(HOME);return c.focus()}return self.clients.openWindow(HOME);
+ }));
+});
+
+````
+
+## Autres images conservées sur le dépôt
+
+- clair/icons/icon-180.png
+- clair/icons/icon-192.png
+- clair/icons/icon-512.png
+- Ces trois icônes PWA ne changent pas pour cette évolution.

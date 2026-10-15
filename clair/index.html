@@ -271,6 +271,25 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 .account-recovery .recovery-email{overflow-wrap:anywhere;font-weight:650}
 .recovery-actions{display:grid;gap:18px}
 .password-toggle{display:block;margin-top:8px;min-height:44px;text-align:left}
+
+/* Decorative companion; all guidance remains accessible as text. */
+.mascot-pose{display:block;width:126px;aspect-ratio:512/683;background-image:url('assets/mascotte-poses.png');background-size:400% 100%;background-repeat:no-repeat;flex:none}
+.pose-0{background-position:0% 0}.pose-1{background-position:33.3333% 0}.pose-2{background-position:66.6667% 0}.pose-3{background-position:100% 0}
+.mascot-guide{display:flex;align-items:center;gap:18px;margin:16px 0 22px;padding:10px 18px;border:1px solid var(--line);border-radius:24px;background:var(--soft)}
+.mascot-copy{margin:0;line-height:1.5;color:var(--accent-text);font-size:15px;font-weight:600}
+.account-card .mascot-guide{justify-content:center}.account-card .mascot-pose{width:108px}
+#welcome .welcome-content{width:min(100%,420px);margin:auto;display:flex;align-items:center;flex-direction:column;gap:14px}
+#welcome .welcome-brand{font-size:36px;font-weight:850;letter-spacing:-2px}
+#welcome .mascot-pose{width:180px}
+#welcome h1{font-size:clamp(32px,7vw,44px);line-height:1.05;letter-spacing:-1.5px;color:white;margin:0}
+#welcome .welcome-actions{display:grid;gap:4px;width:100%;margin-top:4px}
+#welcome button{margin-top:0;width:100%;font-weight:650}
+#welcome #welcome-skip{background:white;color:#700d3b;border:0}
+#welcome #welcome-login{background:transparent;border:0;text-decoration:underline}
+#welcome button[hidden]{display:none}
+#welcome .welcome-credit{font-size:12px}
+@media(max-width:600px){.mascot-guide{gap:12px;padding:8px 12px}.mascot-pose{width:90px}.mascot-copy{font-size:14px}.account-card{margin:8px auto}.account-card h1{font-size:28px}.account-card:has(input:focus,select:focus,textarea:focus) .mascot-pose,dialog:has(input:focus,select:focus,textarea:focus) .mascot-pose{width:56px}.account-card:has(input:focus,select:focus,textarea:focus) .mascot-guide,dialog:has(input:focus,select:focus,textarea:focus) .mascot-guide{margin:8px 0;gap:10px}}
+@media(max-height:700px){#welcome{overflow-y:auto}#welcome .mascot-pose{width:110px}#welcome .welcome-content{gap:10px}}
 </style>
 </head>
 <body data-wall="plain">
@@ -278,7 +297,7 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 <div class="shell"><aside class="sidebar"><div class="brand"><span class="brand-mark" aria-hidden="true">c</span>clair</div><p class="tagline">Mon argent, simplement.</p><nav class="nav" aria-label="Navigation principale"></nav><div class="sidebar-foot"><p>Mon espace personnel.</p><button class="link" data-nav="settings">Sauvegarder mes données</button></div></aside>
 <main><header class="topbar"><div class="mobile-brand"><span class="brand-mark" aria-hidden="true">c</span>clair</div><span class="top-date" id="today-label"></span><span class="status"><span class="dot" aria-hidden="true"></span><span id="status-label">Sur cet appareil</span></span></header><div id="alert" role="alert"></div><div id="reminders" aria-live="polite"></div><div id="sync-alert" aria-live="polite"></div><div id="page"></div></main></div>
 <nav class="bottom-nav" aria-label="Navigation mobile"></nav><dialog id="dialog" aria-labelledby="dialog-title"></dialog><div id="toast" role="status" aria-live="polite"></div>
-<dialog id="welcome" aria-labelledby="welcome-title"><h1 class="hello" id="welcome-title">Bonjour</h1><p>Clair<br><span class="welcome-credit">Développé par El-Hadj</span></p><button type="button" id="welcome-skip" autofocus>Ouvrir Clair</button></dialog>
+<dialog id="welcome" aria-labelledby="welcome-title"><div class="welcome-content"><div class="welcome-brand">clair</div><span class="mascot-pose pose-0" aria-hidden="true"></span><h1 id="welcome-title">Ton argent,<br>simplement.</h1><p>Configure tes habitudes une fois.<br>Clair suit tes dépenses répétitives.</p><div class="welcome-actions"><button type="button" id="welcome-skip" autofocus>Créer mon compte</button><button type="button" id="welcome-login">J’ai déjà un compte</button></div><p class="welcome-credit">Développé par El-Hadj</p></div></dialog>
 <script>
 /* Clair — calculs en centimes, dates civiles, aucune requête réseau. */
 (function (root) {
@@ -765,7 +784,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function accountGate(){
     if(!cloud.ready||cloud.status==='loading')return '<section class="card" id="account-loading"><h1>Ouverture de ton compte…</h1><p class="help">Ta copie locale est conservée.</p></section>';
     const signup=accountMode==='signup';
-    return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div><h1>Ton budget, partout.</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}${signup?'<p class="help">12 caractères minimum. Ton adresse e-mail devra être confirmée.</p>':''}<p id="account-error" class="help negative" role="alert"></p><button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié ?</button>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
+    return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div>${mascot(signup?1:0,signup?"Préparons ton espace, à ton rythme.":"Heureuse de te retrouver.")}<h1>${signup?"Créons ton espace.":"Ton budget, partout."}</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}${signup?'<p class="help">12 caractères minimum. Ton adresse e-mail devra être confirmée.</p>':''}<p id="account-error" class="help negative" role="alert"></p><button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié ?</button>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
   }
   function accountCard(){
     if(!cloud.enabled||!cloud.user)return '';
@@ -1128,11 +1147,13 @@ function paymentDetails(key){
   function readDays(f){return dayNames.map((_,i)=>f.get('day-'+i)?num(f.get('price-'+i)):0);}
   function beginSetup(){if(data.setupDone){close();page='rules';render();notify('Tes habitudes sont déjà configurées. Tu peux les modifier ici.');return;}wizard={step:0,existing:data.initialized,balance:amount(data.openingCents),start:nextDay(),days:[0,300,300,300,300,300,0],meals:false,charges:data.fixedExpenses.map(x=>({...x,enabled:false})),name:'Repas habituels'};wizardView();}
   function chargeFields(c,i){return `<div class="wizard-charge"><label class="check"><input name="charge-on-${i}" type="checkbox" ${c.enabled?'checked':''}>Compter automatiquement cette charge</label><div class="form-grid">${field('Nom','charge-name-'+i,c.name,'text','maxlength="100"')}${field('Montant (€)','charge-amount-'+i,c.amount?String(c.amount):'','text','inputmode="decimal"')}<label class="field"><span>Catégorie</span><select name="charge-category-${i}">${options(c.categoryId||'abonnements')}</select></label>${field('Premier jour du suivi','charge-start-'+i,c.start||wizard.start,'date',`min="${data.initialized?data.openingBalanceDate:E.today()}"`)}<label class="field"><span>Échéance chaque mois</span><select name="charge-day-${i}"><option value="last" ${c.day==='last'?'selected':''}>Dernier jour du mois</option>${Array.from({length:31},(_,n)=>`<option value="${n+1}" ${Number(c.day)===n+1?'selected':''}>Le ${n+1}</option>`).join('')}</select></label></div><button type="button" class="link" data-action="wizard-remove-charge" data-index="${i}">Retirer cette ligne</button></div>`;}
+  // Approved artwork: four poses displayed directly, without altering the illustration.
+  function mascot(pose,message){return `<div class="mascot-guide"><span class="mascot-pose pose-${pose}" aria-hidden="true"></span><p class="mascot-copy">${esc(message)}</p></div>`;}
   function wizardView(){const s=wizard.step;let body='';if(s===0)body=wizard.existing?`<p class="muted">Tes ${data.transactions.length} opérations et ton solde initial sont conservés. Ajoutons les habitudes qui te feront gagner du temps.</p><div class="notice">Les charges existantes ne deviendront automatiques que si tu les sélectionnes. Les règles déjà actives ne sont pas modifiées.</div>`:`<p class="muted">Combien as-tu réellement de disponible aujourd’hui, après tes dépenses déjà payées ?</p>${field('Mon solde actuel (€)','balance',wizard.balance==='0,00'?'':wizard.balance,'text','inputmode="decimal" required placeholder="Ex. 250,00"')}<p class="help">Le suivi démarre aujourd’hui. Par défaut, les automatismes commencent demain pour ne pas recompter ce que tu as déjà payé.</p>`;
     if(s===1)body=`<p class="muted">Quels jours prends-tu ton repas habituel ? Tu peux fixer un montant différent pour chaque jour.</p><label class="check"><input name="meals" type="checkbox" ${wizard.meals?'checked':''}>Activer les repas automatiques</label>${dayFields(wizard.days)}${field('Commencer les repas le','start',wizard.start,'date',`min="${data.initialized?data.openingBalanceDate:E.today()}" required`)}<p class="help">Les jours décochés ne coûtent rien. Les jours cochés sont comptés automatiquement à partir de cette date.</p>`;
     if(s===2)body=`<p class="muted">Ajoute ton loyer et tes abonnements. Saisis le montant réellement à ta charge, après les aides éventuelles.</p>${wizard.charges.length?wizard.charges.map(chargeFields).join(''):'<p class="help">Aucune charge ajoutée. Tu peux aussi les configurer plus tard.</p>'}<button type="button" class="button" data-action="wizard-add-charge">+ Loyer ou abonnement</button>`;
     if(s===3){const enabled=wizard.charges.filter(c=>c.enabled);body=`<p class="muted">Tout est prêt. Tu pourras ajuster une dépense, changer les tarifs ou suspendre tes repas pendant les vacances.</p><section class="card soft"><h3>${wizard.meals?'Repas automatiques':'Repas : non activés'}</h3>${wizard.meals?`<p class="help">${esc(ruleCopy({kind:'weekly',amounts:wizard.days}))}<br>À partir du ${esc(dateLabel(wizard.start))}</p>`:''}<h3>${enabled.length} charge${enabled.length>1?'s':''} automatique${enabled.length>1?'s':''}</h3>${enabled.map(c=>`<p class="help" style="margin-bottom:8px">${esc(c.name)} · ${euro(num(c.amount))} · ${c.day==='last'?'fin de mois':'le '+c.day}<br>Suivi dès le ${esc(dateLabel(c.start||wizard.start))}</p>`).join('')}</section><div class="notice">Ce suivi estime tes dépenses selon tes réglages. Il ne lit pas ton compte bancaire. Les dates passées choisies seront rattrapées une seule fois.</div>`;}
-    dialog(['Un bon point de départ.','Tes repas, déjà prévus.','Les charges qui reviennent.','Ton quotidien est prêt.'][s],`<div class="wizard-step">ÉTAPE ${s+1} SUR 4</div><div class="wizard-progress">${[0,1,2,3].map(i=>`<span class="${i<=s?'on':''}"></span>`).join('')}</div><form id="wizard-form" ${s===2?'novalidate':''}>${body}<div id="form-error" class="notice error" role="alert" tabindex="-1"></div><div class="dialog-actions">${s>0?'<button type="button" class="button" data-action="wizard-back">Retour</button>':''}<button class="button primary" type="submit">${s===3?'Activer mon suivi':'Continuer →'}</button></div></form>`,'wizard');}
+    dialog(['Un bon point de départ.','Tes repas, déjà prévus.','Les charges qui reviennent.','Ton quotidien est prêt.'][s],`<div class="wizard-step">ÉTAPE ${s+1} SUR 4</div><div class="wizard-progress">${[0,1,2,3].map(i=>`<span class="${i<=s?'on':''}"></span>`).join('')}</div>${mascot([2,1,2,3][s],["Indique l’argent dont tu disposes aujourd’hui.","Choisis les jours qui correspondent à tes habitudes.","Configure tes charges une fois, Clair suivra les suivantes.","Vérifie tes réglages avant d’activer ton suivi."][s])}<form id="wizard-form" ${s===2?'novalidate':''}>${body}<div id="form-error" class="notice error" role="alert" tabindex="-1"></div><div class="dialog-actions">${s>0?'<button type="button" class="button" data-action="wizard-back">Retour</button>':''}<button class="button primary" type="submit">${s===3?'Activer mon suivi':'Continuer →'}</button></div></form>`,'wizard');}
   function wizardInvalid(message,field){const error=new Error(message);error.field=field;throw error;}
   function collectWizard(validate=true){
     const f=new FormData($('#wizard-form'));
@@ -1284,8 +1305,13 @@ function submitCharge(f){
     let seen=false;try{seen=sessionStorage.getItem('clair-welcome-v1')==='1';sessionStorage.setItem('clair-welcome-v1','1');}catch(_){}
     if(accountResetStep||seen||matchMedia('(prefers-reduced-motion: reduce)').matches){ready();return;}
     let timer;intro.addEventListener('close',()=>{clearTimeout(timer);ready();},{once:true});
-    $('#welcome-skip').addEventListener('click',()=>intro.close(),{once:true});
-    intro.showModal();timer=setTimeout(()=>{if(intro.open)intro.close();},1600);
+    let newcomer=!data.initialized;
+    try{if(localStorage.getItem('clair-account-session-v1'))newcomer=false;}catch(_){}
+    $('#welcome-skip').textContent=newcomer&&cloud.enabled?'Créer mon compte':'Ouvrir Clair';
+    $('#welcome-login').hidden=!newcomer||!cloud.enabled;
+    $('#welcome-skip').addEventListener('click',()=>{if(newcomer&&cloud.enabled)accountMode='signup';intro.close();render();},{once:true});
+    $('#welcome-login').addEventListener('click',()=>{accountMode='login';intro.close();render();},{once:true});
+    intro.showModal();if(!newcomer)timer=setTimeout(()=>{if(intro.open)intro.close();},1600);
   }
   welcome();
   if(!loadError&&data.initialized)syncPush();
