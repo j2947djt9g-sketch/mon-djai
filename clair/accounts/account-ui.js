@@ -6,6 +6,7 @@
   let accountMode='login',accountBusy=false,accountRecovery=recoveryParams.get('type')==='recovery',accountStarted=false;
   let accountResetStep=accountRecovery?'checking':recoveryError?'expired':null;
   let accountResetEmail='',accountResetUntil=0,accountRecoveryUserId=null,accountDeferredSetup=false,accountResetTimer=null;
+  let accountSignupResult=null,accountChangeUserId=null,accountChangeNonceRequired=false,accountChangeResendUntil=0;
   const cloud=new window.ClairCloud(window.CLAIR_ACCOUNT_CONFIG,{
     normalize: value=>E.normalize(value),
     status:()=>{
@@ -52,11 +53,76 @@
   function accountGate(){
     if(!cloud.ready||cloud.status==='loading')return '<section class="card" id="account-loading"><h1>Ouverture de ton compte…</h1><p class="help">Ta copie locale est conservée.</p></section>';
     const signup=accountMode==='signup';
+    if(signup&&accountSignupResult)return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div>${mascot(1,'Retrouvons ton espace.')}<h1>${accountSignupResult==='exists'?'Tu as déjà un compte.':'Vérifie tes e-mails.'}</h1><p class="muted">${accountSignupResult==='exists'?'Cette adresse e-mail est déjà associée à un compte. Connecte-toi ou récupère ton mot de passe.':'Si cette adresse peut créer un compte, tu recevras un e-mail pour le confirmer. Si tu as déjà un compte, connecte-toi ou récupère ton mot de passe.'}</p><p class="recovery-email">${esc(accountResetEmail)}</p><p id="account-error" class="help negative" role="alert"></p><div class="recovery-actions"><button class="button primary" data-action="account-login">Me connecter</button><button class="button" data-action="account-forgot">Mot de passe oublié ?</button><button class="link" data-action="account-signup-edit">Corriger mon adresse</button></div></section>`;
     return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div>${mascot(signup?1:0,signup?"Préparons ton espace, à ton rythme.":"Heureuse de te retrouver.")}<h1>${signup?"Créons ton espace.":"Ton budget, partout."}</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}${signup?'<p class="help">12 caractères minimum. Ton adresse e-mail devra être confirmée.</p>':''}<p id="account-error" class="help negative" role="alert"></p><button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié ?</button>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
   }
   function accountCard(){
     if(!cloud.enabled||!cloud.user)return '';
-    return `<section class="card"><h2>Mon compte</h2><p>${esc(cloud.displayName||'Mon espace')}</p><p class="help">${esc(cloud.user.email)}</p><p class="help">${esc(accountStatus())}</p><div class="actions"><button class="button" data-action="account-sync" ${cloud.busy?'disabled':''}>Synchroniser</button><button class="link" data-action="account-logout">Me déconnecter</button></div><details class="settings-more"><summary>Ancien budget sur cet appareil</summary><p class="help">Le transfert demande confirmation et conserve une copie de secours.</p><button class="button" data-action="account-import">Transférer mon ancien budget</button></details></section>`;
+    return `<section class="card"><h2>Mon compte</h2><p>${esc(cloud.displayName||'Mon espace')}</p><p class="help">${esc(cloud.user.email)}</p><p class="help">${esc(accountStatus())}</p><div class="actions"><button class="button" data-action="account-change-password">Modifier mon mot de passe</button><button class="button" data-action="account-sync" ${cloud.busy?'disabled':''}>Synchroniser</button><button class="link" data-action="account-logout">Me déconnecter</button></div><details class="settings-more"><summary>Ancien budget sur cet appareil</summary><p class="help">Le transfert demande confirmation et conserve une copie de secours.</p><button class="button" data-action="account-import">Transférer mon ancien budget</button></details></section>`;
+  }
+  function changePasswordDialog(){
+    if(!cloud.user||!cloud.ready){notify('Connecte-toi à ton compte pour modifier ton mot de passe.');return;}
+    accountChangeUserId=cloud.user.id;accountChangeNonceRequired=false;accountChangeResendUntil=0;
+    dialog('Modifier mon mot de passe',`<p class="help">Pour ton compte ${esc(cloud.user.email)}.</p><form id="account-change-password-form">${field('Mot de passe actuel','currentPassword','','password','required maxlength="128" autocomplete="current-password"')}${field('Nouveau mot de passe','password','','password','required minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="account-change-help"')}${field('Confirmer le nouveau mot de passe','passwordConfirm','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}<button type="button" class="link password-toggle" data-action="account-change-toggle" aria-pressed="false">Afficher les mots de passe</button><p class="help" id="account-change-help">12 caractères minimum. Tu peux utiliser une phrase.</p><div id="account-change-verification" hidden><p class="help" id="account-change-code-help" role="status">Saisis le code de vérification reçu par e-mail.</p>${field('Code de vérification','nonce','','tel','autocomplete="one-time-code" inputmode="numeric" maxlength="16" aria-describedby="account-change-code-help"')}<button type="button" class="link" data-action="account-change-resend">Renvoyer le code</button></div>${formActions('Enregistrer mon mot de passe')}</form>`,'account-change-password');
+  }
+  function passwordChangeActive(){return modal?.kind==='account-change-password'&&accountChangeUserId===cloud.user?.id&&$('#dialog').open;}
+  async function sendPasswordVerification(){
+    if(!passwordChangeActive())return;
+    if(accountChangeResendUntil>Date.now())throw Error('Attends une minute avant de renvoyer le code.');
+    const {error}=await cloud.client.auth.reauthenticate();
+    if(!passwordChangeActive())return;
+    if(error){
+      if(error.status===429){accountChangeResendUntil=Date.now()+60000;throw Error('Trop de demandes. Attends un moment avant de réessayer.');}
+      throw Error('Le code n’a pas pu être envoyé. Vérifie ta connexion, puis réessaie.');
+    }
+    accountChangeResendUntil=Date.now()+60000;
+    $('#account-change-code-help').textContent='Un code de vérification a été envoyé par e-mail. Saisis-le pour enregistrer ton mot de passe.';
+    $('#account-change-password-form input[name="nonce"]')?.focus();
+  }
+  async function changePassword(form,f,password){
+    if(!passwordChangeActive())throw Error('Rouvre « Modifier mon mot de passe » depuis ton compte.');
+    const currentPassword=String(f.get('currentPassword')||''),confirmation=String(f.get('passwordConfirm')||''),nonce=String(f.get('nonce')||'').trim();
+    if(!currentPassword)throw Error('Indique ton mot de passe actuel.');
+    if(password.length<12||password.length>128)throw Error('Utilise entre 12 et 128 caractères pour le nouveau mot de passe.');
+    if(password!==confirmation)throw Error('Les deux nouveaux mots de passe ne correspondent pas.');
+    if(password===currentPassword)throw Error('Choisis un mot de passe différent du précédent.');
+    if(navigator.onLine===false)throw Error('Vérifie ta connexion Internet, puis réessaie.');
+    if(accountChangeNonceRequired&&!nonce)throw Error('Saisis le code de vérification reçu par e-mail.');
+    // Verify through a separate transient session: the project's current-password
+    // requirement may be disabled. Never replace or persist the budget session.
+    const verifier=supabase.createClient(window.CLAIR_ACCOUNT_CONFIG.url,window.CLAIR_ACCOUNT_CONFIG.key,{auth:{storageKey:'clair-password-check-'+crypto.randomUUID(),persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+    let temporarySession=false;
+    try{
+      const checked=await verifier.auth.signInWithPassword({email:cloud.user.email,password:currentPassword});
+      temporarySession=Boolean(checked.data?.session);
+      if(checked.error){
+        if(checked.error.code==='invalid_credentials')throw Error('Le mot de passe actuel est incorrect.');
+        if(checked.error.status===429)throw Error('Trop de tentatives. Attends un moment avant de réessayer.');
+        throw Error('Le mot de passe actuel n’a pas pu être vérifié. Vérifie ta connexion, puis réessaie.');
+      }
+      if(checked.data?.user?.id!==accountChangeUserId)throw Error('La vérification du compte n’a pas abouti. Rouvre les réglages.');
+    }finally{if(temporarySession)try{await verifier.auth.signOut({scope:'local'});}catch{}}
+    if(!passwordChangeActive())return;
+    // The vendored SDK forwards attributes unchanged: Auth expects current_password.
+    const {error}=await cloud.client.auth.updateUser({password,current_password:currentPassword,...(accountChangeNonceRequired?{nonce}:{})});
+    if(!passwordChangeActive())return;
+    if(error){
+      if(error.code==='reauthentication_needed'){
+        accountChangeNonceRequired=true;$('#account-change-verification').hidden=false;
+        $('#account-change-password-form input[name="nonce"]').required=true;
+        await sendPasswordVerification();return;
+      }
+      if(error.code==='reauthentication_not_valid')throw Error('Ce code est incorrect ou expiré. Vérifie-le ou demande un nouveau code.');
+      if(['invalid_credentials','current_password_mismatch'].includes(error.code))throw Error('Le mot de passe actuel est incorrect.');
+      if(error.code==='current_password_required')throw Error('Indique ton mot de passe actuel, puis réessaie.');
+      if(error.code==='same_password')throw Error('Choisis un mot de passe différent du précédent.');
+      if(error.code==='weak_password')throw Error('Ce mot de passe est trop facile à deviner. Choisis une phrase plus longue.');
+      if(['session_not_found','refresh_token_not_found','refresh_token_already_used','bad_jwt','user_not_found'].includes(error.code))throw Error('Ta session a expiré. Reconnecte-toi, puis réessaie.');
+      if(error.status===429)throw Error('Trop de demandes. Attends un moment avant de réessayer.');
+      throw Error('Le mot de passe n’a pas pu être enregistré. Vérifie ta connexion, puis réessaie.');
+    }
+    form.reset();accountChangeUserId=null;
+    dialog('Mot de passe modifié','<p role="status">Ton nouveau mot de passe est enregistré.</p><button class="button primary" data-action="close">Revenir à mes réglages</button>','account-change-done');
   }
   function accountStatus(){return {loading:'Connexion…','signed-out':'Connexion requise',synced:'Synchronisé',pending:'À synchroniser',offline:'Hors ligne · enregistré ici',error:'Synchronisation à reprendre',conflict:'Deux copies à départager'}[cloud.status]||'Sur cet appareil';}
   function renderAccountStatus(){
@@ -143,15 +209,17 @@
     if(accountBusy)return;accountBusy=true;const button=form.querySelector('button[type=submit]');if(button)button.disabled=true;
     accountMessage('');if(form.id==='account-forgot-form')resetCooldown();
     try{
-      const f=new FormData(form),email=String(f.get('email')||'').trim(),password=String(f.get('password')||'');
+      const f=new FormData(form),email=String(f.get('email')||'').trim().toLowerCase(),password=String(f.get('password')||'');
       if(form.id==='account-form'){
         const guard=attempts();if(guard.until>Date.now())throw Error('Attends une minute avant de réessayer.');
         const signup=form.dataset.mode==='signup';let response;
         if(signup){
           const name=String(f.get('displayName')||'').trim();if(!name||name.length>64||password.length<12)throw Error('Indique ton prénom et un mot de passe d’au moins 12 caractères.');
+          accountResetEmail=email;
           response=await cloud.client.auth.signUp({email,password,options:{data:{display_name:name},emailRedirectTo:location.origin+location.pathname}});
         }else response=await cloud.client.auth.signInWithPassword({email,password});
         if(response.error){
+          if(signup&&['user_already_exists','email_exists'].includes(response.error.code)){accountSignupResult='exists';render();return;}
           if(response.error.code==='invalid_credentials'){
             const count=(guard.until&&guard.until<=Date.now()?0:Number(guard.count)||0)+1;
             localStorage.setItem('clair-auth-attempts-v1',JSON.stringify({count,until:count>=3?Date.now()+60000:0}));
@@ -162,10 +230,11 @@
           throw Error('Connexion indisponible. Vérifie ta connexion Internet et réessaie.');
         }
         localStorage.removeItem('clair-auth-attempts-v1');
-        if(signup&&!response.data.session){form.reset();accountMessage('Vérifie tes e-mails pour confirmer ton compte, puis connecte-toi ici.');return;}
+        if(signup&&!response.data.session){accountSignupResult='confirmation';render();return;}
         await cloud.attach(response.data.user||response.data.session?.user);
       }
       if(form.id==='account-forgot-form')await sendRecovery(email);
+      if(form.id==='account-change-password-form')await changePassword(form,f,password);
       if(form.id==='account-password-form'){
         if(!accountRecoveryUserId||cloud.user?.id!==accountRecoveryUserId){accountResetStep='expired';render();focusRecovery();return;}
         if(password.length<12||password.length>128)throw Error('Utilise entre 12 et 128 caractères.');
@@ -202,7 +271,21 @@
     dialog('Deux copies de ton budget',`<p>Choisis celle à conserver pour tous tes appareils. Télécharge les deux copies avant de choisir si tu souhaites les comparer.</p><div class="actions"><button class="button" data-action="account-export-device">Sauvegarder cette copie</button>${cloud.conflict.remote?'<button class="button" data-action="account-export-online">Sauvegarder la copie en ligne</button>':''}</div><div class="actions"><button class="button primary" data-action="account-keep-device">Garder cet appareil</button>${cloud.conflict.remote?'<button class="button" data-action="account-keep-online">Garder la copie en ligne</button>':''}</div>`,'account-conflict');
   }
   async function accountAction(action){
-    if(action==='account-mode'){accountMode=accountMode==='login'?'signup':'login';render();}
+    if(action==='account-mode'||action==='account-login'||action==='account-signup-edit'){
+      if(accountBusy)return;
+      accountResetEmail=$('#account-form input[name="email"]')?.value?.trim().toLowerCase()||accountResetEmail;
+      accountMode=action==='account-login'?'login':action==='account-signup-edit'?'signup':accountMode==='login'?'signup':'login';
+      accountSignupResult=null;render();
+    }
+    if(action==='account-change-password'){if(!accountBusy)changePasswordDialog();}
+    if(action==='account-change-toggle'){
+      const inputs=$('#account-change-password-form')?.querySelectorAll('input[name="currentPassword"],input[name="password"],input[name="passwordConfirm"]');
+      if(inputs?.length){const show=inputs[0].type==='password';for(const input of inputs)input.type=show?'text':'password';const button=$('[data-action="account-change-toggle"]');button.textContent=show?'Masquer les mots de passe':'Afficher les mots de passe';button.setAttribute('aria-pressed',String(show));}
+    }
+    if(action==='account-change-resend'){
+      if(accountBusy)return;accountBusy=true;accountMessage('');
+      try{await sendPasswordVerification();}catch(error){accountMessage(error.message);}finally{accountBusy=false;}
+    }
     if(action==='account-forgot'||action==='account-reset-edit'){
       if(accountBusy)return;
       if(action==='account-forgot')accountResetEmail=$('#account-form input[name="email"]')?.value?.trim()||accountResetEmail;

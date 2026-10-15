@@ -273,8 +273,9 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 .password-toggle{display:block;margin-top:8px;min-height:44px;text-align:left}
 
 /* Decorative companion; all guidance remains accessible as text. */
-.mascot-pose{display:block;width:126px;aspect-ratio:512/683;background-image:url('assets/mascotte-poses.png');background-size:400% 100%;background-repeat:no-repeat;flex:none}
-.pose-0{background-position:0% 0}.pose-1{background-position:33.3333% 0}.pose-2{background-position:66.6667% 0}.pose-3{background-position:100% 0}
+.mascot-pose{display:block;width:126px;aspect-ratio:3/4;background-size:contain;background-position:center bottom;background-repeat:no-repeat;flex:none}
+.pose-0{background-image:url('assets/mascotte/01-bienvenue.png')}.pose-1{background-image:url('assets/mascotte/04-prevision-tendue.png')}.pose-2{background-image:url('assets/mascotte/03-vigilance.png')}.pose-3{background-image:url('assets/mascotte/02-serenite.png')}.pose-4{background-image:url('assets/mascotte/05-solde-zero.png')}.pose-5{background-image:url('assets/mascotte/06-solde-negatif-v2.webp')}
+#welcome .welcome-playing{background-image:url('assets/mascotte/01-bienvenue.webp')}
 .mascot-guide{display:flex;align-items:center;gap:18px;margin:16px 0 22px;padding:10px 18px;border:1px solid var(--line);border-radius:24px;background:var(--soft)}
 .mascot-copy{margin:0;line-height:1.5;color:var(--accent-text);font-size:15px;font-weight:600}
 .account-card .mascot-guide{justify-content:center}.account-card .mascot-pose{width:108px}
@@ -302,18 +303,18 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 .journal-companion .help{margin:0;line-height:1.5}.journal-companion-content>div{min-width:0}
 @media(max-width:720px){.balance-companion-row{grid-template-columns:minmax(0,1fr) 82px;gap:10px;margin-bottom:14px}.balance-section .balance-companion{width:82px}.balance-companion-row .balance{font-size:clamp(30px,8.7vw,52px)}.balance-companion-copy{font-size:12px;margin-top:8px}.journal-companion{padding:6px 12px;margin-bottom:16px}.journal-companion-content{gap:12px}.journal-companion-title{font-size:15px}}
 @media(max-width:380px){.balance-companion-row{grid-template-columns:minmax(0,1fr) 64px}.balance-section .balance-companion{width:64px}.journal-companion .mascot-pose{width:54px}}
-/* Mascot feedback uses the existing forecast states. */
+/* Static expressions follow the actual balance first, then its forecast. */
 .balance-companion-row{--companion-glow:rgba(160,197,255,.65);--companion-dot:#c4dbff}
 .balance-companion-row[data-mascot-state="covered"]{--companion-glow:rgba(112,239,180,.68);--companion-dot:#89f0be}
 .balance-companion-row[data-mascot-state="committed"]{--companion-glow:rgba(255,211,110,.65);--companion-dot:#ffd778}
 .balance-companion-row[data-mascot-state="shortfall"]{--companion-glow:rgba(255,126,146,.7);--companion-dot:#ff9bac}
+.balance-companion-row[data-mascot-state="zero"]{--companion-glow:rgba(255,211,110,.65);--companion-dot:#ffd778}
+.balance-companion-row[data-mascot-state="negative"]{--companion-glow:rgba(255,126,146,.7);--companion-dot:#ff9bac}
 .balance-companion-copy::before{content:"";display:inline-block;width:7px;height:7px;margin:0 7px 1px 0;border-radius:50%;background:var(--companion-dot);box-shadow:0 0 8px var(--companion-glow)}
-.balance-section .balance-companion{filter:drop-shadow(0 0 12px var(--companion-glow)) drop-shadow(0 8px 10px rgba(22,6,25,.18));transform-origin:center bottom;animation:companion-greet 1.8s ease-in-out 1}
-.journal-companion-content[data-mascot-state="saved"] .mascot-pose{filter:drop-shadow(0 0 8px rgba(54,185,118,.4));animation:companion-celebrate .7s ease-out 1}
+.balance-section .balance-companion{filter:drop-shadow(0 0 12px var(--companion-glow)) drop-shadow(0 8px 10px rgba(22,6,25,.18))}
+.journal-companion-content[data-mascot-state="saved"] .mascot-pose{filter:drop-shadow(0 0 8px rgba(54,185,118,.4))}
 .journal-companion-content[data-mascot-state="saved"] .journal-companion-title{color:var(--ok)}
-@keyframes companion-greet{0%,100%{transform:translateY(0) rotate(0)}40%{transform:translateY(-5px) rotate(-2deg)}70%{transform:translateY(-2px) rotate(1deg)}}
-@keyframes companion-celebrate{0%,100%{transform:translateY(0)}40%{transform:translateY(-7px)}70%{transform:translateY(-2px)}}
-@media(prefers-reduced-motion:reduce){.balance-section .balance-companion,.journal-companion-content[data-mascot-state="saved"] .mascot-pose{animation:none}}
+@media(prefers-reduced-motion:reduce){#welcome .welcome-playing{background-image:url('assets/mascotte/01-bienvenue.png')}}
 </style>
 </head>
 <body data-wall="plain">
@@ -762,6 +763,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   let accountMode='login',accountBusy=false,accountRecovery=recoveryParams.get('type')==='recovery',accountStarted=false;
   let accountResetStep=accountRecovery?'checking':recoveryError?'expired':null;
   let accountResetEmail='',accountResetUntil=0,accountRecoveryUserId=null,accountDeferredSetup=false,accountResetTimer=null;
+  let accountSignupResult=null,accountChangeUserId=null,accountChangeNonceRequired=false,accountChangeResendUntil=0;
   const cloud=new window.ClairCloud(window.CLAIR_ACCOUNT_CONFIG,{
     normalize: value=>E.normalize(value),
     status:()=>{
@@ -808,11 +810,76 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function accountGate(){
     if(!cloud.ready||cloud.status==='loading')return '<section class="card" id="account-loading"><h1>Ouverture de ton compte…</h1><p class="help">Ta copie locale est conservée.</p></section>';
     const signup=accountMode==='signup';
+    if(signup&&accountSignupResult)return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div>${mascot(1,'Retrouvons ton espace.')}<h1>${accountSignupResult==='exists'?'Tu as déjà un compte.':'Vérifie tes e-mails.'}</h1><p class="muted">${accountSignupResult==='exists'?'Cette adresse e-mail est déjà associée à un compte. Connecte-toi ou récupère ton mot de passe.':'Si cette adresse peut créer un compte, tu recevras un e-mail pour le confirmer. Si tu as déjà un compte, connecte-toi ou récupère ton mot de passe.'}</p><p class="recovery-email">${esc(accountResetEmail)}</p><p id="account-error" class="help negative" role="alert"></p><div class="recovery-actions"><button class="button primary" data-action="account-login">Me connecter</button><button class="button" data-action="account-forgot">Mot de passe oublié ?</button><button class="link" data-action="account-signup-edit">Corriger mon adresse</button></div></section>`;
     return `<section class="card account-card"><div class="brand-mark" aria-hidden="true">c</div>${mascot(signup?1:0,signup?"Préparons ton espace, à ton rythme.":"Heureuse de te retrouver.")}<h1>${signup?"Créons ton espace.":"Ton budget, partout."}</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}${signup?'<p class="help">12 caractères minimum. Ton adresse e-mail devra être confirmée.</p>':''}<p id="account-error" class="help negative" role="alert"></p><button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié ?</button>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
   }
   function accountCard(){
     if(!cloud.enabled||!cloud.user)return '';
-    return `<section class="card"><h2>Mon compte</h2><p>${esc(cloud.displayName||'Mon espace')}</p><p class="help">${esc(cloud.user.email)}</p><p class="help">${esc(accountStatus())}</p><div class="actions"><button class="button" data-action="account-sync" ${cloud.busy?'disabled':''}>Synchroniser</button><button class="link" data-action="account-logout">Me déconnecter</button></div><details class="settings-more"><summary>Ancien budget sur cet appareil</summary><p class="help">Le transfert demande confirmation et conserve une copie de secours.</p><button class="button" data-action="account-import">Transférer mon ancien budget</button></details></section>`;
+    return `<section class="card"><h2>Mon compte</h2><p>${esc(cloud.displayName||'Mon espace')}</p><p class="help">${esc(cloud.user.email)}</p><p class="help">${esc(accountStatus())}</p><div class="actions"><button class="button" data-action="account-change-password">Modifier mon mot de passe</button><button class="button" data-action="account-sync" ${cloud.busy?'disabled':''}>Synchroniser</button><button class="link" data-action="account-logout">Me déconnecter</button></div><details class="settings-more"><summary>Ancien budget sur cet appareil</summary><p class="help">Le transfert demande confirmation et conserve une copie de secours.</p><button class="button" data-action="account-import">Transférer mon ancien budget</button></details></section>`;
+  }
+  function changePasswordDialog(){
+    if(!cloud.user||!cloud.ready){notify('Connecte-toi à ton compte pour modifier ton mot de passe.');return;}
+    accountChangeUserId=cloud.user.id;accountChangeNonceRequired=false;accountChangeResendUntil=0;
+    dialog('Modifier mon mot de passe',`<p class="help">Pour ton compte ${esc(cloud.user.email)}.</p><form id="account-change-password-form">${field('Mot de passe actuel','currentPassword','','password','required maxlength="128" autocomplete="current-password"')}${field('Nouveau mot de passe','password','','password','required minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="account-change-help"')}${field('Confirmer le nouveau mot de passe','passwordConfirm','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}<button type="button" class="link password-toggle" data-action="account-change-toggle" aria-pressed="false">Afficher les mots de passe</button><p class="help" id="account-change-help">12 caractères minimum. Tu peux utiliser une phrase.</p><div id="account-change-verification" hidden><p class="help" id="account-change-code-help" role="status">Saisis le code de vérification reçu par e-mail.</p>${field('Code de vérification','nonce','','tel','autocomplete="one-time-code" inputmode="numeric" maxlength="16" aria-describedby="account-change-code-help"')}<button type="button" class="link" data-action="account-change-resend">Renvoyer le code</button></div>${formActions('Enregistrer mon mot de passe')}</form>`,'account-change-password');
+  }
+  function passwordChangeActive(){return modal?.kind==='account-change-password'&&accountChangeUserId===cloud.user?.id&&$('#dialog').open;}
+  async function sendPasswordVerification(){
+    if(!passwordChangeActive())return;
+    if(accountChangeResendUntil>Date.now())throw Error('Attends une minute avant de renvoyer le code.');
+    const {error}=await cloud.client.auth.reauthenticate();
+    if(!passwordChangeActive())return;
+    if(error){
+      if(error.status===429){accountChangeResendUntil=Date.now()+60000;throw Error('Trop de demandes. Attends un moment avant de réessayer.');}
+      throw Error('Le code n’a pas pu être envoyé. Vérifie ta connexion, puis réessaie.');
+    }
+    accountChangeResendUntil=Date.now()+60000;
+    $('#account-change-code-help').textContent='Un code de vérification a été envoyé par e-mail. Saisis-le pour enregistrer ton mot de passe.';
+    $('#account-change-password-form input[name="nonce"]')?.focus();
+  }
+  async function changePassword(form,f,password){
+    if(!passwordChangeActive())throw Error('Rouvre « Modifier mon mot de passe » depuis ton compte.');
+    const currentPassword=String(f.get('currentPassword')||''),confirmation=String(f.get('passwordConfirm')||''),nonce=String(f.get('nonce')||'').trim();
+    if(!currentPassword)throw Error('Indique ton mot de passe actuel.');
+    if(password.length<12||password.length>128)throw Error('Utilise entre 12 et 128 caractères pour le nouveau mot de passe.');
+    if(password!==confirmation)throw Error('Les deux nouveaux mots de passe ne correspondent pas.');
+    if(password===currentPassword)throw Error('Choisis un mot de passe différent du précédent.');
+    if(navigator.onLine===false)throw Error('Vérifie ta connexion Internet, puis réessaie.');
+    if(accountChangeNonceRequired&&!nonce)throw Error('Saisis le code de vérification reçu par e-mail.');
+    // Verify through a separate transient session: the project's current-password
+    // requirement may be disabled. Never replace or persist the budget session.
+    const verifier=supabase.createClient(window.CLAIR_ACCOUNT_CONFIG.url,window.CLAIR_ACCOUNT_CONFIG.key,{auth:{storageKey:'clair-password-check-'+crypto.randomUUID(),persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+    let temporarySession=false;
+    try{
+      const checked=await verifier.auth.signInWithPassword({email:cloud.user.email,password:currentPassword});
+      temporarySession=Boolean(checked.data?.session);
+      if(checked.error){
+        if(checked.error.code==='invalid_credentials')throw Error('Le mot de passe actuel est incorrect.');
+        if(checked.error.status===429)throw Error('Trop de tentatives. Attends un moment avant de réessayer.');
+        throw Error('Le mot de passe actuel n’a pas pu être vérifié. Vérifie ta connexion, puis réessaie.');
+      }
+      if(checked.data?.user?.id!==accountChangeUserId)throw Error('La vérification du compte n’a pas abouti. Rouvre les réglages.');
+    }finally{if(temporarySession)try{await verifier.auth.signOut({scope:'local'});}catch{}}
+    if(!passwordChangeActive())return;
+    // The vendored SDK forwards attributes unchanged: Auth expects current_password.
+    const {error}=await cloud.client.auth.updateUser({password,current_password:currentPassword,...(accountChangeNonceRequired?{nonce}:{})});
+    if(!passwordChangeActive())return;
+    if(error){
+      if(error.code==='reauthentication_needed'){
+        accountChangeNonceRequired=true;$('#account-change-verification').hidden=false;
+        $('#account-change-password-form input[name="nonce"]').required=true;
+        await sendPasswordVerification();return;
+      }
+      if(error.code==='reauthentication_not_valid')throw Error('Ce code est incorrect ou expiré. Vérifie-le ou demande un nouveau code.');
+      if(['invalid_credentials','current_password_mismatch'].includes(error.code))throw Error('Le mot de passe actuel est incorrect.');
+      if(error.code==='current_password_required')throw Error('Indique ton mot de passe actuel, puis réessaie.');
+      if(error.code==='same_password')throw Error('Choisis un mot de passe différent du précédent.');
+      if(error.code==='weak_password')throw Error('Ce mot de passe est trop facile à deviner. Choisis une phrase plus longue.');
+      if(['session_not_found','refresh_token_not_found','refresh_token_already_used','bad_jwt','user_not_found'].includes(error.code))throw Error('Ta session a expiré. Reconnecte-toi, puis réessaie.');
+      if(error.status===429)throw Error('Trop de demandes. Attends un moment avant de réessayer.');
+      throw Error('Le mot de passe n’a pas pu être enregistré. Vérifie ta connexion, puis réessaie.');
+    }
+    form.reset();accountChangeUserId=null;
+    dialog('Mot de passe modifié','<p role="status">Ton nouveau mot de passe est enregistré.</p><button class="button primary" data-action="close">Revenir à mes réglages</button>','account-change-done');
   }
   function accountStatus(){return {loading:'Connexion…','signed-out':'Connexion requise',synced:'Synchronisé',pending:'À synchroniser',offline:'Hors ligne · enregistré ici',error:'Synchronisation à reprendre',conflict:'Deux copies à départager'}[cloud.status]||'Sur cet appareil';}
   function renderAccountStatus(){
@@ -899,15 +966,17 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if(accountBusy)return;accountBusy=true;const button=form.querySelector('button[type=submit]');if(button)button.disabled=true;
     accountMessage('');if(form.id==='account-forgot-form')resetCooldown();
     try{
-      const f=new FormData(form),email=String(f.get('email')||'').trim(),password=String(f.get('password')||'');
+      const f=new FormData(form),email=String(f.get('email')||'').trim().toLowerCase(),password=String(f.get('password')||'');
       if(form.id==='account-form'){
         const guard=attempts();if(guard.until>Date.now())throw Error('Attends une minute avant de réessayer.');
         const signup=form.dataset.mode==='signup';let response;
         if(signup){
           const name=String(f.get('displayName')||'').trim();if(!name||name.length>64||password.length<12)throw Error('Indique ton prénom et un mot de passe d’au moins 12 caractères.');
+          accountResetEmail=email;
           response=await cloud.client.auth.signUp({email,password,options:{data:{display_name:name},emailRedirectTo:location.origin+location.pathname}});
         }else response=await cloud.client.auth.signInWithPassword({email,password});
         if(response.error){
+          if(signup&&['user_already_exists','email_exists'].includes(response.error.code)){accountSignupResult='exists';render();return;}
           if(response.error.code==='invalid_credentials'){
             const count=(guard.until&&guard.until<=Date.now()?0:Number(guard.count)||0)+1;
             localStorage.setItem('clair-auth-attempts-v1',JSON.stringify({count,until:count>=3?Date.now()+60000:0}));
@@ -918,10 +987,11 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
           throw Error('Connexion indisponible. Vérifie ta connexion Internet et réessaie.');
         }
         localStorage.removeItem('clair-auth-attempts-v1');
-        if(signup&&!response.data.session){form.reset();accountMessage('Vérifie tes e-mails pour confirmer ton compte, puis connecte-toi ici.');return;}
+        if(signup&&!response.data.session){accountSignupResult='confirmation';render();return;}
         await cloud.attach(response.data.user||response.data.session?.user);
       }
       if(form.id==='account-forgot-form')await sendRecovery(email);
+      if(form.id==='account-change-password-form')await changePassword(form,f,password);
       if(form.id==='account-password-form'){
         if(!accountRecoveryUserId||cloud.user?.id!==accountRecoveryUserId){accountResetStep='expired';render();focusRecovery();return;}
         if(password.length<12||password.length>128)throw Error('Utilise entre 12 et 128 caractères.');
@@ -958,7 +1028,21 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     dialog('Deux copies de ton budget',`<p>Choisis celle à conserver pour tous tes appareils. Télécharge les deux copies avant de choisir si tu souhaites les comparer.</p><div class="actions"><button class="button" data-action="account-export-device">Sauvegarder cette copie</button>${cloud.conflict.remote?'<button class="button" data-action="account-export-online">Sauvegarder la copie en ligne</button>':''}</div><div class="actions"><button class="button primary" data-action="account-keep-device">Garder cet appareil</button>${cloud.conflict.remote?'<button class="button" data-action="account-keep-online">Garder la copie en ligne</button>':''}</div>`,'account-conflict');
   }
   async function accountAction(action){
-    if(action==='account-mode'){accountMode=accountMode==='login'?'signup':'login';render();}
+    if(action==='account-mode'||action==='account-login'||action==='account-signup-edit'){
+      if(accountBusy)return;
+      accountResetEmail=$('#account-form input[name="email"]')?.value?.trim().toLowerCase()||accountResetEmail;
+      accountMode=action==='account-login'?'login':action==='account-signup-edit'?'signup':accountMode==='login'?'signup':'login';
+      accountSignupResult=null;render();
+    }
+    if(action==='account-change-password'){if(!accountBusy)changePasswordDialog();}
+    if(action==='account-change-toggle'){
+      const inputs=$('#account-change-password-form')?.querySelectorAll('input[name="currentPassword"],input[name="password"],input[name="passwordConfirm"]');
+      if(inputs?.length){const show=inputs[0].type==='password';for(const input of inputs)input.type=show?'text':'password';const button=$('[data-action="account-change-toggle"]');button.textContent=show?'Masquer les mots de passe':'Afficher les mots de passe';button.setAttribute('aria-pressed',String(show));}
+    }
+    if(action==='account-change-resend'){
+      if(accountBusy)return;accountBusy=true;accountMessage('');
+      try{await sendPasswordVerification();}catch(error){accountMessage(error.message);}finally{accountBusy=false;}
+    }
     if(action==='account-forgot'||action==='account-reset-edit'){
       if(accountBusy)return;
       if(action==='account-forgot')accountResetEmail=$('#account-form input[name="email"]')?.value?.trim()||accountResetEmail;
@@ -1081,7 +1165,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     modal={kind,...state};$('#dialog').innerHTML=`<div class="dialog-inner"><div class="dialog-head"><h2 id="dialog-title">${title}</h2><button class="close" data-action="close" aria-label="Fermer">×</button></div>${kind==='wizard'?'':'<div id="form-error" class="notice error" role="alert"></div>'}${body}</div>`;
     if(!$('#dialog').open)$('#dialog').showModal();
   }
-  function close(){ modal=null;if($('#dialog').open)$('#dialog').close(); }
+  function close(){if(modal?.kind==='account-change-password'){$('#account-change-password-form')?.reset();accountChangeUserId=null;}modal=null;if($('#dialog').open)$('#dialog').close();}
   const formActions = (save='Enregistrer') => `<div class="dialog-actions"><button type="button" class="button" data-action="close">Annuler</button><button class="button primary" type="submit">${save}</button></div>`;
   const monthNav = () => `<div class="month-nav"><button data-action="month-prev" aria-label="Mois précédent">‹</button><span>${esc(monthLabel(month))}</span><button data-action="month-next" aria-label="Mois suivant">›</button></div>`;
   function txRow(t, controls=true) {const c=cat(t.categoryId);return `<div class="row"><span class="row-icon" aria-hidden="true">${t.type==='income'?'+':esc(c.icon)}</span><div class="row-info"><div class="row-name">${esc(t.name || c.label)}${t.autoKey?'<span class="badge">Auto</span>':''}${t.paymentConfirmed?'<span class="badge ok">Payé (confirmé par toi)</span>':''}</div><div class="row-meta">${esc(dateLabel(t.date))} · ${t.type==='income'?'Argent reçu':esc(c.label)}${t.corrected?' · corrigée':''}${t.earlyPaid?' · payé en avance pour le '+esc(dateLabel(t.autoKey.slice(-10))):''}${t.date>E.today()?' · à venir':''}${t.note?' · '+esc(t.note):''}</div></div><span class="row-amount ${t.type==='income'?'income':''}">${t.type==='income'?'+':'−'}${euro(t.amountCents)}</span>${controls?`<button class="button small" data-action="edit-tx" data-id="${esc(t.id)}" aria-label="Modifier ${esc(t.name)}">Modifier</button>`:''}</div>`;}
@@ -1103,13 +1187,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       <div class="pay-controls"><p class="pay-date">${esc(shortDate(c.dueDate))}</p><p class="pay-reminder">${reminder?icon('bell')+'Rappel dans Clair à J−2':'Rappel désactivé'}</p></div>
     </article>`;
   }
-  // Display-only states use the same forecast as the balance card; no extra thresholds.
-  function balanceCompanion(free,reserved,complete){
+  // Actual zero and negative balances take priority; no arbitrary low-balance threshold.
+  function balanceCompanion(balance,free,reserved,complete){
+    if(balance<0)return {pose:5,state:'negative',message:'Ton solde est négatif. Regardons ensemble ce qui peut t’aider.'};
+    if(balance===0)return {pose:4,state:'zero',message:'Ton solde est à zéro. Faisons le point à ton rythme.'};
     if(!complete)return {pose:1,state:'setup',message:'Termine tes habitudes pour préciser la prévision.'};
-    if(free<0)return {pose:2,state:'shortfall',message:'Regardons les dépenses prévues : il reste un manque à couvrir.'};
-    if(free===0)return {pose:1,state:'committed',message:'Tes dépenses prévues sont couvertes, sans marge pour le moment.'};
-    if(!reserved)return {pose:0,state:'unreserved',message:'Aucune dépense prévue d’ici la fin du mois selon tes réglages.'};
-    return {pose:0,state:'covered',message:'Tes dépenses prévues sont couvertes. Tu gardes une marge.'};
+    if(free<0)return {pose:1,state:'shortfall',message:'Regardons les dépenses prévues : il reste un manque à couvrir.'};
+    if(free===0)return {pose:2,state:'committed',message:'Tes dépenses prévues sont couvertes, sans marge pour le moment.'};
+    if(!reserved)return {pose:3,state:'unreserved',message:'Aucune dépense prévue d’ici la fin du mois selon tes réglages.'};
+    return {pose:3,state:'covered',message:'Tes dépenses prévues sont couvertes. Tu gardes une marge.'};
   }
   let journalFeedback=null,journalFeedbackTimer=null;
   function rememberJournalEntry(id){
@@ -1128,7 +1214,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function home() {
     if(!data.initialized)return `<div class="big-empty"><div class="brand-mark">c</div><h1>Clair</h1><p class="muted">Ton argent, simplement.</p><button class="button primary" data-action="setup">Configurer mon suivi</button><p class="help">Déjà une sauvegarde ?</p><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label></div>`;
     const now=E.today(), balance=E.balance(data), reserve=E.reserve(data), free=balance-reserve.cents, cards=E.upcoming(data);
-    const end=now.slice(0,7)+'-'+E.lastDay(now.slice(0,7)),companion=balanceCompanion(free,reserve.cents,data.setupDone);
+    const end=now.slice(0,7)+'-'+E.lastDay(now.slice(0,7)),companion=balanceCompanion(balance,free,reserve.cents,data.setupDone);
     return `<section class="balance-section" aria-labelledby="balance-title"><div class="balance-top"><h1 id="balance-title">Mon solde</h1><button class="icon-button" data-action="notifications" aria-label="Notifications" title="Notifications">${icon('bell')}</button></div><div class="balance-companion-row" data-mascot-state="${companion.state}"><div class="balance-readout"><div class="balance ${balance<0?'negative':''}">${euro(balance)}</div><p class="balance-companion-copy">${esc(companion.message)}</p></div><span class="mascot-pose pose-${companion.pose} balance-companion" aria-hidden="true"></span></div><details class="balance-help"><summary aria-label="Comprendre le solde calculé">Comment est-il calculé ?</summary><p>Aujourd’hui · solde de départ, opérations saisies et dépenses automatiques déjà comptées. Ce n’est pas un relevé bancaire.</p></details><div class="balance-summary"><div><h2>Dépenses prévues d’ici le ${esc(dateLabel(end))}</h2><strong>${euro(reserve.cents)}</strong></div><div class="forecast-result"><h2>${free<0?'Il manque':'Il restera'}</h2><strong class="${free<0?'negative':''}">${euro(Math.abs(free))}</strong><p>${free<0?'pour couvrir les dépenses prévues':'après les dépenses prévues'}</p></div></div><details class="balance-help"><summary>Voir le calcul</summary><p>${euro(balance)} de solde − ${euro(reserve.cents)} de dépenses prévues = ${euro(free)}.</p><p>Les dépenses prévues ne sont pas encore déduites. Les revenus à venir ne sont pas inclus.</p></details><div class="quick"><button class="button primary" data-action="add">${icon('plus')}Ajouter</button></div></section>`+
       (!data.setupDone?'<div class="notice">Tes anciennes données sont conservées. <button class="link" data-action="setup">Terminer la configuration</button></div>':'')+
       `<section class="payments" aria-labelledby="up-title"><div class="section-head"><h2 id="up-title">Paiements à venir</h2><button class="link" data-nav="rules">Mes habitudes</button></div>${cards.length?`<div class="shelf" tabindex="0" role="region" aria-label="Échéances, de la plus urgente à la plus lointaine">${cards.map(payCard).join('')}</div>`:'<p class="help">Aucune échéance de loyer ou d’abonnement à afficher.</p>'}<details class="settings-more"><summary>À propos des échéances</summary><p class="help">Les prochains paiements et les opérations à confirmer sont classés par date. Les opérations passées sont déjà comptées : confirmer leur paiement ne les déduit pas de nouveau.</p></details><button class="link" data-nav="budget">Voir mon bilan du mois ${icon('arrow')}</button></section>`;
@@ -1164,7 +1250,9 @@ async function installClair(){
 }
 async function downloadClair(){
  if(downloadBusy)return;downloadBusy=true;if(page==='settings')render();
- try{const response=await fetch(new URL('index.html',location.href),{cache:'no-cache'});if(!response.ok)throw Error('Téléchargement indisponible. Réessaie avec une connexion Internet.');let source=await response.text();if(!source.includes('root.ClairEngine =')||!source.includes('<html'))throw Error('Le fichier reçu ne correspond pas à Clair.');source=source.replace(/<link rel="(?:manifest|icon|apple-touch-icon)"[^>]*>/g,'');download(source,'Clair.html','text/html;charset=utf-8');notify('Clair téléchargé. Pour transférer tes dépenses, sauvegarde aussi tes données.');}catch(error){notify(error.message||'Téléchargement impossible. Réessaie en ligne.');}finally{downloadBusy=false;if(page==='settings')render();}
+ try{const response=await fetch(new URL('index.html',location.href),{cache:'no-cache'});if(!response.ok)throw Error('Téléchargement indisponible. Réessaie avec une connexion Internet.');let source=await response.text();if(!source.includes('root.ClairEngine =')||!source.includes('<html'))throw Error('Le fichier reçu ne correspond pas à Clair.');const assets=[...new Set([...source.matchAll(/url\('(?<asset>assets\/mascotte\/[^']+)'\)/g)].map(m=>m.groups.asset))];
+ for(const asset of assets){const image=await fetch(new URL(asset,location.href));if(!image.ok)throw Error('Une image manque au téléchargement. Réessaie en ligne.');const bytes=new Uint8Array(await image.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));source=source.split("url('"+asset+"')").join("url('data:image/"+(asset.endsWith('.webp')?'webp':'png')+';base64,'+btoa(binary)+"')");}
+ source=source.replace(/<link rel="(?:manifest|icon|apple-touch-icon)"[^>]*>/g,'');download(source,'Clair.html','text/html;charset=utf-8');notify('Clair téléchargé. Pour transférer tes dépenses, sauvegarde aussi tes données.');}catch(error){notify(error.message||'Téléchargement impossible. Réessaie en ligne.');}finally{downloadBusy=false;if(page==='settings')render();}
 }
 function settings(){const p=data.preferences;return heading('Clair','Réglages')+accountCard()+
 `<div class="settings-links"><button class="settings-link" data-nav="rules"><span>Mes habitudes<small>Repas et abonnements</small></span>${icon('arrow')}</button><button class="settings-link" data-nav="budget"><span>Budget et épargne<small>Mes repères du mois</small></span>${icon('arrow')}</button></div><div class="settings-grid settings-simple">
@@ -1193,7 +1281,7 @@ function paymentDetails(key){
   function readDays(f){return dayNames.map((_,i)=>f.get('day-'+i)?num(f.get('price-'+i)):0);}
   function beginSetup(){if(data.setupDone){close();page='rules';render();notify('Tes habitudes sont déjà configurées. Tu peux les modifier ici.');return;}wizard={step:0,existing:data.initialized,balance:amount(data.openingCents),start:nextDay(),days:[0,300,300,300,300,300,0],meals:false,charges:data.fixedExpenses.map(x=>({...x,enabled:false})),name:'Repas habituels'};wizardView();}
   function chargeFields(c,i){return `<div class="wizard-charge"><label class="check"><input name="charge-on-${i}" type="checkbox" ${c.enabled?'checked':''}>Compter automatiquement cette charge</label><div class="form-grid">${field('Nom','charge-name-'+i,c.name,'text','maxlength="100"')}${field('Montant (€)','charge-amount-'+i,c.amount?String(c.amount):'','text','inputmode="decimal"')}<label class="field"><span>Catégorie</span><select name="charge-category-${i}">${options(c.categoryId||'abonnements')}</select></label>${field('Premier jour du suivi','charge-start-'+i,c.start||wizard.start,'date',`min="${data.initialized?data.openingBalanceDate:E.today()}"`)}<label class="field"><span>Échéance chaque mois</span><select name="charge-day-${i}"><option value="last" ${c.day==='last'?'selected':''}>Dernier jour du mois</option>${Array.from({length:31},(_,n)=>`<option value="${n+1}" ${Number(c.day)===n+1?'selected':''}>Le ${n+1}</option>`).join('')}</select></label></div><button type="button" class="link" data-action="wizard-remove-charge" data-index="${i}">Retirer cette ligne</button></div>`;}
-  // Approved artwork: four poses displayed directly, without altering the illustration.
+  // Static artwork throughout the app; only the entry screen plays an animation.
   function mascot(pose,message){return `<div class="mascot-guide"><span class="mascot-pose pose-${pose}" aria-hidden="true"></span><p class="mascot-copy">${esc(message)}</p></div>`;}
   function wizardView(){const s=wizard.step;let body='';if(s===0)body=wizard.existing?`<p class="muted">Tes ${data.transactions.length} opérations et ton solde initial sont conservés. Ajoutons les habitudes qui te feront gagner du temps.</p><div class="notice">Les charges existantes ne deviendront automatiques que si tu les sélectionnes. Les règles déjà actives ne sont pas modifiées.</div>`:`<p class="muted">Combien as-tu réellement de disponible aujourd’hui, après tes dépenses déjà payées ?</p>${field('Mon solde actuel (€)','balance',wizard.balance==='0,00'?'':wizard.balance,'text','inputmode="decimal" required placeholder="Ex. 250,00"')}<p class="help">Le suivi démarre aujourd’hui. Par défaut, les automatismes commencent demain pour ne pas recompter ce que tu as déjà payé.</p>`;
     if(s===1)body=`<p class="muted">Quels jours prends-tu ton repas habituel ? Tu peux fixer un montant différent pour chaque jour.</p><label class="check"><input name="meals" type="checkbox" ${wizard.meals?'checked':''}>Activer les repas automatiques</label>${dayFields(wizard.days)}${field('Commencer les repas le','start',wizard.start,'date',`min="${data.initialized?data.openingBalanceDate:E.today()}" required`)}<p class="help">Les jours décochés ne coûtent rien. Les jours cochés sont comptés automatiquement à partir de cette date.</p>`;
@@ -1333,7 +1421,7 @@ function submitCharge(f){
     if(el.id==='kind-filter')journalResults();if(el.id==='rule-kind'){const f=new FormData($('#rule-form')),r=data.rules.find(r=>r.id===modal.id),kind=el.value;openRule(r,kind,{name:String(f.get('name')),categoryId:String(f.get('categoryId')),kind,start:String(f.get('start')),amountCents:f.get('amount')?num(f.get('amount'),true):0,amounts:[0,300,300,300,300,300,0],day:f.get('day')||'last',month:f.get('month')||1});}
   }catch(e){if($('#form-error')&&$('#dialog').open)$('#form-error').textContent=e.message;else{notify(e.message);render();}}});
   // A previous native close event can arrive after this dialog has reopened.
-  $('#dialog').addEventListener('close',()=>{if(!$('#dialog').open)modal=null;});
+  $('#dialog').addEventListener('close',()=>{if(!$('#dialog').open){if(modal?.kind==='account-change-password'){$('#account-change-password-form')?.reset();accountChangeUserId=null;}modal=null;}});
   window.addEventListener('storage',event=>{if(event.key!==KEY)return;if(cloud.enabled&&cloud.user){try{cloud.record=cloud.decode(event.newValue,cloud.user.id);}catch(error){notify(error.message);return;}} try{snapshot=event.newValue;data=snapshot?E.normalize(JSON.parse(snapshot)):E.empty();loadError=null;close();render();notify('Données actualisées depuis un autre onglet.');}catch(e){loadError=e.message;rawRecovery=event.newValue||'';render();}});
   document.addEventListener('visibilitychange',async()=>{if(!document.hidden){if(cloud.enabled&&cloud.user)await cloud.sync();catchUp();render();}});
   window.addEventListener('online',()=>cloud.sync());
@@ -1350,14 +1438,18 @@ function submitCharge(f){
     const ready=()=>{if(cloud.enabled){if(!accountStarted){accountStarted=true;cloud.init().catch(()=>{cloud.ready=true;cloud.status='error';cloud.error='Connexion indisponible. Réessaie.';render();});}}else if(!loadError&&!data.initialized)beginSetup();};
     let seen=false;try{seen=sessionStorage.getItem('clair-welcome-v1')==='1';sessionStorage.setItem('clair-welcome-v1','1');}catch(_){}
     if(accountResetStep||seen||matchMedia('(prefers-reduced-motion: reduce)').matches){ready();return;}
-    let timer;intro.addEventListener('close',()=>{clearTimeout(timer);ready();},{once:true});
+    let timer;const pose=$('#welcome .mascot-pose');
+    const stop=()=>{clearTimeout(timer);pose.classList.remove('welcome-playing');};
+    intro.addEventListener('close',()=>{stop();ready();},{once:true});
     let newcomer=!data.initialized;
     try{if(localStorage.getItem('clair-account-session-v1'))newcomer=false;}catch(_){}
     $('#welcome-skip').textContent=newcomer&&cloud.enabled?'Créer mon compte':'Ouvrir Clair';
     $('#welcome-login').hidden=!newcomer||!cloud.enabled;
     $('#welcome-skip').addEventListener('click',()=>{if(newcomer&&cloud.enabled)accountMode='signup';intro.close();render();},{once:true});
     $('#welcome-login').addEventListener('click',()=>{accountMode='login';intro.close();render();},{once:true});
-    intro.showModal();if(!newcomer)timer=setTimeout(()=>{if(intro.open)intro.close();},1600);
+    pose.classList.add('welcome-playing');intro.showModal();
+    timer=setTimeout(()=>{stop();if(!newcomer&&intro.open)intro.close();},2000);
+    matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',event=>{if(event.matches)stop();});
   }
   welcome();
   if(!loadError&&data.initialized)syncPush();

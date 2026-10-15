@@ -7,7 +7,7 @@ const node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',style:{
 const flushClose=()=>{while(closeTasks.length)closeTasks.shift()();};
 const click=(action,extra={})=>events.click({target:{closest:()=>({dataset:{action,...extra}})}});
 let payloads=[],notifications=[],fetched=[];
-const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{protocol:'https:',href:'https://example.test/clair/'},navigator:{userAgent:'iPhone',platform:'iPhone',maxTouchPoints:5},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener:(type,fn)=>{events[type]=fn;}},fetch:async url=>{fetched.push(String(url));return {ok:true,text:async()=>html};}};
+const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{protocol:'https:',href:'https://example.test/clair/'},navigator:{userAgent:'iPhone',platform:'iPhone',maxTouchPoints:5},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener:(type,fn)=>{events[type]=fn;}},btoa:text=>Buffer.from(text,'binary').toString('base64'),fetch:async url=>{fetched.push(String(url));return {ok:true,text:async()=>html,arrayBuffer:async()=>new Uint8Array([1,2,3]).buffer};}};
 sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;
 vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
 let ui=scripts[3];const boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert.ok(boot>0);
@@ -87,7 +87,8 @@ const form=o=>({get:k=>o[k]??null});
  await t.downloadClair();assert.equal(payloads.length,1);assert.equal(payloads[0].name,'Clair.html');assert.ok(payloads[0].body.includes('root.ClairEngine ='));
  assert.ok(!payloads[0].body.includes('Netflix & famille'));assert.ok(!payloads[0].body.includes('<link rel="manifest"'));
  assert.equal(fetched[0],'https://example.test/clair/index.html');assert.equal(t.busy().downloadBusy,false);
- console.log('PASS download uses clean app source, excludes user ledger and fixes old broken link');
+ assert.equal(fetched.length,8);assert.equal(new Set(fetched).size,8);assert.match(payloads[0].body,/url\('data:image\/webp;base64,/);assert.match(payloads[0].body,/url\('data:image\/png;base64,/);assert.doesNotMatch(payloads[0].body,/url\('assets\/mascotte\//);
+ console.log('PASS download embeds seven visual assets without the user ledger');
  await t.installClair();assert.match(node('#dialog').innerHTML,/Safari/);
  let prompts=0;t.setPrompt({prompt:async()=>{prompts++;},userChoice:Promise.resolve({outcome:'dismissed'})});await t.installClair();assert.equal(prompts,1);assert.equal(t.busy().installBusy,false);
  console.log('PASS iPhone install guidance and native prompt dismissal');
@@ -96,4 +97,3 @@ const form=o=>({get:k=>o[k]??null});
 })().catch(e=>{console.error(e);process.exitCode=1;});
 }
 runTests();
-

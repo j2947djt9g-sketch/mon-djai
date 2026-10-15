@@ -20,12 +20,12 @@ const prepared=c=>{const d=c.E.empty();d.initialized=d.setupDone=true;d.openingB
 const rent={id:'rent',name:'Loyer',categoryId:'logement',kind:'monthly',amountCents:60000,amounts:[],start:'2026-10-16',end:null,pauses:[],day:20,month:1,reminderEnabled:true};
 async function main(){
  const a=context(),d=prepared(a);d.rules.push(rent);
- for(const [opening,state,pose]of [[50000,'shortfall',2],[60000,'committed',1],[100000,'covered',0]]){
+ for(const [opening,state,pose]of [[50000,'shortfall',1],[60000,'committed',2],[100000,'covered',3],[0,'zero',4],[-1,'negative',5]]){
   d.openingCents=opening;a.t.setData(structuredClone(d));const before=JSON.stringify(a.t.getData()),view=a.t.home();
   assert.match(view,new RegExp('data-mascot-state="'+state+'"'));assert.match(view,new RegExp('pose-'+pose+' balance-companion'));
   assert.equal(a.E.reserve(a.t.getData()).cents,60000);assert.equal(JSON.stringify(a.t.getData()),before);
  }
- d.openingCents=-1;a.t.setData(structuredClone(d));assert.match(a.t.home(),/data-mascot-state="shortfall"/);
+ d.setupDone=false;d.openingCents=-1;a.t.setData(structuredClone(d));assert.match(a.t.home(),/data-mascot-state="negative"/);d.openingCents=0;a.t.setData(structuredClone(d));assert.match(a.t.home(),/data-mascot-state="zero"/);d.setupDone=true;
  d.openingCents=100000;d.rules=[];a.t.setData(structuredClone(d));assert.match(a.t.home(),/data-mascot-state="unreserved"/);
  d.setupDone=false;a.t.setData(d);assert.match(a.t.home(),/data-mascot-state="setup"/);
  console.log('PASS: forecast deficit despite positive balance, exact coverage, margin, negative balance, no scheduled expenses and incomplete setup; render does not mutate the budget');
