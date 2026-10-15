@@ -1,6 +1,6 @@
 # Clair — construction, architecture et exploitation
 
-- Date : 14 octobre 2026.
+- Date de mise à jour : 15 octobre 2026.
 - Base de référence : 1fde897568d24339e28db6a16f383760d13ab05e ; évolution mascotte décrite ci-dessous.
 - Ce document décrit le fonctionnement technique existant, les décisions prises et les limites vérifiées.
 - Produit : [PRD.md](PRD.md). Point d'entrée : [CONTEXTE.md](CONTEXTE.md). Sources exactes : [SOURCES.md](SOURCES.md).
@@ -314,3 +314,14 @@
 
 - _config.yml exclut clair/docs du rendu Jekyll : les exemples de code brut doivent rester des sources, sans interprétation Liquid.
 - Les quatre documents se consultent directement dans le dépôt GitHub.
+
+## Réactions visuelles de la mascotte — 15 octobre 2026
+
+- Base avant modification : 82384ef332f08c1e773c0a41ac34dafdd1527fa0 ; le correctif du paiement anticipé et les ajouts de mascotte quotidiens sont conservés.
+- CSS : variables de halo et repère de couleur sur balance-companion-row selon data-mascot-state. covered = vert, committed = jaune, shortfall = rouge ; setup et unreserved = neutre.
+- Les états suivent free = solde − dépenses prévues ; aucun seuil supplémentaire et aucune mutation du budget.
+- companion-greet dure 1,8 seconde, companion-celebrate 0,7 seconde ; une seule itération. prefers-reduced-motion: reduce désactive les deux animations.
+- Le titre de succès dans l’historique utilise --ok, déjà adapté aux thèmes clair et sombre.
+- Aucun changement de JavaScript, d’authentification, du modèle de données ou des tailles mobiles. Le service worker passe de v8 à v9.
+- Vérifications exécutées : test-mascot-daily.cjs (états, recherche, mois, filtres, annulation et stockage plein), test-local.cjs (paiement anticipé, fermeture différée et absence de double débit) et compilation des quatre scripts.
+- Aucun budget ou compte réel lu. Le contrôle visuel automatique n’a pas pu démarrer ; rendu navigateur et iPhone physique : [À CONFIRMER].

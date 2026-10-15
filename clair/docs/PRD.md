@@ -1,8 +1,8 @@
 # Clair — PRD : fonctionnement du produit
 
 - Référence : code du dépôt j2947djt9g-sketch/mon-djai, dossier clair/.
-- Version examinée : 1fde897568d24339e28db6a16f383760d13ab05e.
-- Date de ce dossier : 14 octobre 2026.
+- Base examinée avant cette retouche : 82384ef332f08c1e773c0a41ac34dafdd1527fa0.
+- Date de mise à jour : 15 octobre 2026.
 - Application : https://j2947djt9g-sketch.github.io/mon-djai/clair/
 - Lire d'abord [CONTEXTE.md](CONTEXTE.md). Architecture et données : [CONSTRUCTION.md](CONSTRUCTION.md). Code : [SOURCES.md](SOURCES.md).
 - Ce document décrit le produit existant et les demandes déjà acceptées. Il ne transforme pas une fonction préparée dans le code en service opérationnel.
@@ -187,3 +187,14 @@
 - La mascotte se réduit sur petit écran pendant la saisie ; les instructions restent du texte lisible.
 - Aucun appel à une IA : messages fixes et illustration décorative.
 - La dernière expression accompagne la vérification avant activation ; seul le succès de l’enregistrement active le suivi.
+
+## Mascotte au quotidien — 15 octobre 2026
+
+- Présente à côté du solde et dans l’historique ; les messages décrivent les calculs existants.
+- Halo vert si les dépenses prévues laissent une marge, jaune si elles sont couvertes sans marge, rouge si la prévision montre un manque.
+- Halo neutre pour une configuration incomplète ou sans dépenses à venir ; aucune nouvelle limite financière arbitraire.
+- Un repère coloré accompagne le message écrit ; la couleur ne porte pas seule l’information.
+- Bref mouvement d’accueil et réaction de satisfaction après un enregistrement réussi dans l’historique. Pas d’animation continue.
+- Les mouvements sont désactivés lorsque l’appareil demande une réduction des animations.
+- Les expressions restent visibles lorsque les mouvements sont désactivés. Les dimensions mobiles et les deux sous-cartes de prévision sont conservées.
+- Tests de logique de la mascotte et du paiement anticipé réussis. Rendu navigateur automatique et essai iPhone physique : [À CONFIRMER].

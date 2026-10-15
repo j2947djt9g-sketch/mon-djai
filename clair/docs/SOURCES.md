@@ -1,6 +1,6 @@
 # Clair — sources brutes
 
-- Évolution mascotte du 15 octobre 2026, basée sur 1fde897568d24339e28db6a16f383760d13ab05e.
+- Évolution mascotte du 15 octobre 2026, reprise depuis 82384ef332f08c1e773c0a41ac34dafdd1527fa0.
 - Ce document reproduit les fichiers texte de l’application, à l’exception des quatre documents eux-mêmes.
 - Les empreintes SHA-256 permettent de comparer les copies. Les ressources binaires sont à récupérer dans le même commit du dépôt.
 - Dépôt : https://github.com/j2947djt9g-sketch/mon-djai/tree/main/clair
@@ -767,6 +767,73 @@ runTests();
 
 ````
 
+## clair/accounts/test-mascot-daily.cjs
+
+- SHA-256 : 5f21f52cf38a93b4096369caa00048508fe8eed66b03bc9a470e51967398481d
+- Taille : 6674 octets.
+
+````text
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto').webcrypto;
+const html=fs.readFileSync(__dirname+'/../index.html','utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+function context(){
+ let clock=Date.parse('2026-10-15T12:00:00Z'),failStorage=false;const storage=new Map(),nodes=new Map(),events={},timers=[];
+ class TestDate extends Date{constructor(...args){super(...(args.length?args:[clock]))}static now(){return clock}}
+ const node=selector=>{if(!nodes.has(selector))nodes.set(selector,{innerHTML:'',textContent:'',value:'',dataset:{},style:{},open:false,hidden:false,showModal(){this.open=true},close(){this.open=false},addEventListener(){},scrollIntoView(){},focus(){}});return nodes.get(selector)};
+ const sandbox={Intl,Date:TestDate,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,
+ setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length},clearTimeout(){},setInterval(){},
+ location:{protocol:'file:',href:'file:///clair/index.html'},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),
+ localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>{if(failStorage)throw Error('Quota exceeded');storage.set(k,v)},removeItem:k=>storage.delete(k)},
+ document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener:(type,fn)=>{events[type]=fn}},
+ FormData:class{constructor(form){this.values=form.values}get(key){return this.values[key]??null}}};
+ sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;
+ vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
+ const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);
+ vm.runInContext(scripts[3].slice(0,boot)+`window.test={home,journal,journalResults,balanceCompanion,render,openTx,feedback:()=>journalFeedback,setData(d){data=d;snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot)},getData:()=>data,setPage:p=>{page=p},setMonth:m=>{month=m}};})();`,sandbox);
+ return {E:sandbox.ClairEngine,t:sandbox.test,node,events,timers,advance:ms=>clock+=ms,failStorage:()=>{failStorage=true}};
+}
+const prepared=c=>{const d=c.E.empty();d.initialized=d.setupDone=true;d.openingBalanceDate='2026-10-15';d.openingCents=50000;return d};
+const rent={id:'rent',name:'Loyer',categoryId:'logement',kind:'monthly',amountCents:60000,amounts:[],start:'2026-10-16',end:null,pauses:[],day:20,month:1,reminderEnabled:true};
+async function main(){
+ const a=context(),d=prepared(a);d.rules.push(rent);
+ for(const [opening,state,pose]of [[50000,'shortfall',2],[60000,'committed',1],[100000,'covered',0]]){
+  d.openingCents=opening;a.t.setData(structuredClone(d));const before=JSON.stringify(a.t.getData()),view=a.t.home();
+  assert.match(view,new RegExp('data-mascot-state="'+state+'"'));assert.match(view,new RegExp('pose-'+pose+' balance-companion'));
+  assert.equal(a.E.reserve(a.t.getData()).cents,60000);assert.equal(JSON.stringify(a.t.getData()),before);
+ }
+ d.openingCents=-1;a.t.setData(structuredClone(d));assert.match(a.t.home(),/data-mascot-state="shortfall"/);
+ d.openingCents=100000;d.rules=[];a.t.setData(structuredClone(d));assert.match(a.t.home(),/data-mascot-state="unreserved"/);
+ d.setupDone=false;a.t.setData(d);assert.match(a.t.home(),/data-mascot-state="setup"/);
+ console.log('PASS: forecast deficit despite positive balance, exact coverage, margin, negative balance, no scheduled expenses and incomplete setup; render does not mutate the budget');
+ const b=context();b.t.setData(prepared(b));b.t.setPage('journal');b.t.render();
+ assert.match(b.node('#journal-companion').innerHTML,/Ton historique commence ici/);assert.equal(b.node('#journal-results').hidden,true);
+ b.node('#search').value='anything';b.t.journalResults();assert.match(b.node('#journal-companion').innerHTML,/data-mascot-state="filtered"/);
+ b.node('#search').value='';b.node('#kind-filter').value='';
+ b.t.openTx(null,'expense','loisirs');
+ const form={id:'tx-form',closest:()=>true,values:{date:'2026-10-15',name:'<img src=x onerror=alert(1)>',amount:'12,50',categoryId:'loisirs',note:''}};
+ await b.events.submit({target:form,preventDefault(){}});
+ assert.equal(b.t.getData().transactions.length,1);assert.equal(b.E.balance(b.t.getData()),48750);
+ assert.match(b.node('#journal-companion').innerHTML,/data-mascot-state="saved"/);assert.match(b.node('#journal-companion').innerHTML,/pose-3/);
+ assert.match(b.node('#journal-results').innerHTML,/&lt;img/);assert.doesNotMatch(b.node('#journal-results').innerHTML,/<img src=x/);
+ b.node('#search').value='no matching operation';b.t.journalResults();assert.doesNotMatch(b.node('#journal-companion').innerHTML,/state="saved"/);
+ b.node('#search').value='';b.node('#kind-filter').value='income';b.t.journalResults();assert.doesNotMatch(b.node('#journal-companion').innerHTML,/state="saved"/);
+ b.node('#kind-filter').value='all';b.t.setMonth('2026-09');b.t.journalResults();assert.match(b.node('#journal-companion').innerHTML,/Aucune opération ce mois-ci/);
+ b.t.setMonth('2026-10');b.t.journalResults();assert.match(b.node('#journal-companion').innerHTML,/state="saved"/);
+ b.advance(4501);b.timers.find(x=>x.ms===4500).fn();assert.equal(b.t.feedback(),null);assert.match(b.node('#journal-companion').innerHTML,/state="entries"/);
+ b.node('#search').value='keep my search';b.t.journalResults();assert.equal(b.node('#search').value,'keep my search');
+ console.log('PASS: empty history, successful saved entry, escaped text, search/type/month filters and expiration preserve the journal controls');
+ const c=context();c.t.setData(prepared(c));c.t.setPage('journal');c.t.render();c.t.openTx(null,'expense','loisirs');c.failStorage();
+ await c.events.submit({target:{...form,values:{...form.values,name:'Courses'}},preventDefault(){}});
+ assert.equal(c.t.getData().transactions.length,0);assert.equal(c.t.feedback(),null);assert.doesNotMatch(c.node('#journal-companion').innerHTML,/state="saved"/);
+ const e=context();e.t.setData(prepared(e));e.t.setPage('journal');e.t.render();e.t.openTx(null,'expense','loisirs');
+ await e.events.submit({target:{...form,values:{...form.values,name:'Courses'}},preventDefault(){}});
+ await e.events.click({target:{closest:()=>({dataset:{action:'undo'}})}});
+ assert.equal(e.t.getData().transactions.length,0);assert.match(e.node('#journal-companion').innerHTML,/state="empty"/);
+ console.log('PASS: storage failure never celebrates; undo removes both the entry and its success reaction');
+}
+main().catch(error=>{console.error(error);process.exitCode=1});
+
+````
+
 ## clair/accounts/test-mascot.cjs
 
 - SHA-256 : 41ea02951f706cf4a837532c16d78c0855d2606f4830d3cf22e8db2c8ae4b2cb
@@ -1002,8 +1069,8 @@ rollback;
 
 ## clair/index.html
 
-- SHA-256 : eda4aeee4dcdab26ac653f76804dd1dce6a41c16d12cbfc790aa4a99d0d80324
-- Taille : 355699 octets.
+- SHA-256 : 9aec02ce307bd56eedec3f455b43f3bf7f4f8d7f0614a0805adb94dc9ef791fa
+- Taille : 361697 octets.
 
 ````text
 <!doctype html>
@@ -1298,6 +1365,30 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 #welcome .welcome-credit{font-size:12px}
 @media(max-width:600px){.mascot-guide{gap:12px;padding:8px 12px}.mascot-pose{width:90px}.mascot-copy{font-size:14px}.account-card{margin:8px auto}.account-card h1{font-size:28px}.account-card:has(input:focus,select:focus,textarea:focus) .mascot-pose,dialog:has(input:focus,select:focus,textarea:focus) .mascot-pose{width:56px}.account-card:has(input:focus,select:focus,textarea:focus) .mascot-guide,dialog:has(input:focus,select:focus,textarea:focus) .mascot-guide{margin:8px 0;gap:10px}}
 @media(max-height:700px){#welcome{overflow-y:auto}#welcome .mascot-pose{width:110px}#welcome .welcome-content{gap:10px}}
+
+/* A compact companion beside the amount; forecasts and payment controls keep their place. */
+.balance-companion-row{display:grid;grid-template-columns:minmax(0,1fr) 112px;align-items:center;gap:18px;margin:8px 0 16px}
+.balance-readout{min-width:0}.balance-companion-row .balance{margin:0;line-height:1.12;font-size:clamp(36px,5.8vw,64px);overflow-wrap:anywhere}
+.balance-companion-copy{margin:10px 0 0;max-width:42ch;line-height:1.5;font-size:13px;color:#f5dfe9}
+.balance-section .balance-companion{width:112px;align-self:end;filter:drop-shadow(0 8px 10px rgba(22,6,25,.18))}
+.journal-companion{margin:-4px 0 20px;padding:6px 18px;border:1px solid var(--line);border-radius:22px;background:var(--soft)}
+.journal-companion-content{display:flex;align-items:center;gap:18px;min-height:96px}
+.journal-companion .mascot-pose{width:64px}.journal-companion-title{margin:0 0 5px;font-size:16px;font-weight:700;color:var(--ink)}
+.journal-companion .help{margin:0;line-height:1.5}.journal-companion-content>div{min-width:0}
+@media(max-width:720px){.balance-companion-row{grid-template-columns:minmax(0,1fr) 82px;gap:10px;margin-bottom:14px}.balance-section .balance-companion{width:82px}.balance-companion-row .balance{font-size:clamp(30px,8.7vw,52px)}.balance-companion-copy{font-size:12px;margin-top:8px}.journal-companion{padding:6px 12px;margin-bottom:16px}.journal-companion-content{gap:12px}.journal-companion-title{font-size:15px}}
+@media(max-width:380px){.balance-companion-row{grid-template-columns:minmax(0,1fr) 64px}.balance-section .balance-companion{width:64px}.journal-companion .mascot-pose{width:54px}}
+/* Mascot feedback uses the existing forecast states. */
+.balance-companion-row{--companion-glow:rgba(160,197,255,.65);--companion-dot:#c4dbff}
+.balance-companion-row[data-mascot-state="covered"]{--companion-glow:rgba(112,239,180,.68);--companion-dot:#89f0be}
+.balance-companion-row[data-mascot-state="committed"]{--companion-glow:rgba(255,211,110,.65);--companion-dot:#ffd778}
+.balance-companion-row[data-mascot-state="shortfall"]{--companion-glow:rgba(255,126,146,.7);--companion-dot:#ff9bac}
+.balance-companion-copy::before{content:"";display:inline-block;width:7px;height:7px;margin:0 7px 1px 0;border-radius:50%;background:var(--companion-dot);box-shadow:0 0 8px var(--companion-glow)}
+.balance-section .balance-companion{filter:drop-shadow(0 0 12px var(--companion-glow)) drop-shadow(0 8px 10px rgba(22,6,25,.18));transform-origin:center bottom;animation:companion-greet 1.8s ease-in-out 1}
+.journal-companion-content[data-mascot-state="saved"] .mascot-pose{filter:drop-shadow(0 0 8px rgba(54,185,118,.4));animation:companion-celebrate .7s ease-out 1}
+.journal-companion-content[data-mascot-state="saved"] .journal-companion-title{color:var(--ok)}
+@keyframes companion-greet{0%,100%{transform:translateY(0) rotate(0)}40%{transform:translateY(-5px) rotate(-2deg)}70%{transform:translateY(-2px) rotate(1deg)}}
+@keyframes companion-celebrate{0%,100%{transform:translateY(0)}40%{transform:translateY(-7px)}70%{transform:translateY(-2px)}}
+@media(prefers-reduced-motion:reduce){.balance-section .balance-companion,.journal-companion-content[data-mascot-state="saved"] .mascot-pose{animation:none}}
 </style>
 </head>
 <body data-wall="plain">
@@ -2087,11 +2178,33 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       <div class="pay-controls"><p class="pay-date">${esc(shortDate(c.dueDate))}</p><p class="pay-reminder">${reminder?icon('bell')+'Rappel dans Clair à J−2':'Rappel désactivé'}</p></div>
     </article>`;
   }
+  // Display-only states use the same forecast as the balance card; no extra thresholds.
+  function balanceCompanion(free,reserved,complete){
+    if(!complete)return {pose:1,state:'setup',message:'Termine tes habitudes pour préciser la prévision.'};
+    if(free<0)return {pose:2,state:'shortfall',message:'Regardons les dépenses prévues : il reste un manque à couvrir.'};
+    if(free===0)return {pose:1,state:'committed',message:'Tes dépenses prévues sont couvertes, sans marge pour le moment.'};
+    if(!reserved)return {pose:0,state:'unreserved',message:'Aucune dépense prévue d’ici la fin du mois selon tes réglages.'};
+    return {pose:0,state:'covered',message:'Tes dépenses prévues sont couvertes. Tu gardes une marge.'};
+  }
+  let journalFeedback=null,journalFeedbackTimer=null;
+  function rememberJournalEntry(id){
+    clearTimeout(journalFeedbackTimer);journalFeedback={id,until:Date.now()+4500};
+    if(page==='journal')journalResults();
+    journalFeedbackTimer=setTimeout(()=>{journalFeedback=null;if(page==='journal')journalResults();},4500);
+  }
+  function journalCompanion(list,filtered){
+    const saved=journalFeedback&&journalFeedback.until>Date.now()&&list.some(t=>t.id===journalFeedback.id);
+    let pose=1,title='Tes opérations, au même endroit.',copy='Retrouve tes dépenses et ajuste une opération si besoin.',state='entries';
+    if(saved){pose=3;title='Opération enregistrée.';copy='Elle apparaît dans ton historique.';state='saved';}
+    else if(!list.length&&filtered){pose=2;title='Aucun résultat pour cette sélection.';copy='Essaie un autre mot ou un autre filtre.';state='filtered';}
+    else if(!list.length){pose=0;title=data.transactions.length?'Aucune opération ce mois-ci.':'Ton historique commence ici.';copy=data.transactions.length?'Change de mois ou ajoute une opération.':'Ajoute une opération pour la retrouver ici.';state='empty';}
+    return `<div class="journal-companion-content" data-mascot-state="${state}"><span class="mascot-pose pose-${pose}" aria-hidden="true"></span><div><p class="journal-companion-title">${esc(title)}</p><p class="help">${esc(copy)}</p></div></div>`;
+  }
   function home() {
     if(!data.initialized)return `<div class="big-empty"><div class="brand-mark">c</div><h1>Clair</h1><p class="muted">Ton argent, simplement.</p><button class="button primary" data-action="setup">Configurer mon suivi</button><p class="help">Déjà une sauvegarde ?</p><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label></div>`;
     const now=E.today(), balance=E.balance(data), reserve=E.reserve(data), free=balance-reserve.cents, cards=E.upcoming(data);
-    const end=now.slice(0,7)+'-'+E.lastDay(now.slice(0,7));
-    return `<section class="balance-section" aria-labelledby="balance-title"><div class="balance-top"><h1 id="balance-title">Mon solde</h1><button class="icon-button" data-action="notifications" aria-label="Notifications" title="Notifications">${icon('bell')}</button></div><div class="balance ${balance<0?'negative':''}">${euro(balance)}</div><details class="balance-help"><summary aria-label="Comprendre le solde calculé">Comment est-il calculé ?</summary><p>Aujourd’hui · solde de départ, opérations saisies et dépenses automatiques déjà comptées. Ce n’est pas un relevé bancaire.</p></details><div class="balance-summary"><div><h2>Dépenses prévues d’ici le ${esc(dateLabel(end))}</h2><strong>${euro(reserve.cents)}</strong></div><div class="forecast-result"><h2>${free<0?'Il manque':'Il restera'}</h2><strong class="${free<0?'negative':''}">${euro(Math.abs(free))}</strong><p>${free<0?'pour couvrir les dépenses prévues':'après les dépenses prévues'}</p></div></div><details class="balance-help"><summary>Voir le calcul</summary><p>${euro(balance)} de solde − ${euro(reserve.cents)} de dépenses prévues = ${euro(free)}.</p><p>Les dépenses prévues ne sont pas encore déduites. Les revenus à venir ne sont pas inclus.</p></details><div class="quick"><button class="button primary" data-action="add">${icon('plus')}Ajouter</button></div></section>`+
+    const end=now.slice(0,7)+'-'+E.lastDay(now.slice(0,7)),companion=balanceCompanion(free,reserve.cents,data.setupDone);
+    return `<section class="balance-section" aria-labelledby="balance-title"><div class="balance-top"><h1 id="balance-title">Mon solde</h1><button class="icon-button" data-action="notifications" aria-label="Notifications" title="Notifications">${icon('bell')}</button></div><div class="balance-companion-row" data-mascot-state="${companion.state}"><div class="balance-readout"><div class="balance ${balance<0?'negative':''}">${euro(balance)}</div><p class="balance-companion-copy">${esc(companion.message)}</p></div><span class="mascot-pose pose-${companion.pose} balance-companion" aria-hidden="true"></span></div><details class="balance-help"><summary aria-label="Comprendre le solde calculé">Comment est-il calculé ?</summary><p>Aujourd’hui · solde de départ, opérations saisies et dépenses automatiques déjà comptées. Ce n’est pas un relevé bancaire.</p></details><div class="balance-summary"><div><h2>Dépenses prévues d’ici le ${esc(dateLabel(end))}</h2><strong>${euro(reserve.cents)}</strong></div><div class="forecast-result"><h2>${free<0?'Il manque':'Il restera'}</h2><strong class="${free<0?'negative':''}">${euro(Math.abs(free))}</strong><p>${free<0?'pour couvrir les dépenses prévues':'après les dépenses prévues'}</p></div></div><details class="balance-help"><summary>Voir le calcul</summary><p>${euro(balance)} de solde − ${euro(reserve.cents)} de dépenses prévues = ${euro(free)}.</p><p>Les dépenses prévues ne sont pas encore déduites. Les revenus à venir ne sont pas inclus.</p></details><div class="quick"><button class="button primary" data-action="add">${icon('plus')}Ajouter</button></div></section>`+
       (!data.setupDone?'<div class="notice">Tes anciennes données sont conservées. <button class="link" data-action="setup">Terminer la configuration</button></div>':'')+
       `<section class="payments" aria-labelledby="up-title"><div class="section-head"><h2 id="up-title">Paiements à venir</h2><button class="link" data-nav="rules">Mes habitudes</button></div>${cards.length?`<div class="shelf" tabindex="0" role="region" aria-label="Échéances, de la plus urgente à la plus lointaine">${cards.map(payCard).join('')}</div>`:'<p class="help">Aucune échéance de loyer ou d’abonnement à afficher.</p>'}<details class="settings-more"><summary>À propos des échéances</summary><p class="help">Les prochains paiements et les opérations à confirmer sont classés par date. Les opérations passées sont déjà comptées : confirmer leur paiement ne les déduit pas de nouveau.</p></details><button class="link" data-nav="budget">Voir mon bilan du mois ${icon('arrow')}</button></section>`;
   }
@@ -2103,8 +2216,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     (old.length?`<details><summary class="help">${old.length} ancienne${old.length>1?'s':''} règle${old.length>1?'s':''} — historique conservé</summary><div style="margin-top:14px">${old.map(r=>ruleCard(r,true)).join('')}</div></details>`:'')+
     (!data.setupDone?'<button class="button" data-action="setup">Terminer la configuration guidée</button>':'');}
   function ruleCard(r,archived=false){const susp=isSuspended(r);return `<section class="rule-card ${archived?'archived':''}"><div class="rule-head"><span class="row-icon" aria-hidden="true">${esc(cat(r.categoryId).icon)}</span><div class="row-info"><h3><button class="rule-title" data-action="edit-rule" data-id="${esc(r.id)}">${esc(r.name)}</button></h3><p class="help">${esc(ruleCopy(r))}</p></div><span class="badge">${archived?'Terminée':susp?'En pause':r.start>E.today()?'À venir':r.end?'Arrêt prévu':'Automatique'}</span></div><p class="schedule">À partir du ${esc(dateLabel(r.start))}${r.end?' · jusqu’au '+esc(dateLabel(r.end)):''}</p>${r.pauses.map((p,i)=>`<p class="help" style="margin:8px 0 0">Pause : ${esc(dateLabel(p.start))} → ${p.end===INFINITE?'jusqu’à reprise':esc(dateLabel(p.end))}${p.end>=nextDay()&&!archived?` <button class="link" data-action="resume" data-id="${esc(r.id)}" data-index="${i}">Reprendre dès demain</button>`:''}</p>`).join('')}${!archived?`<div class="rule-switches"><label class="switch"><input type="checkbox" role="switch" data-suspend="${esc(r.id)}" ${susp?'':'checked'}>${susp?'En pause · reprendre dès demain':'Active · suspendre dès demain'}</label>${r.kind!=='weekly'?`<label class="switch"><input type="checkbox" role="switch" data-reminder="${esc(r.id)}" ${r.reminderEnabled?'checked':''}>Rappel 2 jours avant</label>`:''}</div><div class="rule-actions"><button class="button small" data-action="edit-rule" data-id="${esc(r.id)}">Modifier</button><button class="button small" data-action="pause-rule" data-id="${esc(r.id)}">Vacances / pause</button><button class="button small" data-action="skip-today" data-id="${esc(r.id)}">Annuler aujourd’hui</button><button class="button small danger" data-action="stop-rule" data-id="${esc(r.id)}">Arrêter</button></div>`:''}</section>`;}
-  function journal(){return heading('Toutes tes opérations','Historique','Automatiques ou saisies, tes dépenses restent modifiables.',monthNav())+`<div class="toolbar"><label class="sr-only" for="search">Rechercher</label><input id="search" placeholder="Rechercher une opération…" maxlength="100"><label class="sr-only" for="kind-filter">Type d’opération</label><select id="kind-filter"><option value="all">Tout</option><option value="auto">Automatiques</option><option value="manual">Saisies</option><option value="income">Argent reçu</option></select><button class="button" data-action="expense">+ Dépense</button></div><section class="card" id="journal-results"></section>`;}
-  function journalResults(){const query=($('#search')?.value||'').toLocaleLowerCase('fr'),kind=$('#kind-filter')?.value||'all';const list=data.transactions.filter(t=>t.date.slice(0,7)===month && (!query || (t.name+' '+t.note+' '+cat(t.categoryId).label).toLocaleLowerCase('fr').includes(query)) && (kind==='all'||(kind==='auto'&&t.autoKey)||(kind==='manual'&&!t.autoKey)||(kind==='income'&&t.type==='income'))).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));$('#journal-results').innerHTML=list.length?list.map(t=>txRow(t)).join(''):'<div class="empty">Aucune opération pour cette sélection.</div>';}
+  function journal(){return heading('Toutes tes opérations','Historique','Automatiques ou saisies, tes dépenses restent modifiables.',monthNav())+`<div class="journal-companion" id="journal-companion" role="status" aria-live="polite" aria-atomic="true"></div><div class="toolbar"><label class="sr-only" for="search">Rechercher</label><input id="search" placeholder="Rechercher une opération…" maxlength="100"><label class="sr-only" for="kind-filter">Type d’opération</label><select id="kind-filter"><option value="all">Tout</option><option value="auto">Automatiques</option><option value="manual">Saisies</option><option value="income">Argent reçu</option></select><button class="button" data-action="expense">+ Dépense</button></div><section class="card" id="journal-results"></section>`;}
+  function journalResults(){const query=($('#search')?.value||'').toLocaleLowerCase('fr'),kind=$('#kind-filter')?.value||'all';const list=data.transactions.filter(t=>t.date.slice(0,7)===month && (!query || (t.name+' '+t.note+' '+cat(t.categoryId).label).toLocaleLowerCase('fr').includes(query)) && (kind==='all'||(kind==='auto'&&t.autoKey)||(kind==='manual'&&!t.autoKey)||(kind==='income'&&t.type==='income'))).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));$('#journal-results').innerHTML=list.length?list.map(t=>txRow(t)).join(''):'<div class="empty">Aucune opération pour cette sélection.</div>';$('#journal-results').hidden=!list.length;const guide=$('#journal-companion');if(guide)guide.innerHTML=journalCompanion(list,Boolean(query||kind!=='all'));}
   const budgetFor = categoryId => E.own(data.budgetOverrides[month]||{},categoryId)?E.cents(data.budgetOverrides[month][categoryId]):E.cents(data.budgets[categoryId]||0);
   function budget(){const list=data.transactions.filter(t=>t.date.slice(0,7)===month&&t.date<=E.today()),income=list.filter(t=>t.type==='income').reduce((n,t)=>n+t.amountCents,0),spent=list.filter(t=>t.type==='expense'&&t.categoryId!=='epargne').reduce((n,t)=>n+t.amountCents,0),savings=data.transactions.filter(t=>t.type==='expense'&&t.categoryId==='epargne'&&t.date<=E.today()).reduce((n,t)=>n+t.amountCents,0);const by=new Map();list.filter(t=>t.type==='expense'&&t.categoryId!=='epargne').forEach(t=>by.set(t.categoryId,(by.get(t.categoryId)||0)+t.amountCents));const ids=[...new Set([...Object.keys(data.budgets),...Object.keys(data.budgetOverrides[month]||{}),...by.keys()])].filter(k=>k!=='epargne');return heading('Tes repères','Chaque euro a sa place.','Les enveloppes servent de limites. Elles ne créent pas de dépenses.',monthNav())+`<div class="stat-grid"><div class="stat"><small>Reçu ce mois</small><strong>${euro(income)}</strong></div><div class="stat"><small>Dépensé ce mois</small><strong>${euro(spent)}</strong></div><div class="stat"><small>Épargne suivie</small><strong>${euro(savings)}</strong></div></div><div class="grid"><section class="card"><div class="section-head"><h2>Mes enveloppes</h2><button class="link" data-action="budget-edit">Ajouter</button></div>${ids.length?ids.map(k=>{const planned=budgetFor(k),used=by.get(k)||0;return `<div class="budget-row"><div class="budget-row-top"><strong>${esc(cat(k).label)}</strong><button class="link" data-action="budget-edit" data-id="${esc(k)}">${planned?euro(planned):'Définir'}</button></div><p>${euro(used)} dépensés${planned?' · <span class="'+(used>planned?'negative':'')+'">'+euro(planned-used)+' restants</span>':''}${E.own(data.budgetOverrides[month]||{},k)?' · ajustement de ce mois':''}</p>${planned?`<div class="progress ${used>planned?'over':''}"><span style="width:${Math.min(100,Math.round(used/planned*100))}%"></span></div>`:''}</div>`;}).join(''):'<p class="help">Fixe une limite pour l’alimentation, les loisirs ou une autre catégorie.</p>'}</section><section class="card soft"><h2>Petit à petit.</h2><p class="muted">Ton objectif d’épargne : <strong>${data.savingsGoal?euro(E.cents(data.savingsGoal)):'à définir'}</strong></p><div class="actions"><button class="button" data-action="savings-goal">Modifier l’objectif</button><button class="button primary" data-action="savings">+ Mettre de côté</button></div><p class="help" style="margin:18px 0 0">Une somme mise de côté est retirée du solde disponible. Elle reste suivie dans ton épargne.</p></section></div>`;}
   function pushSection(){
@@ -2274,7 +2387,7 @@ function submitCharge(f){
   document.addEventListener('submit',async event=>{const form=event.target;if(form.id.startsWith('account-')){event.preventDefault();await accountSubmit(form);return;}if(!form.closest('#dialog'))return;event.preventDefault();try{const f=new FormData(form);let success=false;
     if(form.id==='charge-flow-form'){submitCharge(f);return;}
     if(form.id==='wizard-form'){collectWizard();if(wizard.step<3){wizard.step++;wizardView();}else completeSetup();return;}
-    if(form.id==='tx-form'){const old=data.transactions.find(t=>t.id===modal.id),mode=modal.type,date=String(f.get('date'));if(!E.validDate(date)||date<data.openingBalanceDate)throw Error('La date doit être valide et ne pas précéder le début du suivi.');const tx={...(old||{}),id:old?.id||id('tx'),name:String(f.get('name')||'').trim(),type:mode,amountCents:num(f.get('amount')),date:old?.autoKey?old.date:date,categoryId:mode==='income'?'income':String(f.get('categoryId')),note:String(f.get('note')||'').trim(),autoKey:old?.autoKey||null,ruleId:old?.ruleId||null,corrected:Boolean(old?.autoKey),paymentConfirmed:Boolean(old?.paymentConfirmed),confirmedAt:old?.confirmedAt||null,earlyPaid:Boolean(old?.earlyPaid)};if(!tx.name)throw Error('Ajoute un nom.');success=commit(d=>{const i=d.transactions.findIndex(t=>t.id===tx.id);if(i>=0)d.transactions[i]=tx;else d.transactions.push(tx);},old?'Opération corrigée.':'Opération ajoutée.');if(success){const previous=old?structuredClone(old):null;notify(old?'Opération corrigée.':'Opération ajoutée.',()=>{const current=data.transactions.find(t=>t.id===tx.id);if(!current||JSON.stringify(current)!==JSON.stringify(tx)){notify('Cette opération a changé depuis. Vérifie-la dans Historique.');return;}commit(d=>{if(previous){const i=d.transactions.findIndex(t=>t.id===tx.id);if(i>=0)d.transactions[i]=previous;}else d.transactions=d.transactions.filter(t=>t.id!==tx.id);},'Saisie annulée.');});}}
+    if(form.id==='tx-form'){const old=data.transactions.find(t=>t.id===modal.id),mode=modal.type,date=String(f.get('date'));if(!E.validDate(date)||date<data.openingBalanceDate)throw Error('La date doit être valide et ne pas précéder le début du suivi.');const tx={...(old||{}),id:old?.id||id('tx'),name:String(f.get('name')||'').trim(),type:mode,amountCents:num(f.get('amount')),date:old?.autoKey?old.date:date,categoryId:mode==='income'?'income':String(f.get('categoryId')),note:String(f.get('note')||'').trim(),autoKey:old?.autoKey||null,ruleId:old?.ruleId||null,corrected:Boolean(old?.autoKey),paymentConfirmed:Boolean(old?.paymentConfirmed),confirmedAt:old?.confirmedAt||null,earlyPaid:Boolean(old?.earlyPaid)};if(!tx.name)throw Error('Ajoute un nom.');success=commit(d=>{const i=d.transactions.findIndex(t=>t.id===tx.id);if(i>=0)d.transactions[i]=tx;else d.transactions.push(tx);},old?'Opération corrigée.':'Opération ajoutée.');if(success){if(!old)rememberJournalEntry(tx.id);const previous=old?structuredClone(old):null;notify(old?'Opération corrigée.':'Opération ajoutée.',()=>{const current=data.transactions.find(t=>t.id===tx.id);if(!current||JSON.stringify(current)!==JSON.stringify(tx)){notify('Cette opération a changé depuis. Vérifie-la dans Historique.');return;}commit(d=>{if(previous){const i=d.transactions.findIndex(t=>t.id===tx.id);if(i>=0)d.transactions[i]=previous;}else d.transactions=d.transactions.filter(t=>t.id!==tx.id);},'Saisie annulée.');});}}
     if(form.id==='rule-form'){const old=data.rules.find(r=>r.id===modal.id),start=String(f.get('start')),kind=String(f.get('kind'));if(!E.validDate(start)||start<(old?nextDay():data.openingBalanceDate))throw Error('Choisis une date de début valide.');const amounts=kind==='weekly'?readDays(f):[],name=String(f.get('name')||'').trim();if(!name||(kind==='weekly'&&!amounts.some(n=>n>0)))throw Error('Donne un nom et choisis au moins un jour actif.');const revision={id:id('rule'),name,kind,start,end:old?.end&&old.end>=start?old.end:null,categoryId:String(f.get('categoryId')),amounts,amountCents:kind==='weekly'?0:num(f.get('amount')),day:f.get('day')==='last'?'last':Number(f.get('day')||1),month:Number(f.get('month')||1),pauses:old?old.pauses.filter(p=>p.end>=start).map(p=>({...p})):[],originFixedId:old?.originFixedId||null,reminderEnabled:kind==='weekly'?false:(old&&old.kind!=='weekly'?old.reminderEnabled:true)};if(old?.end&&start>old.end)throw Error('Cette règle s’arrête avant la date choisie. Crée une nouvelle règle pour la reprendre.');success=commit(d=>{if(old){const prev=d.rules.find(r=>r.id===old.id);if(start<=prev.start)d.rules=d.rules.filter(r=>r.id!==prev.id);else prev.end=E.addDays(start,-1);}d.rules.push(revision);d.setupDone=true;},'Règle enregistrée.');}
     if(form.id==='pause-form'){const start=String(f.get('start')),end=String(f.get('end')||'');if(!E.validDate(start)||start<nextDay()||(!modal.stop&&(!E.validDate(end)||end<start)))throw Error('Choisis des dates valides à partir de demain.');const rid=modal.id,stop=modal.stop;success=commit(d=>{const r=d.rules.find(r=>r.id===rid);if(stop){if(start<=r.start)d.rules=d.rules.filter(x=>x.id!==rid);else r.end=E.addDays(start,-1);}else r.pauses.push({start,end});},stop?'Arrêt programmé.':'Pause enregistrée.');}
     if(form.id==='budget-form'){const categoryId=String(f.get('categoryId')),scope=f.get('scope'),n=num(f.get('amount'),true)/100;success=commit(d=>{if(scope==='recurring'){if(n)d.budgets[categoryId]=n;else delete d.budgets[categoryId];}else{d.budgetOverrides[month]||={};if(scope==='reset')delete d.budgetOverrides[month][categoryId];else d.budgetOverrides[month][categoryId]=n;}},'Enveloppe enregistrée.');}
@@ -2407,13 +2520,13 @@ Base : public/clair.html de Clair, révision Lovable 2bf0524fe80750ceb995eb16bd6
 
 ## clair/sw.js
 
-- SHA-256 : c13d36d0aab6ab9ec44bbbc6053e4d12fa427a337256b95be38c4c3ba176859c
+- SHA-256 : 4e4367a429aca0247b6b61ea35d047c1f857dd1e05f3a76db64a11044a84b745
 - Taille : 1896 octets.
 
 ````text
 /* Offline shell scoped to Clair only; financial data is not cached. */
 const BASE=new URL('./',self.location.href);
-const CACHE='clair-github-'+BASE.pathname+'v7';
+const CACHE='clair-github-'+BASE.pathname+'v9';
 const ASSETS=['assets/mascotte-poses.png','index.html','manifest.webmanifest','icons/icon.svg','icons/icon-180.png','icons/icon-192.png','icons/icon-512.png'].map(p=>new URL(p,BASE).href);
 const HOME=new URL('index.html',BASE).href;
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
@@ -2444,3 +2557,8 @@ self.addEventListener('notificationclick',e=>{
 - clair/icons/icon-192.png
 - clair/icons/icon-512.png
 - Ces trois icônes PWA ne changent pas pour cette évolution.
+
+## Retouche des réactions — 15 octobre 2026
+
+- Halos selon la prévision et animations courtes respectant la réduction des mouvements.
+- Les copies index.html, sw.js et test-mascot-daily.cjs ci-dessus correspondent à cette reprise. Les ressources binaires sont conservées dans le dépôt.

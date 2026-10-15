@@ -302,6 +302,18 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 .journal-companion .help{margin:0;line-height:1.5}.journal-companion-content>div{min-width:0}
 @media(max-width:720px){.balance-companion-row{grid-template-columns:minmax(0,1fr) 82px;gap:10px;margin-bottom:14px}.balance-section .balance-companion{width:82px}.balance-companion-row .balance{font-size:clamp(30px,8.7vw,52px)}.balance-companion-copy{font-size:12px;margin-top:8px}.journal-companion{padding:6px 12px;margin-bottom:16px}.journal-companion-content{gap:12px}.journal-companion-title{font-size:15px}}
 @media(max-width:380px){.balance-companion-row{grid-template-columns:minmax(0,1fr) 64px}.balance-section .balance-companion{width:64px}.journal-companion .mascot-pose{width:54px}}
+/* Mascot feedback uses the existing forecast states. */
+.balance-companion-row{--companion-glow:rgba(160,197,255,.65);--companion-dot:#c4dbff}
+.balance-companion-row[data-mascot-state="covered"]{--companion-glow:rgba(112,239,180,.68);--companion-dot:#89f0be}
+.balance-companion-row[data-mascot-state="committed"]{--companion-glow:rgba(255,211,110,.65);--companion-dot:#ffd778}
+.balance-companion-row[data-mascot-state="shortfall"]{--companion-glow:rgba(255,126,146,.7);--companion-dot:#ff9bac}
+.balance-companion-copy::before{content:"";display:inline-block;width:7px;height:7px;margin:0 7px 1px 0;border-radius:50%;background:var(--companion-dot);box-shadow:0 0 8px var(--companion-glow)}
+.balance-section .balance-companion{filter:drop-shadow(0 0 12px var(--companion-glow)) drop-shadow(0 8px 10px rgba(22,6,25,.18));transform-origin:center bottom;animation:companion-greet 1.8s ease-in-out 1}
+.journal-companion-content[data-mascot-state="saved"] .mascot-pose{filter:drop-shadow(0 0 8px rgba(54,185,118,.4));animation:companion-celebrate .7s ease-out 1}
+.journal-companion-content[data-mascot-state="saved"] .journal-companion-title{color:var(--ok)}
+@keyframes companion-greet{0%,100%{transform:translateY(0) rotate(0)}40%{transform:translateY(-5px) rotate(-2deg)}70%{transform:translateY(-2px) rotate(1deg)}}
+@keyframes companion-celebrate{0%,100%{transform:translateY(0)}40%{transform:translateY(-7px)}70%{transform:translateY(-2px)}}
+@media(prefers-reduced-motion:reduce){.balance-section .balance-companion,.journal-companion-content[data-mascot-state="saved"] .mascot-pose{animation:none}}
 </style>
 </head>
 <body data-wall="plain">

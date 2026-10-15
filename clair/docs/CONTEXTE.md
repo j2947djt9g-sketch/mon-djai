@@ -109,3 +109,14 @@
 - Les fichiers présents dans ce dépôt sont la référence ; ce dossier docs/ contient les quatre documents actualisés.
 - Sources complètes dans SOURCES.md ; consulter seulement les fichiers utiles à la tâche.
 - Affichage sur iPhone physique : [À CONFIRMER].
+
+## Reprise et retouche des réactions — 15 octobre 2026
+
+- Les pièces jointes du 14 octobre étaient antérieures aux ajouts de mascotte de ce matin. La reprise est partie du dernier commit main vérifié : 82384ef332f08c1e773c0a41ac34dafdd1527fa0.
+- Choix confirmé par l’utilisateur : priorité à la mascotte.
+- Halos et repères vert/jaune/rouge liés aux états de prévision existants ; états incomplets ou sans dépenses à venir neutres.
+- Mouvements courts à l’accueil et lors d’une opération enregistrée, désactivés avec prefers-reduced-motion.
+- Modification CSS uniquement dans index.html ; les quatre scripts intégrés sont conservés. Service worker v9 pour renouveler la coque hors ligne.
+- test-mascot-daily.cjs et test-local.cjs réussis ; les quatre scripts intégrés compilent.
+- Le contrôle visuel automatique n’a pas pu démarrer dans cet environnement ; navigateur et iPhone physique restent à vérifier.
+- SOURCES.md contient le HTML et le service worker de cette retouche ainsi que le test quotidien de la mascotte.
