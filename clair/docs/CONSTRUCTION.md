@@ -309,3 +309,8 @@
 - test-mascot.cjs couvre les choix création/connexion, les sessions existantes, le mode local, la récupération et la préférence de réduction des animations.
 - Les six scripts Node passent. Les appels réseau des tests de comptes sont simulés ; aucun nouveau test sur des comptes réels pour cette retouche visuelle.
 - Le rendu sur un iPhone physique reste [À CONFIRMER].
+
+## Publication GitHub Pages
+
+- _config.yml exclut clair/docs du rendu Jekyll : les exemples de code brut doivent rester des sources, sans interprétation Liquid.
+- Les quatre documents se consultent directement dans le dépôt GitHub.

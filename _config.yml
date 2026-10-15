@@ -1,0 +1,3 @@
+# Keep the handoff sources in GitHub without rendering embedded application code.
+exclude:
+  - clair/docs
