@@ -1,10 +1,9 @@
-# Clair — sources brutes
+# Clair - sources brutes
 
-- Application documentée : révision 97b3b8290d382c32d10c76d6c0eaa88085b14b5b, publiée sur GitHub Pages.
-- Publication publique de ces documents autorisée par l’utilisateur le 16 octobre 2026.
-
-- Intégration validée du 15 octobre 2026 : bienvenue animée seule, images fixes et parcours de compte.
-- Base contrôlée : 4d6706fcab50033712da59c79c1d98adc77afa78.
+- Version décrite : fichiers de ce même commit ; base vérifiée avant cette retouche : fca3aec260f28288e585281af7841c4c7b5e6265.
+- Publication publique de ces documents autorisée par l'utilisateur le 16 octobre 2026.
+- Retouche validée le 16 octobre 2026 : mascotte plus grande et immédiatement à droite du solde, message dessous et cache v11.
+- Intégration précédente : bienvenue animée seule, images fixes et parcours de compte.
 - Fichiers texte exacts, sauf les quatre documents eux-mêmes. Ressources binaires décrites par empreinte, à récupérer dans le même commit.
 - Dépôt : https://github.com/j2947djt9g-sketch/mon-djai/tree/main/clair
 - [CONTEXTE.md](CONTEXTE.md), [PRD.md](PRD.md), [CONSTRUCTION.md](CONSTRUCTION.md).
@@ -1337,8 +1336,8 @@ Ressource binaire : récupérer dans ce même commit.
 
 ## clair/index.html
 
-- SHA-256 : 6a0a2497c4e537cc3012cb67a2a47f73f0c47a7ba51925be601c915e075c18a7
-- Taille : 372275 octets.
+- SHA-256 : 61fe2ef7eeb0774084147b9ae7c758dcd7ccf35fee4f9a8487414393a603ebd2
+- Taille : 373197 octets.
 
 ````text
 <!doctype html>
@@ -1636,16 +1635,18 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 @media(max-height:700px){#welcome{overflow-y:auto}#welcome .mascot-pose{width:110px}#welcome .welcome-content{gap:10px}}
 
 /* A compact companion beside the amount; forecasts and payment controls keep their place. */
-.balance-companion-row{display:grid;grid-template-columns:minmax(0,1fr) 112px;align-items:center;gap:18px;margin:8px 0 16px}
-.balance-readout{min-width:0}.balance-companion-row .balance{margin:0;line-height:1.12;font-size:clamp(36px,5.8vw,64px);overflow-wrap:anywhere}
-.balance-companion-copy{margin:10px 0 0;max-width:42ch;line-height:1.5;font-size:13px;color:#f5dfe9}
-.balance-section .balance-companion{width:112px;align-self:end;filter:drop-shadow(0 8px 10px rgba(22,6,25,.18))}
+.balance-companion-row{--companion-size:190px;--companion-gap:18px;margin:8px 0 16px}
+.balance-readout{display:flex;align-items:center;gap:var(--companion-gap);width:fit-content;max-width:100%;min-width:0}
+.balance-companion-row .balance{flex:0 1 auto;min-width:0;margin:0;line-height:1.12;font-size:clamp(36px,5.8vw,64px);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.balance-companion-copy{margin:8px 0 0;max-width:42ch;line-height:1.5;font-size:13px;color:#f5dfe9}
+.balance-section .balance-companion{width:var(--companion-size);flex:0 0 var(--companion-size);align-self:center;filter:drop-shadow(0 8px 10px rgba(22,6,25,.18))}
 .journal-companion{margin:-4px 0 20px;padding:6px 18px;border:1px solid var(--line);border-radius:22px;background:var(--soft)}
 .journal-companion-content{display:flex;align-items:center;gap:18px;min-height:96px}
 .journal-companion .mascot-pose{width:64px}.journal-companion-title{margin:0 0 5px;font-size:16px;font-weight:700;color:var(--ink)}
 .journal-companion .help{margin:0;line-height:1.5}.journal-companion-content>div{min-width:0}
-@media(max-width:720px){.balance-companion-row{grid-template-columns:minmax(0,1fr) 82px;gap:10px;margin-bottom:14px}.balance-section .balance-companion{width:82px}.balance-companion-row .balance{font-size:clamp(30px,8.7vw,52px)}.balance-companion-copy{font-size:12px;margin-top:8px}.journal-companion{padding:6px 12px;margin-bottom:16px}.journal-companion-content{gap:12px}.journal-companion-title{font-size:15px}}
-@media(max-width:380px){.balance-companion-row{grid-template-columns:minmax(0,1fr) 64px}.balance-section .balance-companion{width:64px}.journal-companion .mascot-pose{width:54px}}
+@media(min-width:721px) and (max-width:1100px){.balance-companion-row{--companion-size:150px;--companion-gap:16px}.balance-companion-row .balance{font-size:clamp(32px,4.8vw,52px)}.balance-companion-row.balance-long{--companion-size:130px}.balance-long .balance{font-size:clamp(26px,3.8vw,42px)}.balance-companion-row.balance-very-long{--companion-size:110px}.balance-very-long .balance{font-size:clamp(22px,3.2vw,34px)}}
+@media(max-width:720px){.balance-companion-row{--companion-size:110px;--companion-gap:16px;margin-bottom:14px}.balance-companion-row .balance{font-size:clamp(28px,8.7vw,52px)}.balance-companion-row.balance-long{--companion-size:88px}.balance-long .balance{font-size:clamp(24px,7vw,32px)}.balance-companion-row.balance-very-long{--companion-size:72px}.balance-very-long .balance{font-size:clamp(20px,5.4vw,26px)}.balance-companion-copy{font-size:12px;margin-top:8px}.journal-companion{padding:6px 12px;margin-bottom:16px}.journal-companion-content{gap:12px}.journal-companion-title{font-size:15px}}
+@media(max-width:380px){.balance-companion-row{--companion-size:100px;--companion-gap:14px}.journal-companion .mascot-pose{width:54px}}
 /* Static expressions follow the actual balance first, then its forecast. */
 .balance-companion-row{--companion-glow:rgba(160,197,255,.65);--companion-dot:#c4dbff}
 .balance-companion-row[data-mascot-state="covered"]{--companion-glow:rgba(112,239,180,.68);--companion-dot:#89f0be}
@@ -2558,7 +2559,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if(!data.initialized)return `<div class="big-empty"><div class="brand-mark">c</div><h1>Clair</h1><p class="muted">Ton argent, simplement.</p><button class="button primary" data-action="setup">Configurer mon suivi</button><p class="help">Déjà une sauvegarde ?</p><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label></div>`;
     const now=E.today(), balance=E.balance(data), reserve=E.reserve(data), free=balance-reserve.cents, cards=E.upcoming(data);
     const end=now.slice(0,7)+'-'+E.lastDay(now.slice(0,7)),companion=balanceCompanion(balance,free,reserve.cents,data.setupDone);
-    return `<section class="balance-section" aria-labelledby="balance-title"><div class="balance-top"><h1 id="balance-title">Mon solde</h1><button class="icon-button" data-action="notifications" aria-label="Notifications" title="Notifications">${icon('bell')}</button></div><div class="balance-companion-row" data-mascot-state="${companion.state}"><div class="balance-readout"><div class="balance ${balance<0?'negative':''}">${euro(balance)}</div><p class="balance-companion-copy">${esc(companion.message)}</p></div><span class="mascot-pose pose-${companion.pose} balance-companion" aria-hidden="true"></span></div><details class="balance-help"><summary aria-label="Comprendre le solde calculé">Comment est-il calculé ?</summary><p>Aujourd’hui · solde de départ, opérations saisies et dépenses automatiques déjà comptées. Ce n’est pas un relevé bancaire.</p></details><div class="balance-summary"><div><h2>Dépenses prévues d’ici le ${esc(dateLabel(end))}</h2><strong>${euro(reserve.cents)}</strong></div><div class="forecast-result"><h2>${free<0?'Il manque':'Il restera'}</h2><strong class="${free<0?'negative':''}">${euro(Math.abs(free))}</strong><p>${free<0?'pour couvrir les dépenses prévues':'après les dépenses prévues'}</p></div></div><details class="balance-help"><summary>Voir le calcul</summary><p>${euro(balance)} de solde − ${euro(reserve.cents)} de dépenses prévues = ${euro(free)}.</p><p>Les dépenses prévues ne sont pas encore déduites. Les revenus à venir ne sont pas inclus.</p></details><div class="quick"><button class="button primary" data-action="add">${icon('plus')}Ajouter</button></div></section>`+
+    const balanceLabel=euro(balance),balanceSize=balanceLabel.length>17?'balance-very-long':balanceLabel.length>10?'balance-long':'';
+    return `<section class="balance-section" aria-labelledby="balance-title"><div class="balance-top"><h1 id="balance-title">Mon solde</h1><button class="icon-button" data-action="notifications" aria-label="Notifications" title="Notifications">${icon('bell')}</button></div><div class="balance-companion-row ${balanceSize}" data-mascot-state="${companion.state}"><div class="balance-readout"><div class="balance ${balance<0?'negative':''}">${esc(balanceLabel).replace(/([\u202f\u00a0])(?=\d{3})/g,'$1<wbr>')}</div><span class="mascot-pose pose-${companion.pose} balance-companion" aria-hidden="true"></span></div><p class="balance-companion-copy">${esc(companion.message)}</p></div><details class="balance-help"><summary aria-label="Comprendre le solde calculé">Comment est-il calculé ?</summary><p>Aujourd’hui · solde de départ, opérations saisies et dépenses automatiques déjà comptées. Ce n’est pas un relevé bancaire.</p></details><div class="balance-summary"><div><h2>Dépenses prévues d’ici le ${esc(dateLabel(end))}</h2><strong>${euro(reserve.cents)}</strong></div><div class="forecast-result"><h2>${free<0?'Il manque':'Il restera'}</h2><strong class="${free<0?'negative':''}">${euro(Math.abs(free))}</strong><p>${free<0?'pour couvrir les dépenses prévues':'après les dépenses prévues'}</p></div></div><details class="balance-help"><summary>Voir le calcul</summary><p>${euro(balance)} de solde − ${euro(reserve.cents)} de dépenses prévues = ${euro(free)}.</p><p>Les dépenses prévues ne sont pas encore déduites. Les revenus à venir ne sont pas inclus.</p></details><div class="quick"><button class="button primary" data-action="add">${icon('plus')}Ajouter</button></div></section>`+
       (!data.setupDone?'<div class="notice">Tes anciennes données sont conservées. <button class="link" data-action="setup">Terminer la configuration</button></div>':'')+
       `<section class="payments" aria-labelledby="up-title"><div class="section-head"><h2 id="up-title">Paiements à venir</h2><button class="link" data-nav="rules">Mes habitudes</button></div>${cards.length?`<div class="shelf" tabindex="0" role="region" aria-label="Échéances, de la plus urgente à la plus lointaine">${cards.map(payCard).join('')}</div>`:'<p class="help">Aucune échéance de loyer ou d’abonnement à afficher.</p>'}<details class="settings-more"><summary>À propos des échéances</summary><p class="help">Les prochains paiements et les opérations à confirmer sont classés par date. Les opérations passées sont déjà comptées : confirmer leur paiement ne les déduit pas de nouveau.</p></details><button class="link" data-nav="budget">Voir mon bilan du mois ${icon('arrow')}</button></section>`;
   }
@@ -2846,13 +2848,13 @@ function submitCharge(f){
 
 ## clair/sw.js
 
-- SHA-256 : 7a16d3e47c681790ecfd31fb10a18d494291002dfb9a342585a4e97090cea50a
+- SHA-256 : 4384f57418be3f3bad57515b74a7fd724e1bdef92a29c8f97655215349519b25
 - Taille : 2158 octets.
 
 ````text
 /* Offline shell scoped to Clair only; financial data is not cached. */
 const BASE=new URL('./',self.location.href);
-const CACHE='clair-github-'+BASE.pathname+'v10';
+const CACHE='clair-github-'+BASE.pathname+'v11';
 const ASSETS=['assets/mascotte-poses.png','assets/mascotte/01-bienvenue.png','assets/mascotte/01-bienvenue.webp','assets/mascotte/02-serenite.png','assets/mascotte/03-vigilance.png','assets/mascotte/04-prevision-tendue.png','assets/mascotte/05-solde-zero.png','assets/mascotte/06-solde-negatif-v2.webp','index.html','manifest.webmanifest','icons/icon.svg','icons/icon-180.png','icons/icon-192.png','icons/icon-512.png'].map(p=>new URL(p,BASE).href);
 const HOME=new URL('index.html',BASE).href;
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));

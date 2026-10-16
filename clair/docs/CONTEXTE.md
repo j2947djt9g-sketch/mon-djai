@@ -1,6 +1,6 @@
 # Clair — contexte de reprise pour une IA
 
-- Application documentée : révision 97b3b8290d382c32d10c76d6c0eaa88085b14b5b, publiée sur GitHub Pages.
+- Version décrite : fichiers de ce même commit ; base vérifiée avant cette retouche : fca3aec260f28288e585281af7841c4c7b5e6265.
 - Publication publique de ces documents autorisée par l’utilisateur le 16 octobre 2026.
 
 ## À lire en premier
@@ -116,3 +116,12 @@
 - Neuf suites Node réussies, dont test-account-security et test-account-security-sdk. Vérification avec SDK officiel et transport simulé : mot de passe incorrect bloqué, session temporaire supprimée, session originale et budget conservés.
 - Moteur financier et cloud inchangés ; sources de compte et copie intégrée cohérentes. SOURCES.md comprend les tests et les empreintes des images.
 - Aucun compte réel modifié, aucun mot de passe réel utilisé et aucun e-mail réel envoyé pour les essais. Réception des e-mails et iPhone physique : [À CONFIRMER].
+
+## Dernière retouche validée - 16 octobre 2026
+
+- Mascotte du solde agrandie et rapprochée du montant, placé avec elle dans balance-readout. Message sous le groupe ; aucune image alignée au bord droit de la carte.
+- Largeur 190 px sur grand écran, 150 px sur écran intermédiaire, 110 px sur téléphone, 100 px jusqu'à 380 px ; écart de 14 à 18 px. Montants longs : réduction adaptée et coupure entre groupes de milliers si nécessaire, sans seuil de solde supplémentaire.
+- Préserver l'image entière, les deux prévisions côte à côte sur téléphone, les expressions actuelles et la bienvenue comme seule animation.
+- index.html et sw.js modifiés ; cache v11. Moteur financier, SDK, cloud, comptes et ressources visuelles préservés.
+- Neuf suites Node réussies et huit montants contrôlés sans altération ni mutation du budget. Le navigateur de test ne démarre pas : le dernier rendu visuel et l'iPhone physique restent à confirmer.
+- PRD, CONSTRUCTION et SOURCES actualisés pour cette retouche, publication publique toujours autorisée dans le périmètre clair/.

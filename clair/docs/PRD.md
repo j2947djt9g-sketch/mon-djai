@@ -1,11 +1,11 @@
 # Clair — PRD : fonctionnement du produit
 
-- Application documentée : révision 97b3b8290d382c32d10c76d6c0eaa88085b14b5b, publiée sur GitHub Pages.
+- Version décrite : fichiers de ce même commit ; base vérifiée avant cette retouche : fca3aec260f28288e585281af7841c4c7b5e6265.
 - Publication publique de ces documents autorisée par l’utilisateur le 16 octobre 2026.
 
 
 - Référence : code du dépôt j2947djt9g-sketch/mon-djai, dossier clair/.
-- Base examinée avant cette retouche : 4d6706fcab50033712da59c79c1d98adc77afa78.
+- Base examinée avant cette retouche : fca3aec260f28288e585281af7841c4c7b5e6265.
 - Date de mise à jour : 16 octobre 2026.
 - Application : https://j2947djt9g-sketch.github.io/mon-djai/clair/
 - Lire d'abord [CONTEXTE.md](CONTEXTE.md). Architecture et données : [CONSTRUCTION.md](CONSTRUCTION.md). Code : [SOURCES.md](SOURCES.md).
@@ -207,3 +207,13 @@
 - Montants lisibles et deux sous-cartes côte à côte sur téléphone ; mascotte réduite pendant la saisie. Confirmation écrite dans le journal avec une image fixe.
 - Sept ressources visuelles précachées et intégrées dans le téléchargement HTML. Aucun appel à une IA depuis Clair.
 - Neuf suites Node réussies. Réception réelle des e-mails et iPhone physique : [À CONFIRMER].
+
+## Affichage du solde - retouche validée le 16 octobre 2026
+
+- Le montant et la mascotte forment un groupe compact : l'image se place immédiatement à droite du montant, sans être poussée au bord de la carte.
+- Écart de 18 px sur grand écran, 16 px sur écran intermédiaire et téléphone, 14 px sur les plus petits écrans.
+- Boîte de mascotte de 190 px sur grand écran, 150 px entre 721 et 1 100 px, 110 px sur téléphone et 100 px jusqu'à 380 px. Le rapport 3:4 reste constant et le personnage entier reste visible.
+- Les montants longs utilisent une taille adaptée du chiffre et de la mascotte ; une coupure peut se faire entre groupes de milliers. Cette adaptation dépend de la longueur du texte affiché, sans nouveau seuil financier.
+- Le message explicatif se place sous le groupe montant/mascotte. Les deux sous-cartes de prévision restent côte à côte sur téléphone.
+- La mascotte du solde reste fixe. Les choix d'expression et l'animation de bienvenue restent ceux validés précédemment.
+- Neuf suites Node réussies et montants français contrôlés, y compris les montants longs. Le navigateur automatique n'a pas pu démarrer ; dernier rendu visuel et iPhone physique : [À CONFIRMER].

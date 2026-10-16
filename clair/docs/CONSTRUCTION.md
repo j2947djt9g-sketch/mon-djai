@@ -1,6 +1,6 @@
 # Clair — construction, architecture et exploitation
 
-- Application documentée : révision 97b3b8290d382c32d10c76d6c0eaa88085b14b5b, publiée sur GitHub Pages.
+- Version décrite : fichiers de ce même commit ; base vérifiée avant cette retouche : fca3aec260f28288e585281af7841c4c7b5e6265.
 - Publication publique de ces documents autorisée par l’utilisateur le 16 octobre 2026.
 
 - Date de mise à jour : 16 octobre 2026.
@@ -358,3 +358,14 @@
 - Le SDK officiel 2.102.0 avec transport simulé vérifie les tokens distincts, logout local de la seule session temporaire, absence de cache temporaire et conservation du budget et de la session originaux. Aucun vrai mot de passe, compte ou e-mail modifié pour les tests.
 - Moteur et cloud inchangés ; scripts compilés et copies des sources de compte cohérentes. Réception des e-mails et iPhone physique à confirmer.
 - Sources officielles : https://supabase.com/docs/reference/javascript/auth-updateuser ; https://supabase.com/docs/reference/javascript/auth-signup ; https://supabase.com/docs/guides/auth/password-security ; https://github.com/supabase/auth/blob/master/internal/api/user.go.
+
+## Dernière retouche - proximité et taille de la mascotte, 16 octobre 2026
+
+- Demande et publication validées par l'utilisateur après observation du grand espace entre le montant et l'image.
+- balance-readout contient uniquement le montant et la mascotte, en flex, width:fit-content et max-width:100%. balance-companion-copy est un paragraphe après ce groupe. Le texte explicatif ne détermine plus la distance entre le chiffre et le personnage.
+- Variables --companion-size et --companion-gap : 190/18 px sur grand écran, 150/16 px entre 721 et 1 100 px, 110/16 px sur téléphone et 100/14 px jusqu'à 380 px.
+- home conserve le format monétaire français. balance-long au-delà de 10 caractères et balance-very-long au-delà de 17 caractères réduisent la taille sur les écrans étroits. Ces classes ne changent ni le calcul ni la sélection d'expression. Des wbr sont ajoutés uniquement aux séparateurs précédant un groupe de trois chiffres ; textContent conserve exactement le montant formaté.
+- Boîte 3:4 et background-size:contain conservés. Mascotte fixe, halos en CSS, message sous le groupe et deux sous-cartes de prévision côte à côte.
+- Service worker v11 pour renouveler le cache de l'application ; liste des ressources inchangée.
+- Tests : les neuf suites .cjs passent. Contrôle supplémentaire sur huit montants positifs, nuls, négatifs et longs : texte français inchangé et aucun changement du budget pendant home(). Scripts intégrés compilés ; moteur, SDK, cloud et sources de compte préservés.
+- Limite : Playwright/Edge n'a pas pu démarrer dans l'environnement de test et le navigateur connecté était indisponible. Aucun résultat de contrôle géométrique ou de capture visuelle n'est présenté comme acquis ; rendu sur navigateur et iPhone physique à confirmer.
