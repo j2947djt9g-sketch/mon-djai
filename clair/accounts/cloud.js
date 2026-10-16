@@ -52,6 +52,9 @@
         this.record=this.decode(localStorage.getItem(this.key()),user.id);
         this.hooks.enter?.(user,this.record);
         this.ready=true;
+        // Auth is ready even while the independent budget request is pending.
+        // Recovery can now show its password form without waiting for this sync.
+        this.emit();
         await this.sync(epoch);
         if(epoch!==this.epoch)return;
         this.hooks.opened?.();

@@ -5,7 +5,7 @@
   const recoveryError=recoveryParams.get('error_code')||recoveryQuery.get('error_code')||recoveryParams.get('error')||recoveryQuery.get('error');
   let accountMode='login',accountBusy=false,accountRecovery=recoveryParams.get('type')==='recovery',accountStarted=false;
   let accountResetStep=accountRecovery?'checking':recoveryError?'expired':null;
-  let accountResetEmail='',accountResetUntil=0,accountRecoveryUserId=null,accountDeferredSetup=false,accountResetTimer=null;
+  let accountResetEmail='',accountRecoveryUserId=null,accountDeferredSetup=false;
   let accountSignupResult=null,accountChangeUserId=null,accountChangeNonceRequired=false,accountChangeResendUntil=0;
   const cloud=new window.ClairCloud(window.CLAIR_ACCOUNT_CONFIG,{
     normalize: value=>E.normalize(value),
@@ -139,15 +139,13 @@
     if(accountResetStep==='checking'||(accountResetStep==='password'&&(!cloud.ready||!cloud.user))){
       body='<h1>Vérification du lien…</h1><p class="muted" role="status">Un instant, nous ouvrons la récupération de ton compte.</p>';
     }else if(accountResetStep==='email'){
-      const wait=Math.max(0,Math.ceil((accountResetUntil-Date.now())/1000));
       body='<h1>Retrouver mon compte</h1><p class="muted">Reçois un lien pour choisir un nouveau mot de passe.</p>'+
         '<form id="account-forgot-form">'+field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="email" autocapitalize="none" spellcheck="false"')+error+
-        '<button class="button primary" id="account-reset-send" type="submit" '+(wait?'disabled':'')+'>'+(wait?'Réessayer dans '+wait+' s':'Envoyer le lien')+'</button></form>'+back;
+        '<button class="button primary" id="account-reset-send" type="submit" '+(accountBusy?'disabled':'')+'>'+(accountBusy?'Envoi en cours…':'Envoyer le lien')+'</button></form>'+back;
     }else if(accountResetStep==='sent'){
-      const wait=Math.max(0,Math.ceil((accountResetUntil-Date.now())/1000));
       body='<h1>Vérifie tes e-mails</h1><p class="muted">Si un compte utilise cette adresse, tu recevras un lien pour changer ton mot de passe.</p>'+
-        '<p class="recovery-email">'+esc(accountResetEmail)+'</p><p class="help">Ouvre le lien reçu. Pense à vérifier les indésirables.</p>'+error+
-        '<div class="recovery-actions"><button class="button primary" id="account-reset-resend" data-action="account-reset-resend" '+(wait?'disabled':'')+'>'+(wait?'Renvoyer dans '+wait+' s':'Renvoyer le lien')+'</button>'+
+        '<p class="recovery-email">'+esc(accountResetEmail)+'</p><p class="help">Ouvre le lien reçu : tu pourras saisir directement ton nouveau mot de passe. Pense à vérifier les indésirables.</p>'+error+
+        '<div class="recovery-actions"><button class="button primary" id="account-reset-resend" data-action="account-reset-resend" '+(accountBusy?'disabled':'')+'>'+(accountBusy?'Envoi en cours…':'Renvoyer le lien')+'</button>'+
         '<button class="link" data-action="account-reset-edit">Corriger mon adresse</button>'+back+'</div>';
     }else if(accountResetStep==='password'){
       body='<h1>Nouveau mot de passe</h1><p class="muted">Choisis le mot de passe de ton compte Clair.</p>'+
@@ -166,12 +164,9 @@
       body.replace('<h1>','<h1 id="recovery-title" tabindex="-1">')+'</section>';
   }
   function focusRecovery(){setTimeout(()=>$('#recovery-title')?.focus({preventScroll:true}),0);}
-  function resetCooldown(){
-    clearTimeout(accountResetTimer);
-    const wait=Math.max(0,Math.ceil((accountResetUntil-Date.now())/1000));
+  function updateRecoveryButtons(){
     const button=$('#account-reset-resend')||$('#account-reset-send');
-    if(button){button.disabled=accountBusy||wait>0;button.textContent=accountBusy?'Envoi en cours…':wait?(accountResetStep==='sent'?'Renvoyer dans ':'Réessayer dans ')+wait+' s':accountResetStep==='sent'?'Renvoyer le lien':'Envoyer le lien';}
-    if(wait&&['email','sent'].includes(accountResetStep))accountResetTimer=setTimeout(resetCooldown,1000);
+    if(button){button.disabled=accountBusy;button.textContent=accountBusy?'Envoi en cours…':accountResetStep==='sent'?'Renvoyer le lien':'Envoyer le lien';}
   }
   function clearRecoveryAddress(){
     if(!accountRecovery&&!recoveryError)return;
@@ -180,7 +175,7 @@
   }
   function finishRecovery(){
     if(accountBusy)return;
-    clearRecoveryAddress();accountResetStep=null;accountRecovery=false;accountRecoveryUserId=null;clearTimeout(accountResetTimer);
+    clearRecoveryAddress();accountResetStep=null;accountRecovery=false;accountRecoveryUserId=null;
     close();render();
     if(cloud.user){catchUp();if(accountDeferredSetup){accountDeferredSetup=false;cloud.hooks.empty();}}
   }
@@ -189,25 +184,25 @@
     if(target){target.textContent=message;if(message)target.scrollIntoView({block:'nearest'});}else notify(message);
   }
   async function sendRecovery(email){
-    if(accountResetUntil>Date.now())throw Error('Attends la fin du délai avant de demander un autre lien.');
+    email=String(email||'').trim().toLowerCase();
     if(!email)throw Error('Indique l’adresse e-mail de ton compte.');
+    if(navigator.onLine===false)throw Error('Vérifie ta connexion Internet, puis réessaie.');
     accountResetEmail=email;
     const {error}=await cloud.client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
     if(error){
       if(error.status===429||['over_email_send_rate_limit','over_request_rate_limit'].includes(error.code)){
-        accountResetUntil=Date.now()+60000;resetCooldown();
         throw Error('L’envoi est temporairement limité. Réessaie plus tard.');
       }
       if(navigator.onLine===false||error.name==='AuthRetryableFetchError')
         throw Error('Vérifie ta connexion Internet, puis réessaie.');
       throw Error('Le lien ne peut pas être envoyé pour le moment. Réessaie plus tard.');
     }
-    accountResetUntil=Date.now()+60000;accountResetStep='sent';render();focusRecovery();
+    accountResetStep='sent';render();focusRecovery();
   }
   function attempts(){try{return JSON.parse(localStorage.getItem('clair-auth-attempts-v1')||'{"count":0,"until":0}');}catch{return {count:0,until:0};}}
   async function accountSubmit(form){
     if(accountBusy)return;accountBusy=true;const button=form.querySelector('button[type=submit]');if(button)button.disabled=true;
-    accountMessage('');if(form.id==='account-forgot-form')resetCooldown();
+    accountMessage('');if(form.id==='account-forgot-form')updateRecoveryButtons();
     try{
       const f=new FormData(form),email=String(f.get('email')||'').trim().toLowerCase(),password=String(f.get('password')||'');
       if(form.id==='account-form'){
@@ -237,8 +232,10 @@
       if(form.id==='account-change-password-form')await changePassword(form,f,password);
       if(form.id==='account-password-form'){
         if(!accountRecoveryUserId||cloud.user?.id!==accountRecoveryUserId){accountResetStep='expired';render();focusRecovery();return;}
+        const recoveryUserId=accountRecoveryUserId;
         if(password.length<12||password.length>128)throw Error('Utilise entre 12 et 128 caractères.');
         const {error}=await cloud.client.auth.updateUser({password});
+        if(accountRecoveryUserId!==recoveryUserId||cloud.user?.id!==recoveryUserId)return;
         if(error){
           if(error.status===401||['session_not_found','refresh_token_not_found','refresh_token_already_used','bad_jwt','user_not_found'].includes(error.code)){
             accountResetStep='expired';render();focusRecovery();return;
@@ -248,10 +245,11 @@
           if(error.status===429)throw Error('Trop de demandes. Attends un moment avant de réessayer.');
           throw Error(navigator.onLine===false?'Vérifie ta connexion Internet, puis réessaie.':'Le mot de passe n’a pas pu être enregistré. Réessaie.');
         }
+        try{localStorage.removeItem('clair-auth-attempts-v1');}catch{}
         accountResetStep='done';accountRecovery=false;accountRecoveryUserId=null;render();focusRecovery();
       }
     }catch(error){accountMessage(error.message||'La connexion n’a pas abouti.');}
-    finally{accountBusy=false;if(button)button.disabled=false;resetCooldown();}
+    finally{accountBusy=false;if(button)button.disabled=false;updateRecoveryButtons();}
   }
   function transferLegacy(){
     const legacy=legacyBudget();if(!legacy){notify('Aucun ancien budget à transférer sur cet appareil.');return;}
@@ -289,7 +287,7 @@
     if(action==='account-forgot'||action==='account-reset-edit'){
       if(accountBusy)return;
       if(action==='account-forgot')accountResetEmail=$('#account-form input[name="email"]')?.value?.trim()||accountResetEmail;
-      accountResetStep='email';close();clearRecoveryAddress();render();resetCooldown();focusRecovery();
+      accountResetStep='email';close();clearRecoveryAddress();render();updateRecoveryButtons();focusRecovery();
     }
     if(action==='account-reset-back'||action==='account-reset-finish'){
       if(action==='account-reset-back')accountMode='login';
@@ -297,9 +295,9 @@
     }
     if(action==='account-reset-resend'){
       if(accountBusy)return;
-      accountBusy=true;accountMessage('');resetCooldown();
+      accountBusy=true;accountMessage('');updateRecoveryButtons();
       try{await sendRecovery(accountResetEmail);}catch(error){accountMessage(error.message);}
-      finally{accountBusy=false;resetCooldown();}
+      finally{accountBusy=false;updateRecoveryButtons();}
     }
     if(action==='account-password-toggle'){
       const input=$('#account-new-password'),button=$('[data-action="account-password-toggle"]');

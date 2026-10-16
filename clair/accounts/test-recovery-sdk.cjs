@@ -6,6 +6,7 @@ const user={id:uid,aud:'authenticated',role:'authenticated',email:'sdk-test@exam
 const jwt=[{alg:'HS256',typ:'JWT'},{sub:uid,aud:'authenticated',role:'authenticated',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000),iss:'https://hkssnbvktfscizojhftl.supabase.co/auth/v1'},'TEST-SIGNATURE'].map(x=>Buffer.from(typeof x==='string'?x:JSON.stringify(x)).toString('base64url')).join('.');
 const initial=new URL('https://example.test/clair/#access_token='+jwt+'&refresh_token=TEST-REFRESH&expires_in=3600&expires_at='+String(Math.floor(Date.now()/1000)+3600)+'&token_type=bearer&type=recovery');
 const storage=new Map(),nodes=new Map(),calls=[];
+let releaseBudget,budgetRequested=false;const budgetGate=new Promise(resolve=>releaseBudget=resolve);
 function node(s){if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',style:{},dataset:{},open:false,showModal(){this.open=true},close(){this.open=false},focus(){},scrollIntoView(){},addEventListener(){}});return nodes.get(s)}
 const controls=new Set(['#account-forgot-form','#account-password-form','#account-reset-send','#account-reset-resend']);
 const s={Intl,Date,TextEncoder,TextDecoder,URL,URLSearchParams,Blob,Headers,Request,Response,structuredClone,crypto,console,AbortController,setTimeout,clearTimeout,setInterval,clearInterval,
@@ -19,7 +20,7 @@ const s={Intl,Date,TextEncoder,TextDecoder,URL,URLSearchParams,Blob,Headers,Requ
    const target=new URL(url instanceof Request?url.url:url),method=options.method||'GET';calls.push({path:target.pathname,method});
    if(target.pathname==='/auth/v1/user')return new Response(JSON.stringify(user),{status:200,headers:{'content-type':'application/json'}});
    if(target.pathname==='/auth/v1/logout')return new Response('{}',{status:200});
-   if(target.pathname==='/rest/v1/clair_budgets'){const payload=s.ClairEngine.empty();payload.initialized=payload.setupDone=true;payload.openingCents=1700;return new Response(JSON.stringify({payload,revision:1,operation_id:'sdk-operation',display_name:'Test'}),{status:200,headers:{'content-type':'application/json'}})}
+   if(target.pathname==='/rest/v1/clair_budgets'){budgetRequested=true;await budgetGate;const payload=s.ClairEngine.empty();payload.initialized=payload.setupDone=true;payload.openingCents=1700;return new Response(JSON.stringify({payload,revision:1,operation_id:'sdk-operation',display_name:'Test'}),{status:200,headers:{'content-type':'application/json'}})}
    throw Error('Unexpected API path '+target.pathname);
  }};
 s.window=s;s.globalThis=s;s.addEventListener=()=>{};s.removeEventListener=()=>{};
@@ -27,13 +28,15 @@ vm.createContext(s);for(let i=0;i<3;i++)vm.runInContext(scripts[i],s);
 const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');
 vm.runInContext(scripts[3].slice(0,boot)+'window.test={cloud,render,accountSubmit,accountAction,state:()=>accountResetStep};})();',s);
 async function main(){
- const t=s.test;await t.cloud.init();
- for(let n=0;n<50&&t.state()!=='password';n++)await new Promise(r=>setTimeout(r,10));
+ const t=s.test,opening=t.cloud.init();
+ for(let n=0;n<50&&!node('#page').innerHTML.includes('account-password-form');n++)await new Promise(r=>setTimeout(r,10));
  assert.equal(t.cloud.user.id,uid);assert.equal(t.state(),'password');assert(node('#page').innerHTML.includes('account-password-form'));assert.equal(s.location.hash,'');
+ assert(budgetRequested);assert.equal(t.cloud.status,'loading');assert.equal(t.cloud.ready,true);
  await t.accountSubmit({id:'account-password-form',values:{password:'test recovery long phrase'},querySelector:()=>({disabled:false})});
  assert.equal(t.state(),'done');assert(calls.some(c=>c.path==='/auth/v1/user'&&c.method==='PUT'));
+ releaseBudget();await opening;assert.equal(t.state(),'done');
  await t.accountAction('account-reset-finish');assert.equal(t.state(),null);assert.match(node('#page').innerHTML,/17,00/);
- console.log('PASS official Supabase JS 2.102.0: URL consumed, PASSWORD_RECOVERY session validated, updateUser, direct original budget return (mock transport)');
+ console.log('PASS official Supabase JS 2.102.0: URL consumed, validated recovery form and password update before slow budget load, late sync preserves success, original budget return (mock transport)');
  await t.cloud.client.auth.stopAutoRefresh();
 }
 main().then(()=>process.exit(0)).catch(e=>{console.error(e);process.exit(1)});
