@@ -199,14 +199,12 @@
     }
     accountResetStep='sent';render();focusRecovery();
   }
-  function attempts(){try{return JSON.parse(localStorage.getItem('clair-auth-attempts-v1')||'{"count":0,"until":0}');}catch{return {count:0,until:0};}}
   async function accountSubmit(form){
     if(accountBusy)return;accountBusy=true;const button=form.querySelector('button[type=submit]');if(button)button.disabled=true;
     accountMessage('');if(form.id==='account-forgot-form')updateRecoveryButtons();
     try{
       const f=new FormData(form),email=String(f.get('email')||'').trim().toLowerCase(),password=String(f.get('password')||'');
       if(form.id==='account-form'){
-        const guard=attempts();if(guard.until>Date.now())throw Error('Attends une minute avant de réessayer.');
         const signup=form.dataset.mode==='signup';let response;
         if(signup){
           const name=String(f.get('displayName')||'').trim();if(!name||name.length>64||password.length<12)throw Error('Indique ton prénom et un mot de passe d’au moins 12 caractères.');
@@ -215,16 +213,12 @@
         }else response=await cloud.client.auth.signInWithPassword({email,password});
         if(response.error){
           if(signup&&['user_already_exists','email_exists'].includes(response.error.code)){accountSignupResult='exists';render();return;}
-          if(response.error.code==='invalid_credentials'){
-            const count=(guard.until&&guard.until<=Date.now()?0:Number(guard.count)||0)+1;
-            localStorage.setItem('clair-auth-attempts-v1',JSON.stringify({count,until:count>=3?Date.now()+60000:0}));
-            throw Error(count>=3?'Trois essais incorrects. Réessaie dans une minute.':'Adresse e-mail ou mot de passe incorrect.');
-          }
+          if(response.error.code==='invalid_credentials')throw Error('Adresse e-mail ou mot de passe incorrect.');
           if(response.error.status===429)throw Error('Trop de tentatives. Attends un moment avant de réessayer.');
           if(response.error.code==='email_not_confirmed')throw Error('Confirme ton adresse e-mail avant de te connecter.');
           throw Error('Connexion indisponible. Vérifie ta connexion Internet et réessaie.');
         }
-        localStorage.removeItem('clair-auth-attempts-v1');
+        try{localStorage.removeItem('clair-auth-attempts-v1');}catch{}
         if(signup&&!response.data.session){accountSignupResult='confirmation';render();return;}
         await cloud.attach(response.data.user||response.data.session?.user);
       }

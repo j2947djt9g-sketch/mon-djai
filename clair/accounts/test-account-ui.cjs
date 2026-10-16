@@ -10,8 +10,12 @@ vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(sc
  t.render();assert(!node('#page').innerHTML.includes('17,00'));t.cloud.ready=true;t.cloud.status='signed-out';t.render();assert(node('#page').innerHTML.includes('account-form'));assert(!node('#page').innerHTML.includes('17,00'));
  console.log('PASS: login gate hides existing budget until account authentication');
  const form={id:'account-form',dataset:{mode:'login'},values:{email:'a@example.test',password:'wrong'},querySelector:()=>({disabled:false}),reset(){}};
- for(let n=0;n<3;n++){replies.push({error:{code:'invalid_credentials'}});await t.accountSubmit(form)}assert.equal(requests.length,3);await t.accountSubmit(form);assert.equal(requests.length,3);assert(node('#account-error').textContent.includes('minute'));
- console.log('PASS: three failed attempts cause a temporary device cooldown');
+ storage.set('clair-auth-attempts-v1',JSON.stringify({count:3,until:Date.now()+60000}));
+ for(let n=0;n<4;n++){replies.push({error:{code:'invalid_credentials'}});await t.accountSubmit(form);assert.equal(requests.length,n+1);assert.equal(node('#account-error').textContent,'Adresse e-mail ou mot de passe incorrect.');}
+ let unlock;replies.push(new Promise(resolve=>{unlock=resolve}));const pending=t.accountSubmit(form);await t.accountSubmit(form);assert.equal(requests.length,5);unlock({error:{code:'invalid_credentials'}});await pending;
+ replies.push({error:{status:429}});await t.accountSubmit(form);assert.equal(requests.length,6);assert.match(node('#account-error').textContent,/Trop de tentatives/);
+ replies.push({error:{code:'invalid_credentials'}});await t.accountSubmit(form);assert.equal(requests.length,7);assert.equal(node('#account-error').textContent,'Adresse e-mail ou mot de passe incorrect.');
+ console.log('PASS: stale local lock and repeated mistakes never impose a cooldown; duplicate submits are prevented and server limits remain visible');
  storage.delete('clair-auth-attempts-v1');await t.accountAction('account-mode');replies.push({data:{session:null,user:{}}});form.dataset.mode='signup';form.values={email:'a@example.test',password:'twelve-character-password',displayName:'  El-Hadj  '};await t.accountSubmit(form);assert.equal(requests.at(-1).options.data.display_name,'El-Hadj');assert.match(t.accountGate(),/confirmer/);
  t.cloud.user={id:'user-a',email:'a@example.test'};t.cloud.displayName='<img src=x onerror=alert(1)>';assert(t.accountCard().includes('&lt;img'));assert(!t.accountCard().includes('<img src=x'));
  storage.set('clair-local-owner-v1','user-b');assert.equal(t.legacyBudget(),null);
