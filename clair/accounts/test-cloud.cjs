@@ -19,7 +19,7 @@ function device(uid,storage=new Map()){
  vm.createContext(context);vm.runInContext(source,context);
  const hooks={normalize:d=>E.normalize(d),enter(){},apply:(p,r)=>applications.push({p,r}),status(){},leave(){},empty(){}};
  const cloud=new context.window.ClairCloud({url:'https://testproject.supabase.co',key:'sb_publishable_test'},hooks,{createClient:()=>client});
- return {cloud,storage,writes,applications,navigator,client,authEvent:(event,session)=>callback(event,session),setUser:u=>{currentUser=u},edit:d=>{const raw=cloud.pack(d);storage.set(cloud.key(),raw);cloud.saved(raw)},async init(){await cloud.init()}};
+ return {cloud,storage,writes,applications,navigator,client,localStorage:context.localStorage,authEvent:(event,session)=>callback(event,session),setUser:u=>{currentUser=u},edit:d=>{const raw=cloud.pack(d);storage.set(cloud.key(),raw);cloud.saved(raw)},async init(){await cloud.init()}};
 }
 const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents=n;return d};
 (async()=>{
@@ -49,6 +49,16 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  console.log('PASS: duplicate SDK session events do not restart or block opening');
  const sameA=device('same'),sameB=device('same');await sameA.init();sameA.edit(budget(100));await sameA.cloud.sync();await sameB.init();sameA.edit(budget(200));sameB.edit(budget(200));await sameA.cloud.sync();await sameB.cloud.sync();assert.equal(sameB.cloud.status,'synced');assert.equal(sameB.cloud.conflict,null);
  console.log('PASS: identical automatic updates from two devices do not create a false conflict');
+ const quotaA=device('quota'),quotaB=device('quota');await quotaA.init();quotaA.edit(budget(100));await quotaA.cloud.sync();await quotaB.init();quotaA.edit(budget(200));quotaB.edit(budget(300));await quotaA.cloud.sync();await quotaB.cloud.sync();
+ const preserved=JSON.stringify(quotaB.cloud.record),cached=quotaB.storage.get(quotaB.cloud.key()),conflict=quotaB.cloud.conflict,applied=quotaB.applications.length;
+ const persist=quotaB.localStorage.setItem;quotaB.localStorage.setItem=()=>{throw Error('QuotaExceededError')};
+ for(const remote of [false,true]){
+  assert.throws(()=>quotaB.cloud.resolve(remote),/QuotaExceededError/);
+  assert.equal(JSON.stringify(quotaB.cloud.record),preserved,'failed resolution must preserve in-memory budget and metadata');
+  assert.equal(quotaB.storage.get(quotaB.cloud.key()),cached);assert.equal(quotaB.cloud.conflict,conflict);assert.equal(quotaB.cloud.status,'conflict');assert.equal(quotaB.applications.length,applied);
+ }
+ quotaB.localStorage.setItem=persist;quotaB.cloud.resolve(false);await quotaB.cloud.sync();assert.equal(rows.get('quota').payload.openingCents,300);assert.equal(quotaB.cloud.status,'synced');
+ console.log('PASS: storage failure preserves both conflict copies and metadata; retry succeeds after storage recovers');
  const recovered=device('recovery-original');await recovered.init();let recoveryUser;
  recovered.cloud.hooks.recovery=user=>{recoveryUser=user.id};
  const recoveryTarget={id:'recovery-target',email:'target@example.test',user_metadata:{}};

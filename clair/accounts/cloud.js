@@ -120,8 +120,9 @@
         this.adopt(this.conflict.remote);return;
       }
       // The conflict UI exports the device copy before asking the user to choose.
-      this.record.meta.revision=this.conflict.remote?.revision||0;this.record.meta.operationId=crypto.randomUUID();this.record.meta.dirty=true;
-      const raw=JSON.stringify({...this.record.payload,_cloud:this.record.meta});localStorage.setItem(this.key(),raw);this.conflict=null;this.hooks.apply?.(this.record.payload,raw);this.status='pending';this.emit();this.schedule();
+      const meta={...this.record.meta,revision:this.conflict.remote?.revision||0,operationId:crypto.randomUUID(),dirty:true};
+      // Commit metadata only after persistence succeeds, so a full storage leaves both copies intact.
+      const raw=JSON.stringify({...this.record.payload,_cloud:meta});localStorage.setItem(this.key(),raw);this.record={payload:this.record.payload,meta};this.conflict=null;this.hooks.apply?.(this.record.payload,raw);this.status='pending';this.emit();this.schedule();
     }
     async logout(){
       if(this.record?.meta.dirty){await this.sync();if(this.record?.meta.dirty)throw Error('Enregistre les modifications en ligne avant de te déconnecter, ou exporte une sauvegarde.');}
