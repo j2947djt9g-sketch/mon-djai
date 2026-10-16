@@ -6,7 +6,7 @@ assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('h
 let rows=new Map(),saveDelay=null,readDelay=null,loseResponse=false;
 function device(uid,storage=new Map()){
  let currentUser={id:uid,email:uid+'@example.test',user_metadata:{display_name:uid}};
- const writes=[],applications=[],navigator={onLine:true};let callback;
+ const writes=[],applications=[],navigator={onLine:true},timers=new Map();let callback,nextTimer=0;
  const client={auth:{onAuthStateChange:f=>callback=f,getSession:async()=>({data:{session:{user:currentUser}}}),signOut:async()=>({})},
  from:()=>({select(){return this},eq(_field,value){this.uid=value;return this},async maybeSingle(){if(readDelay)await readDelay;return {data:structuredClone(rows.get(this.uid)||null)}}}),
  async rpc(name,params){const id=currentUser.id;if(saveDelay)await saveDelay;const row=rows.get(id);
@@ -15,11 +15,11 @@ function device(uid,storage=new Map()){
  const next={payload:params.p_payload,revision:(row?.revision||0)+1,operation_id:params.p_operation_id,display_name:params.p_display_name};rows.set(id,structuredClone(next));writes.push(params);
  if(loseResponse){loseResponse=false;throw Error('response lost')};return {data:{saved:true,row:structuredClone(next)}};
  }};
- const context={window:{},crypto,structuredClone,JSON,Error,Number,String,Date,navigator,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},setTimeout:()=>1,clearTimeout(){}};
+ const context={window:{},crypto,structuredClone,JSON,Error,Number,String,Date,navigator,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},setTimeout(fn){timers.set(++nextTimer,fn);return nextTimer},clearTimeout(id){timers.delete(id)}};
  vm.createContext(context);vm.runInContext(source,context);
  const hooks={normalize:d=>E.normalize(d),enter(){},apply:(p,r)=>applications.push({p,r}),status(){},leave(){},empty(){}};
  const cloud=new context.window.ClairCloud({url:'https://testproject.supabase.co',key:'sb_publishable_test'},hooks,{createClient:()=>client});
- return {cloud,storage,writes,applications,navigator,client,localStorage:context.localStorage,authEvent:(event,session)=>callback(event,session),setUser:u=>{currentUser=u},edit:d=>{const raw=cloud.pack(d);storage.set(cloud.key(),raw);cloud.saved(raw)},async init(){await cloud.init()}};
+ return {cloud,storage,writes,applications,navigator,client,localStorage:context.localStorage,authEvent:(event,session)=>callback(event,session),async flushTimers(){const batch=[...timers.values()];timers.clear();for(const fn of batch)await fn()},setUser:u=>{currentUser=u},edit:d=>{const raw=cloud.pack(d);storage.set(cloud.key(),raw);cloud.saved(raw)},async init(){await cloud.init()}};
 }
 const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents=n;return d};
 (async()=>{
@@ -71,5 +71,28 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  assert.equal(recoveryUser,'recovery-target');assert.equal(recovered.cloud.ready,false);assert.equal(recovered.cloud.status,'loading');
  await recovered.cloud.attach(recoveryTarget);assert.equal(recovered.cloud.user.id,'recovery-target');assert.equal(recovered.cloud.record,null);
  console.log('PASS: recovery for another account waits for its session and never uses the previous budget');
+ const switcher=device('switch-old'),target=device('switch-new');await switcher.init();switcher.edit(budget(100));await switcher.cloud.sync();await target.init();target.edit(budget(900));await target.cloud.sync();switcher.edit(budget(200));
+ let releaseRead;readDelay=new Promise(resolve=>{releaseRead=resolve});const oldSync=switcher.cloud.sync();await new Promise(resolve=>setImmediate(resolve));
+ const targetUser={id:'switch-new',email:'switch-new@example.test',user_metadata:{}};switcher.setUser(targetUser);switcher.authEvent('SIGNED_IN',{user:targetUser});releaseRead();await oldSync;readDelay=null;
+ assert.equal(rows.get('switch-new').payload.openingCents,900,'previous account must never write using the new session');assert.equal(rows.get('switch-old').payload.openingCents,100);assert.equal(switcher.storage.get(switcher.cloud.key('switch-old')).includes('200'),true);
+ await switcher.flushTimers();assert.equal(switcher.cloud.user.id,'switch-new');assert.equal(switcher.cloud.record.payload.openingCents,900);
+ console.log('PASS: account switch invalidates old reads before deferred Auth handling; old unsaved budget stays separate');
+ const failedCleanup=device('logout-storage');await failedCleanup.init();failedCleanup.edit(budget(700));await failedCleanup.cloud.sync();failedCleanup.localStorage.removeItem=()=>{throw Error('SecurityError')};
+ await assert.rejects(failedCleanup.cloud.logout(),/SecurityError/);assert.equal(failedCleanup.cloud.user,null);assert.equal(failedCleanup.cloud.record,null);assert.equal(failedCleanup.cloud.status,'signed-out');
+ console.log('PASS: successful server sign-out closes the budget even when cache removal fails');
+ const staleSession=device('stale-session');let releaseSession;const sessionGate=new Promise(resolve=>{releaseSession=resolve});
+ staleSession.client.auth.getSession=async()=>{await sessionGate;return {data:{session:{user:{id:'stale-session',email:'old@example.test'}}}}};
+ const starting=staleSession.init();staleSession.setUser(targetUser);staleSession.authEvent('SIGNED_IN',{user:targetUser});releaseSession();await starting;await staleSession.flushTimers();
+ assert.equal(staleSession.cloud.user.id,'switch-new');assert.equal(staleSession.cloud.record.payload.openingCents,900);
+ console.log('PASS: a delayed startup session cannot override a newer authentication event');
+ for(let n=0;n<20;n++){
+  const first={id:'switch-old',email:'old@example.test'},last={id:'switch-new',email:'new@example.test'};
+  staleSession.setUser(first);staleSession.authEvent('SIGNED_IN',{user:first});staleSession.setUser(last);staleSession.authEvent('SIGNED_IN',{user:last});await staleSession.flushTimers();
+  assert.equal(staleSession.cloud.user.id,last.id);assert.equal(staleSession.cloud.record.payload.openingCents,900);assert.equal(staleSession.cloud.status,'synced');assert.equal(staleSession.cloud.authTransition,null);
+ }
+ console.log('PASS: twenty consecutive rapid switches retain only the latest account without changing either remote budget');
+ const lateLogout=device('late-logout');await lateLogout.init();let releaseLogout;lateLogout.client.auth.signOut=()=>new Promise(resolve=>{releaseLogout=resolve});
+ const loggingOut=lateLogout.cloud.logout();lateLogout.setUser(targetUser);lateLogout.authEvent('SIGNED_IN',{user:targetUser});releaseLogout({});await loggingOut;await lateLogout.flushTimers();assert.equal(lateLogout.cloud.user.id,'switch-new');assert.equal(lateLogout.cloud.record.payload.openingCents,900);
+ console.log('PASS: an old sign-out response never cancels a newer sign-in event');
  console.log('PASS: all scripts parse; original financial engine unchanged');
 })().catch(e=>{console.error(e);process.exitCode=1});

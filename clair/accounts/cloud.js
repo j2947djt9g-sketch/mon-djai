@@ -5,7 +5,7 @@
     constructor(config, hooks, sdk=root.supabase){
       this.config=config;this.hooks=hooks;this.enabled=!!config;this.user=null;
       this.client=null;this.ready=!this.enabled;this.status=this.enabled?'loading':'local';
-      this.record=null;this.conflict=null;this.busy=false;this.timer=null;this.epoch=0;
+      this.record=null;this.conflict=null;this.busy=false;this.timer=null;this.epoch=0;this.authTransition=null;
       this.displayName='';this.error='';this.disposed=false;
       if(this.enabled){
         if(!/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(config.url)||!/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.key))throw Error('Configuration des comptes invalide.');
@@ -21,7 +21,7 @@
       return {payload:this.hooks.normalize(payload),meta:m};
     }
     pack(payload){
-      if(!this.user)throw Error('Connecte-toi pour enregistrer dans ton compte.');
+      if(!this.user||this.authTransition!==null)throw Error('Connecte-toi pour enregistrer dans ton compte.');
       const meta={userId:this.user.id,revision:this.record?.meta.revision||0,dirty:true,operationId:crypto.randomUUID()};
       return JSON.stringify({...payload,_cloud:meta});
     }
@@ -35,14 +35,21 @@
           if(session?.user.id&&session.user.id!==this.user?.id){this.ready=false;this.status='loading';}
           this.emit();
         }
-        if(event==='SIGNED_OUT'||(session?.user.id&&session.user.id!==this.user?.id))setTimeout(()=>this.attach(session?.user||null),0);
+        if(event==='SIGNED_OUT'||(session?.user.id&&session.user.id!==(this.authTransition?this.authTransition.user?.id:this.user?.id))){
+          // Invalidate in-flight work now; Auth callbacks must defer their asynchronous work.
+          const epoch=++this.epoch;this.authTransition={epoch,user:session?.user||null};clearTimeout(this.timer);this.ready=false;this.status='loading';this.emit();
+          setTimeout(()=>{if(this.authTransition?.epoch!==epoch||this.epoch!==epoch)return;return this.attach(this.authTransition.user);},0);
+        }
       });
+      const authEpoch=this.epoch;
       const {data,error}=await this.client.auth.getSession();
+      if(authEpoch!==this.epoch){if(this.authTransition)await this.attach(this.authTransition.user);return;}
       if(error){this.error='La session n’a pas pu être restaurée.';this.ready=true;this.status='signed-out';this.emit();return;}
       await this.attach(data.session?.user||null);
     }
     async attach(user){
-      if(user?.id===this.user?.id&&(this.ready||(this.user&&this.status==='loading')))return;
+      const transitioning=this.authTransition!==null;this.authTransition=null;
+      if(!transitioning&&user?.id===this.user?.id&&(this.ready||(this.user&&this.status==='loading')))return;
       const epoch=++this.epoch;clearTimeout(this.timer);this.record=null;this.conflict=null;this.error='';this.ready=false;this.user=user;
       if(!user){this.status='signed-out';this.ready=true;this.hooks.leave?.();this.emit();return;}
       this.displayName=String(user.user_metadata?.display_name||'').slice(0,64);
@@ -83,7 +90,7 @@
       this.status='synced';this.error='';this.hooks.apply?.(payload,raw);this.emit();
     }
     async sync(expectedEpoch=this.epoch){
-      if(!this.enabled||!this.user||this.busy||this.conflict||this.disposed)return;
+      if(!this.enabled||!this.user||this.authTransition!==null||this.busy||this.conflict||this.disposed)return;
       this.busy=true;const userId=this.user.id;
       try{
         if(navigator.onLine===false)throw Error('offline');
@@ -127,9 +134,13 @@
       const raw=JSON.stringify({...this.record.payload,_cloud:meta});localStorage.setItem(this.key(),raw);this.record={payload:this.record.payload,meta};this.conflict=null;this.hooks.apply?.(this.record.payload,raw);this.status='pending';this.emit();this.schedule();
     }
     async logout(){
+      const uid=this.user?.id;
       if(this.record?.meta.dirty){await this.sync();if(this.record?.meta.dirty)throw Error('Enregistre les modifications en ligne avant de te déconnecter, ou exporte une sauvegarde.');}
-      const uid=this.user?.id;const {error}=await this.client.auth.signOut({scope:'local'});if(error)throw Error('Déconnexion indisponible. Réessaie.');
-      if(uid)localStorage.removeItem(this.key(uid));await this.attach(null);
+      if(this.user?.id!==uid||this.authTransition!==null)throw Error('La session a changé. Vérifie le compte avant de te déconnecter.');
+      const {error}=await this.client.auth.signOut({scope:'local'});if(error)throw Error('Déconnexion indisponible. Réessaie.');
+      // Close authenticated views first, even if the browser refuses cache removal.
+      if(this.user?.id===uid&&(!this.authTransition?.user||this.authTransition.user.id===uid))await this.attach(null);
+      if(uid)localStorage.removeItem(this.key(uid));
     }
   }
   root.ClairCloud=ClairCloud;
