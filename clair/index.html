@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="auto" data-app-version="2026-10-16.4">
+<html lang="fr" data-theme="auto" data-app-version="2026-10-16.5">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#fa2d58">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://hkssnbvktfscizojhftl.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
@@ -604,9 +604,11 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       if(!user){this.status='signed-out';this.ready=true;this.hooks.leave?.();this.emit();return;}
       this.displayName=String(user.user_metadata?.display_name||'').slice(0,64);
       this.status='loading';this.emit();
+      let cachedRaw=null;
       try{
         this.hooks.enter?.(user,null);
-        this.record=this.decode(localStorage.getItem(this.key()),user.id);
+        cachedRaw=localStorage.getItem(this.key());
+        this.record=this.decode(cachedRaw,user.id);
         this.hooks.enter?.(user,this.record);
         this.ready=true;
         // Auth is ready even while the independent budget request is pending.
@@ -616,7 +618,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         if(epoch!==this.epoch)return;
         this.hooks.opened?.();
         if(!this.record&&!this.conflict&&this.status==='synced')this.hooks.empty?.(user);
-      }catch(error){if(epoch!==this.epoch)return;this.hooks.badCache?.(error,localStorage.getItem(this.key()));this.error=error.message;this.status='error';this.ready=true;this.emit();}
+      }catch(error){if(epoch!==this.epoch)return;this.error=error.message;this.status='error';this.ready=true;this.hooks.badCache?.(error,cachedRaw);this.emit();}
     }
     async read(){
       const {data,error}=await this.client.from('clair_budgets').select('payload,revision,operation_id,display_name,updated_at').eq('user_id',this.user.id).maybeSingle();

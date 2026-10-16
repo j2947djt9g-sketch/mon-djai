@@ -47,9 +47,11 @@
       if(!user){this.status='signed-out';this.ready=true;this.hooks.leave?.();this.emit();return;}
       this.displayName=String(user.user_metadata?.display_name||'').slice(0,64);
       this.status='loading';this.emit();
+      let cachedRaw=null;
       try{
         this.hooks.enter?.(user,null);
-        this.record=this.decode(localStorage.getItem(this.key()),user.id);
+        cachedRaw=localStorage.getItem(this.key());
+        this.record=this.decode(cachedRaw,user.id);
         this.hooks.enter?.(user,this.record);
         this.ready=true;
         // Auth is ready even while the independent budget request is pending.
@@ -59,7 +61,7 @@
         if(epoch!==this.epoch)return;
         this.hooks.opened?.();
         if(!this.record&&!this.conflict&&this.status==='synced')this.hooks.empty?.(user);
-      }catch(error){if(epoch!==this.epoch)return;this.hooks.badCache?.(error,localStorage.getItem(this.key()));this.error=error.message;this.status='error';this.ready=true;this.emit();}
+      }catch(error){if(epoch!==this.epoch)return;this.error=error.message;this.status='error';this.ready=true;this.hooks.badCache?.(error,cachedRaw);this.emit();}
     }
     async read(){
       const {data,error}=await this.client.from('clair_budgets').select('payload,revision,operation_id,display_name,updated_at').eq('user_id',this.user.id).maybeSingle();

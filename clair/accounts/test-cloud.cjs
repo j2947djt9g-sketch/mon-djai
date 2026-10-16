@@ -45,6 +45,11 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  console.log('PASS: sign-out removes account cache; original local budget remains; photos are not transmitted');
  const bad=device('c');bad.storage.set(bad.cloud.key('c'),'{broken');await bad.init();assert.equal(bad.cloud.status,'error');assert.equal(bad.cloud.record,null);assert.equal(bad.storage.get(bad.cloud.key('c')),'{broken');
  console.log('PASS: corrupt cache is retained; no previous account data is displayed');
+ const blocked=device('blocked-storage');let cacheFailure;
+ blocked.localStorage.getItem=()=>{throw Error('SecurityError: storage blocked')};
+ blocked.cloud.hooks.badCache=(error,raw)=>{cacheFailure={message:error.message,raw};assert.equal(blocked.cloud.ready,true);assert.equal(blocked.cloud.status,'error')};
+ await blocked.init();assert.equal(blocked.cloud.status,'error');assert.equal(blocked.cloud.ready,true);assert.equal(blocked.cloud.record,null);assert.equal(cacheFailure.message,'SecurityError: storage blocked');assert.equal(cacheFailure.raw,null);assert.equal(blocked.writes.length,0);
+ console.log('PASS: blocked storage reports the original error without rereading storage or writing a budget');
  const duplicate=device('duplicate');let unlock;readDelay=new Promise(r=>unlock=r);const opening=duplicate.init();await new Promise(r=>setImmediate(r));const epoch=duplicate.cloud.epoch;await duplicate.cloud.attach({id:'duplicate',email:'duplicate@example.test'});assert.equal(duplicate.cloud.epoch,epoch);unlock();await opening;readDelay=null;assert.equal(duplicate.cloud.status,'synced');
  console.log('PASS: duplicate SDK session events do not restart or block opening');
  const sameA=device('same'),sameB=device('same');await sameA.init();sameA.edit(budget(100));await sameA.cloud.sync();await sameB.init();sameA.edit(budget(200));sameB.edit(budget(200));await sameA.cloud.sync();await sameB.cloud.sync();assert.equal(sameB.cloud.status,'synced');assert.equal(sameB.cloud.conflict,null);
