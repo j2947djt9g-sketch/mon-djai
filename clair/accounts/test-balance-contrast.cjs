@@ -28,6 +28,7 @@ const cards=[
  [['negative'],['forecast-result'],['balance-summary'],['balance-section']]
 ];
 assert.equal(color(cards[0]),'#fff','Negative balance stays readable');
-assert.equal(color(cards[1]),'#ffadb8','Shortfall must be red, not white');
-for(const ancestry of cards){const text=luminance(color(ancestry));for(const background of ['#8d1745','#59235f','#3f285e','#8d274d','#683057','#52345c']){const bg=luminance(background),contrast=(Math.max(text,bg)+.05)/(Math.min(text,bg)+.05);assert(contrast>=4.5,`Negative text contrast too low: ${contrast.toFixed(2)}:1 against ${background}`);}}
-console.log('PASS: white negative balance and red shortfall win the CSS cascade and exceed 4.5:1 on the card gradient base colors');
+assert.equal(color(cards[1]),'#c91a3f','Shortfall must be red, not white');
+for(const [i,ancestry] of cards.entries()){const text=luminance(color(ancestry));for(const background of (i===0?['#43206b','#642b91']:['#fff'])){const bg=luminance(background),contrast=(Math.max(text,bg)+.05)/(Math.min(text,bg)+.05);assert(contrast>=4.5,`Negative text contrast too low: ${contrast.toFixed(2)}:1 against ${background}`);}}
+console.log('PASS: white negative balance and red shortfall win the CSS cascade and exceed 4.5:1 on violet balance and white forecast cards');
+

@@ -2,7 +2,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=r
 const source=fs.readFileSync(__dirname+'/cloud.js','utf8'),html=fs.readFileSync(__dirname+'/../index.html','utf8');
 const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);scripts.forEach(s=>new vm.Script(s));
 const ectx={window:{},Date,Intl};vm.createContext(ectx);vm.runInContext(scripts[0],ectx);const E=ectx.window.ClairEngine;
-assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'d6c1a581119b4d636cf98f3fe20d5823d0f592e48ed9c2856409f34ecb8fa39c');
+assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'1b8a037aaa6b5683bb338d9117efff3afdb986fb82de6119449bf3b716b37a22');
 let rows=new Map(),saveDelay=null,readDelay=null,loseResponse=false;
 function device(uid,storage=new Map()){
  let currentUser={id:uid,email:uid+'@example.test',user_metadata:{display_name:uid}};
@@ -94,5 +94,10 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  const lateLogout=device('late-logout');await lateLogout.init();let releaseLogout;lateLogout.client.auth.signOut=()=>new Promise(resolve=>{releaseLogout=resolve});
  const loggingOut=lateLogout.cloud.logout();lateLogout.setUser(targetUser);lateLogout.authEvent('SIGNED_IN',{user:targetUser});releaseLogout({});await loggingOut;await lateLogout.flushTimers();assert.equal(lateLogout.cloud.user.id,'switch-new');assert.equal(lateLogout.cloud.record.payload.openingCents,900);
  console.log('PASS: an old sign-out response never cancels a newer sign-in event');
- console.log('PASS: all scripts parse; original financial engine unchanged');
+ const saver=device('named-savings');await saver.init();const savings=budget(100000);savings.savingsProjects=[{id:'trip',name:'Voyage',kind:'voyage',icon:'plane',color:'violet',targetCents:100000,targetDate:null,archived:false}];savings.transactions=[{id:'saving-deposit',type:'expense',amountCents:25000,date:E.today(),categoryId:'epargne',savingsProjectId:'trip',name:'Épargne'}];saver.edit(savings);await saver.cloud.sync();
+ const secondSaver=device('named-savings');await secondSaver.init();assert.equal(secondSaver.cloud.record.payload.savingsProjects[0].icon,'plane');assert.equal(E.savingsBalance(secondSaver.cloud.record.payload,'trip'),25000);assert.equal(E.balance(secondSaver.cloud.record.payload),75000);assert.equal(rows.get('named-savings').payload.savingsSchema,1);
+ const isolatedSaver=device('unrelated-savings-account');await isolatedSaver.init();assert.equal(isolatedSaver.cloud.record,null);
+ console.log('PASS: named savings, icons and movements survive cloud save and a second device; unrelated accounts remain isolated');
+ console.log('PASS: all scripts parse; reviewed engine with savings metadata parses');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
