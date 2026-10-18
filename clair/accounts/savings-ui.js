@@ -4,7 +4,7 @@
   const savingsColorLabels={violet:'Violet',blue:'Bleu',green:'Vert',rose:'Rose',amber:'Ambre'};
   const savingsDefaultIcons={voyage:'plane',etudes:'book',securite:'shield',achat:'bag',autre:'star'};
   function savingsIcon(name){
-    const paths={plane:'<path d="m22 2-7 20-4-9-9-4 20-7ZM11 13l5-5"/>',book:'<path d="M12 5C9 3 5 3 2 4v16c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Zm0 0v16"/>',shield:'<path d="m12 2 8 4v6c0 5-8 10-8 10S4 17 4 12V6l8-4Z"/><path d="m8 12 3 3 5-6"/>',bag:'<rect x="4" y="6" width="16" height="16" rx="3"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/>',heart:'<path d="M20 5c-3-3-7-1-8 1C11 4 7 2 4 5c-5 5 8 15 8 15S25 10 20 5Z"/>',home:'<path d="m3 10 9-7 9 7v11h-7v-7h-4v7H3Z"/>',star:'<path d="m12 2 3 6 7 1-5 5 1 8-6-4-6 4 1-8-5-5 7-1 3-6Z"/>'};
+    const paths={plane:'<path d="m17.8 8.2 2.2-2.2a2.1 2.1 0 0 0-3-3l-2.2 2.2-8.6-2L4 5l7 4-3 3-3-1-2 2 5 3 3 5 2-2-1-3 3-3 4 7 1.8-2.2-2-8.6Z"/>',book:'<path d="M12 5C9 3 5 3 2 4v16c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Zm0 0v16"/>',shield:'<path d="m12 2 8 4v6c0 5-8 10-8 10S4 17 4 12V6l8-4Z"/><path d="m8 12 3 3 5-6"/>',bag:'<rect x="4" y="6" width="16" height="16" rx="3"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/>',heart:'<path d="M20 5c-3-3-7-1-8 1C11 4 7 2 4 5c-5 5 8 15 8 15S25 10 20 5Z"/>',home:'<path d="m3 10 9-7 9 7v11h-7v-7h-4v7H3Z"/>',star:'<path d="m12 2 3 6 7 1-5 5 1 8-6-4-6 4 1-8-5-5 7-1 3-6Z"/>'};
     return `<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.star}</svg>`;
   }
   function savingsProgress(p){
