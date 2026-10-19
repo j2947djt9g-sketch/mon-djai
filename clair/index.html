@@ -378,7 +378,7 @@ html[data-theme=dark]{--money-in:#78dda0;--money-out:#8cb5ff}
 .row[data-cashflow=income] .row-icon{color:var(--money-in);background:color-mix(in srgb,var(--money-in) 10%,transparent)}
 .row[data-cashflow=expense] .row-icon{color:var(--money-out);background:color-mix(in srgb,var(--money-out) 10%,transparent)}
 .row[data-savings=true] .row-icon{color:var(--accent-text);background:var(--soft)}
-.journal-controls{display:grid;gap:12px;margin-bottom:18px}.journal-controls>#search{width:100%;min-width:0;border-radius:14px}
+.journal-controls{display:grid;gap:12px;margin-bottom:18px}.journal-controls>#search{width:100%;min-width:0;min-height:44px;padding:11px 14px;border:1px solid var(--line);border-radius:14px;background:var(--paper-solid);color:var(--ink);font:inherit;font-size:14px;appearance:none}.journal-controls>#search:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .journal-segments{display:grid;grid-template-columns:.7fr 1fr 1.12fr;gap:4px;padding:4px;background:var(--soft);border:1px solid var(--line);border-radius:15px;max-width:620px}
 .journal-segments button{min-width:0;min-height:44px;padding:9px 10px;border:0;border-radius:11px;background:transparent;color:var(--ink);font:inherit;font-size:14px;font-weight:600;line-height:1.3;cursor:pointer}
 .journal-segments button[aria-pressed=true]{background:var(--accent-strong);color:#fff;box-shadow:0 2px 8px rgba(70,26,130,.12)}
