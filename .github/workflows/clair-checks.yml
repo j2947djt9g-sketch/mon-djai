@@ -1,7 +1,7 @@
 name: Clair code checks
 on:
   push:
-    branches: [main, clair-dashboard-savings-20261019, clair-ruban-history-20261019]
+    branches: [main, clair-dashboard-savings-20261019, clair-ruban-history-20261019, clair-welcome-ruban-20261019]
     paths:
       - 'clair/**'
       - '.github/workflows/clair-checks.yml'
@@ -38,3 +38,4 @@ jobs:
         run: |
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-browser.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-journal.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-welcome.cjs
