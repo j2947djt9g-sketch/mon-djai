@@ -1,0 +1,21 @@
+/* Ruban identity and clear cashflow filters. */
+:root{--money-in:#15803d;--money-out:#2563eb}
+html[data-theme=dark]{--money-in:#78dda0;--money-out:#8cb5ff;--soft:rgba(169,129,255,.14)}
+@media(prefers-color-scheme:dark){html[data-theme=auto]{--money-in:#78dda0;--money-out:#8cb5ff;--soft:rgba(169,129,255,.14)}}
+.brand-mark{background:transparent;box-shadow:none;overflow:hidden;flex-shrink:0}.brand-mark svg{display:block;width:100%;height:100%}
+.row[data-cashflow=income] .row-amount{color:var(--money-in)}.row[data-cashflow=expense] .row-amount{color:var(--money-out)}
+.row[data-cashflow=income] .row-icon{color:var(--money-in);background:color-mix(in srgb,var(--money-in) 10%,transparent)}
+.row[data-cashflow=expense] .row-icon{color:var(--money-out);background:color-mix(in srgb,var(--money-out) 10%,transparent)}
+.row[data-savings=true] .row-icon{color:var(--accent-text);background:var(--soft)}
+.journal-controls{display:grid;gap:12px;margin-bottom:18px}.journal-controls>#search{width:100%;min-width:0;min-height:44px;padding:11px 14px;border:1px solid var(--line);border-radius:14px;background:var(--paper-solid);color:var(--ink);font:inherit;font-size:14px;appearance:none}.journal-controls>#search:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.journal-segments{display:grid;grid-template-columns:.7fr 1fr 1.12fr;gap:4px;padding:4px;background:var(--soft);border:1px solid var(--line);border-radius:15px;max-width:620px}
+.journal-segments button{min-width:0;min-height:44px;padding:9px 10px;border:0;border-radius:11px;background:transparent;color:var(--ink);font:inherit;font-size:14px;font-weight:600;line-height:1.3;cursor:pointer}
+.journal-segments button[aria-pressed=true]{background:var(--accent-strong);color:#fff;box-shadow:0 2px 8px rgba(70,26,130,.12)}
+.journal-segments button:focus-visible,.journal-options summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.journal-options{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}.journal-options>details{min-width:0;flex:1;max-width:460px}
+.journal-options summary{min-height:44px;display:list-item;width:fit-content;padding:11px 6px;cursor:pointer;color:var(--accent-text);font-size:13px;font-weight:550}
+.journal-options .field{margin:8px 0 0;max-width:350px}.journal-options .help{font-size:12px;line-height:1.6;margin:8px 0 0}
+.journal-options>.button{flex:none;min-height:44px;gap:6px}.journal-options>.button .ui-icon{width:20px;height:20px}
+.journal-companion{margin:0 0 16px;padding:8px 14px;border-radius:18px}.journal-companion-content{min-height:62px;gap:12px}.journal-companion .mascot-pose{width:44px}.journal-companion-title{font-size:14px}.journal-companion .help{font-size:12px}
+.journal-list .row{gap:12px}.journal-list .row-amount{font-variant-numeric:tabular-nums}
+@media(max-width:720px){.journal-segments{max-width:none}.journal-segments button{font-size:12px;padding:8px 4px}.journal-list{padding:8px 12px}.journal-list .row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:6px 9px;padding:14px 0}.journal-list .row-icon{width:30px;height:30px;grid-row:1 / span 2;align-self:start}.journal-list .row-info{grid-column:2;grid-row:1 / span 2}.journal-list .row-name{font-size:13px}.journal-list .row-meta{font-size:11px}.journal-list .row-amount{grid-column:3;grid-row:1;font-size:13px;max-width:35vw;white-space:normal;overflow-wrap:anywhere;text-align:right}.journal-list .row .button.small{grid-column:3;grid-row:2;justify-self:end;min-height:32px;font-size:11px}}

@@ -1,0 +1,26 @@
+(function testJournal(){
+ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto').webcrypto;
+ const html=fs.readFileSync(__dirname+'/../index.html','utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]),nodes=new Map();
+ const node=selector=>{if(!nodes.has(selector))nodes.set(selector,{innerHTML:'',textContent:'',value:'',dataset:{},style:{},open:false,hidden:false,attributes:{},setAttribute(k,v){this.attributes[k]=v},addEventListener(){},scrollIntoView(){},focus(){}});return nodes.get(selector)};
+ const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout(){},clearTimeout(){},setInterval(){},location:{protocol:'file:',href:'file:///clair/index.html'},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener(){}}};
+ sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
+ const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);vm.runInContext(scripts[3].slice(0,boot)+`window.test={journal,journalFlow,journalResults,txRow,render,state:journalState,setData(d){data=d;snapshot=JSON.stringify(d)},setMonth(m){month=m},setPage(p){page=p}};})();`,sandbox);
+ const E=sandbox.ClairEngine,t=sandbox.test,d=E.empty();d.initialized=d.setupDone=true;d.openingBalanceDate='2026-10-01';d.openingCents=100000;
+ d.savingsProjects=[{id:'trip',name:'Voyage <test>',kind:'voyage',icon:'plane',color:'violet',targetCents:100000,targetDate:null,archived:false}];
+ const tx=(id,type,amountCents,name,extra={})=>({id,type,amountCents,name,date:'2026-10-15',categoryId:'autre',note:'',...extra});
+ d.transactions=[tx('salary','income',24000,'Salaire'),tx('phone','expense',1000,'Téléphone'),tx('transport','expense',2200,'Transport',{autoKey:'rule:2026-10-15'}),tx('deposit','expense',3000,'Épargne',{categoryId:'epargne',savingsProjectId:'trip'}),tx('withdraw','income',500,'Retrait',{categoryId:'epargne',savingsProjectId:'trip',date:'2026-10-16'}),tx('older','income',100,'Autre mois',{date:'2026-09-30'}),tx('unsafe','expense',100,'<img src=x onerror=alert(1)>',{note:'test'})];
+ t.setData(d);t.setMonth('2026-10');t.setPage('journal');const before=JSON.stringify(d),balance=E.balance(d);
+ const rows=()=>[...node('#journal-results').innerHTML.matchAll(/data-id="([^"]+)"/g)].map(m=>m[1]);
+ const show=(flow,kind='all',query='')=>{node('#kind-filter').value=kind;node('#search').value=query;t.journalFlow(flow);return rows()};
+ assert.equal(show('all').length,6);assert.deepEqual(show('income'),['salary']);assert.deepEqual(show('expense').sort(),['phone','transport','unsafe']);
+ assert.deepEqual(show('expense','auto'),['transport']);assert.deepEqual(show('expense','manual').sort(),['phone','unsafe']);assert.deepEqual(show('all','savings'),['withdraw','deposit']);assert.deepEqual(show('income','savings'),[]);
+ assert.deepEqual(show('all','savings','Voyage'),['withdraw','deposit']);assert.deepEqual(show('expense','all','téléphone'),['phone']);assert.deepEqual(show('income','all','introuvable'),[]);assert.equal(node('#journal-results').hidden,true);assert.match(node('#journal-companion').innerHTML,/data-mascot-state="filtered"/);
+ show('expense','manual','test');assert.deepEqual(rows(),['unsafe']);assert.doesNotMatch(node('#journal-results').innerHTML,/<img src=/);assert.match(node('#journal-results').innerHTML,/&lt;img/);
+ assert.match(t.journal(),/value="test"/);assert.match(t.journal(),/data-flow="expense" aria-pressed="true"/);assert.match(t.journal(),/value="manual" selected/);
+ t.setMonth('2026-09');t.journalResults();assert.equal(rows().length,0);t.setMonth('2026-10');t.journalResults();assert.deepEqual(rows(),['unsafe']);
+ assert.equal(node('[data-flow="expense"]').attributes['aria-pressed'],'true');assert.equal(node('[data-flow="income"]').attributes['aria-pressed'],'false');
+ const flow=t.state.flow;t.journalFlow('__proto__');assert.equal(t.state.flow,flow);
+ assert.match(t.txRow(d.transactions[0]),/data-cashflow="income"/);assert.match(t.txRow(d.transactions[1]),/data-cashflow="expense"/);assert.match(t.txRow(d.transactions[3]),/data-savings="true"/);assert.match(t.txRow(d.transactions[3]),/>Épargne<\/span>/);assert.match(t.txRow(d.transactions[4]),/Retrait d’épargne/);
+ assert.equal(JSON.stringify(d),before);assert.equal(E.balance(d),balance);
+ console.log('PASS: mixed default, income/expense separation without savings, combined source/search/month filters, preserved selections, escaped names, accessible pressed states and unchanged ledger');
+})();
