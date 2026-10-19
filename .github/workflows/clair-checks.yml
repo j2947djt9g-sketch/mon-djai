@@ -1,7 +1,7 @@
 name: Clair code checks
 on:
   push:
-    branches: [main]
+    branches: [main, clair-dashboard-savings-20261019]
     paths:
       - 'clair/**'
       - '.github/workflows/clair-checks.yml'
@@ -26,3 +26,13 @@ jobs:
             echo "Running $test"
             node "$test"
           done
+
+      - name: Install pinned browser test tool
+        shell: bash
+        run: npm install --prefix "$RUNNER_TEMP/clair-tools" --no-save --ignore-scripts playwright@1.64.1
+      - name: Check browser layouts and savings flows
+        shell: bash
+        env:
+          CLAIR_CHROME_PATH: /usr/bin/google-chrome
+          CLAIR_PREVIEW: '1'
+        run: NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-browser.cjs
