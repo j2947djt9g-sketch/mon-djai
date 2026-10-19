@@ -4,20 +4,20 @@
  const {chromium}=require('playwright'),root=path.resolve(__dirname,'..');
  const move=(id,type,amountCents,name,extra={})=>({id,type,amountCents,name,date:'2026-10-18',categoryId:'autre',note:'',...extra});
  const seed={version:3,initialized:true,setupDone:true,openingCents:30000,openingBalanceDate:'2026-10-01',transactions:[move('salary','income',24000,'Salaire démo'),move('transport','expense',2200,'Transport démo',{categoryId:'transport',autoKey:'demo:2026-10-18'}),move('phone','expense',1000,'Forfait démo',{categoryId:'telephone'}),move('deposit','expense',3000,'Voyage démo',{categoryId:'epargne',savingsProjectId:'trip'}),move('withdraw','income',500,'Retrait démo',{categoryId:'epargne',savingsProjectId:'trip',date:'2026-10-19'})],savingsSchema:1,savingsProjects:[{id:'trip',name:'Voyage démo',kind:'voyage',icon:'plane',color:'violet',targetCents:60000,targetDate:null,archived:false}],rules:[],skipped:[],budgets:{},budgetOverrides:{},customCategories:[],savingsGoal:0,fixedExpenses:[],preferences:{theme:'light',wallpaper:'plain',photo:null,reminders:false}};
- const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}try{res.writeHead(200,{'content-type':{'.html':'text/html','.js':'text/javascript','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.webmanifest':'application/manifest+json'}[path.extname(file)]||'application/octet-stream'});res.end(fs.readFileSync(file));}catch{res.writeHead(404);res.end();}});
+ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}try{const content=fs.readFileSync(file);res.writeHead(200,{'content-type':{'.html':'text/html','.js':'text/javascript','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.webmanifest':'application/manifest+json'}[path.extname(file)]||'application/octet-stream'});res.end(content);}catch{res.writeHead(404);res.end();}});
  async function main(){
   await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
   const browser=await chromium.launch({headless:true,...(process.env.CLAIR_CHROME_PATH?{executablePath:process.env.CLAIR_CHROME_PATH}:{})});
   try{
    // Render the vector source without a font dependency; emitted bytes are reviewable build outputs.
-   if(process.env.CLAIR_RENDER_ICONS==='1'){
+   if(process.argv.includes('--render-icons')){
     const page=await browser.newPage(),svg=fs.readFileSync(path.join(root,'icons/icon.svg'),'utf8');
     for(const size of [180,192,512]){
      await page.setViewportSize({width:size,height:size});await page.setContent('<style>html,body{margin:0}svg{display:block;width:100vw;height:100vh}</style>'+svg);
      console.log('CLAIR_ICON_'+size+'='+((await page.screenshot({type:'png',omitBackground:true})).toString('base64')));
     }
     await page.setViewportSize({width:512,height:512});await page.setContent('<style>html,body{margin:0}svg{display:block;width:100vw;height:100vh}</style>'+svg.replace('rx="112"','rx="0"'));
-    const png=await page.screenshot({type:'png',omitBackground:true});fs.writeFileSync(path.join(root,'icons/icon-maskable-512.png'),png);console.log('CLAIR_ICON_MASKABLE='+png.toString('base64'));await page.close();
+    const png=await page.screenshot({type:'png',omitBackground:true});fs.writeFileSync(path.join(root,'icons/icon-maskable-512.png'),png);console.log('CLAIR_ICON_MASKABLE='+png.toString('base64'));await page.close();return;
    }
    for(const width of [1440,390,320,768]){
     const context=await browser.newContext({viewport:{width,height:width===1440?1000:844},colorScheme:'light'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
