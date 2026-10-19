@@ -430,7 +430,7 @@ body:has(.account-layout) .sidebar,body:has(.account-layout) .bottom-nav,body:ha
 body:has(.account-layout) .shell{max-width:1180px}
 body:has(.account-layout) main{margin-left:0;padding:28px 32px 24px}
 body:has(.account-layout) .topbar{margin:0 auto 36px;max-width:1040px;gap:14px}
-body:has(.account-layout) .mobile-brand{display:flex;font-size:26px;gap:10px;align-items:center}
+body:has(.account-layout) .mobile-brand{display:flex;font-size:26px;font-weight:800;letter-spacing:-.03em;gap:10px;align-items:center}
 body:has(.account-layout) .mobile-brand .brand-mark{width:40px;height:40px;border-radius:12px}
 body:has(.account-layout) .status{padding:8px 13px;background:var(--paper-solid);border:1px solid var(--line);border-radius:999px;font-size:12px;line-height:1.4}
 body:has(.account-layout) #page{padding-top:clamp(0px,5vh,52px)}
@@ -465,9 +465,10 @@ body:has(.account-layout) #page{padding-top:clamp(0px,5vh,52px)}
 .account-screen-credit{text-align:center;font-size:11px;color:var(--muted);margin:22px 0 0}
 html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;--auth-text:#f4edff;--auth-muted:#ccbedf;--auth-border:#514063;--auth-bubble:#372650}
 @media(prefers-color-scheme:dark){html[data-theme=auto] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;--auth-text:#f4edff;--auth-muted:#ccbedf;--auth-border:#514063;--auth-bubble:#372650}}
-@media(max-width:760px){body:has(.account-layout) main{padding:calc(18px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}body:has(.account-layout) .topbar{margin-bottom:22px}body:has(.account-layout) .status{font-size:10px;padding:6px 9px;max-width:56%}body:has(.account-layout) #page{padding-top:0}.account-layout{grid-template-columns:minmax(0,1fr);border-radius:24px;max-width:480px}.account-scene{padding:16px 20px;gap:10px;border-right:0;border-bottom:1px solid var(--auth-border)}.account-device-badge{font-size:10px;padding:5px 9px}.account-mascot-stage{min-height:100px}.account-mascot-stage:before{width:88px;height:88px;left:calc(50% + 48px);bottom:0}.account-mascot-stage .mascot-guide{width:100%;flex-direction:row-reverse;justify-content:center;gap:14px}.account-mascot-stage .mascot-pose{width:78px}.account-mascot-stage .mascot-copy{font-size:12px;max-width:210px;padding:10px 12px;text-align:left}.account-scene-caption{display:none}.account-form-pane{padding:24px}.account-form-pane h1{font-size:28px}.account-form-pane .muted{font-size:13px;margin-bottom:22px}.account-form-pane .eyebrow{margin-bottom:10px}.account-form-pane:has(input:focus) .muted{margin-bottom:14px}.account-layout:has(input:focus) .account-device-badge{display:none}.account-layout:has(input:focus) .account-mascot-stage{min-height:60px}.account-layout:has(input:focus) .mascot-pose{width:46px}.account-layout:has(input:focus) .account-mascot-stage:before{display:none}}
+@media(max-width:760px){body:has(.account-layout) main{padding:calc(18px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}body:has(.account-layout) .topbar{margin-bottom:22px}body:has(.account-layout) .status{font-size:10px;padding:6px 9px;max-width:56%}body:has(.account-layout) #page{padding-top:0}.account-layout{grid-template-columns:minmax(0,1fr);border-radius:24px;max-width:480px}.account-scene{padding:16px 20px;gap:10px;border-right:0;border-bottom:1px solid var(--auth-border)}.account-device-badge{font-size:10px;padding:5px 9px}.account-mascot-stage{min-height:100px}.account-mascot-stage:before{width:88px;height:88px;left:calc(50% + 48px);bottom:0}.account-mascot-stage .mascot-guide{width:100%;flex-direction:row-reverse;justify-content:center;gap:14px}.account-mascot-stage .mascot-pose{width:78px}.account-mascot-stage .mascot-copy{font-size:12px;max-width:210px;padding:10px 12px;text-align:left}.account-scene-caption{display:none}.account-form-pane{padding:24px}.account-form-pane h1{font-size:28px}.account-form-pane .muted{font-size:13px;margin-bottom:22px}.account-form-pane .eyebrow{margin-bottom:10px}}
 @media(max-width:360px){body:has(.account-layout) main{padding-left:12px;padding-right:12px}.account-form-pane{padding:20px}.account-form-pane h1{font-size:25px}.account-form-pane .actions{flex-direction:column;gap:2px}.account-scene{padding:12px 16px}.account-mascot-stage .mascot-pose{width:64px}.account-mascot-stage .mascot-copy{font-size:11px}.account-form-signature{margin-top:18px}}
 
+@media(max-width:760px) and (max-height:600px){.account-device-badge{display:none}.account-mascot-stage{min-height:76px}.account-mascot-stage .mascot-pose{width:56px}.account-mascot-stage:before{width:64px;height:64px;left:calc(50% + 38px)}}
 </style>
 </head>
 <body data-wall="plain">
@@ -1031,7 +1032,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     const content=markup.replace(/<div class="brand-mark" aria-hidden="true">[\s\S]*?<\/svg><\/div>/,'')
       .replace(/<div class="mascot-guide">[\s\S]*?<\/div>/,'');
     return '<div class="account-layout"><aside class="account-scene" aria-label="Clair sur tes appareils">'+
-      '<div class="account-device-badge"><span aria-hidden="true">'+icon('phone')+'</span>Téléphone et ordinateur</div>'+
+      '<div class="account-device-badge"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg></span>Téléphone et ordinateur</div>'+
       '<div class="account-mascot-stage">'+guide+'</div>'+
       '<p class="account-scene-caption">Un compte.<br><strong>Ton budget te suit.</strong></p></aside>'+
       '<div class="account-form-pane"><p class="eyebrow">Espace personnel</p>'+content+

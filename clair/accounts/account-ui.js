@@ -58,7 +58,7 @@
     const content=markup.replace(/<div class="brand-mark" aria-hidden="true">[\s\S]*?<\/svg><\/div>/,'')
       .replace(/<div class="mascot-guide">[\s\S]*?<\/div>/,'');
     return '<div class="account-layout"><aside class="account-scene" aria-label="Clair sur tes appareils">'+
-      '<div class="account-device-badge"><span aria-hidden="true">'+icon('phone')+'</span>Téléphone et ordinateur</div>'+
+      '<div class="account-device-badge"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg></span>Téléphone et ordinateur</div>'+
       '<div class="account-mascot-stage">'+guide+'</div>'+
       '<p class="account-scene-caption">Un compte.<br><strong>Ton budget te suit.</strong></p></aside>'+
       '<div class="account-form-pane"><p class="eyebrow">Espace personnel</p>'+content+
