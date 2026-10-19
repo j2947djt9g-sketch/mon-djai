@@ -46,3 +46,5 @@ html[data-theme=dark] body[data-wall=plain] .wall{background:#100d17}
 }
 
 @media(max-width:720px){.home-grid{gap:12px;margin-top:12px}.home-grid .card{padding:13px}.home-grid .section-head .link{min-height:28px;padding:3px 0}}
+
+@media(max-width:360px){.balance-section{padding:12px;gap:9px}}

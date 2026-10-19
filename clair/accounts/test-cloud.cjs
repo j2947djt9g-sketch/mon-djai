@@ -98,6 +98,11 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  const secondSaver=device('named-savings');await secondSaver.init();assert.equal(secondSaver.cloud.record.payload.savingsProjects[0].icon,'plane');assert.equal(E.savingsBalance(secondSaver.cloud.record.payload,'trip'),25000);assert.equal(E.balance(secondSaver.cloud.record.payload),75000);assert.equal(rows.get('named-savings').payload.savingsSchema,1);
  const isolatedSaver=device('unrelated-savings-account');await isolatedSaver.init();assert.equal(isolatedSaver.cloud.record,null);
  console.log('PASS: named savings, icons and movements survive cloud save and a second device; unrelated accounts remain isolated');
+ const oldRaw=JSON.parse(secondSaver.storage.get(secondSaver.cloud.key()));delete oldRaw.savingsSchema;delete oldRaw.savingsProjects;oldRaw.transactions.forEach(t=>{delete t.savingsProjectId});
+ const cleanOldCache=new Map([[secondSaver.cloud.key(),JSON.stringify(oldRaw)]]),cleanUpgraded=device('named-savings',cleanOldCache);await cleanUpgraded.init();assert.equal(cleanUpgraded.cloud.record.payload.savingsProjects[0].id,'trip');assert.equal(E.savingsBalance(cleanUpgraded.cloud.record.payload,'trip'),25000);
+ oldRaw._cloud.dirty=true;oldRaw._cloud.operationId=crypto.randomUUID();oldRaw.transactions.push({id:'old-addition',type:'expense',amountCents:200,date:E.today(),name:'Old addition',categoryId:'autre'});
+ const dirtyOldCache=new Map([[secondSaver.cloud.key(),JSON.stringify(oldRaw)]]),dirtyUpgraded=device('named-savings',dirtyOldCache);await dirtyUpgraded.init();assert.equal(dirtyUpgraded.cloud.status,'conflict');assert.equal(rows.get('named-savings').payload.savingsProjects[0].id,'trip');assert(dirtyUpgraded.cloud.record.payload.transactions.some(t=>t.id==='old-addition'));
+ console.log('PASS: an old clean cache recovers named projects; an old dirty cache cannot silently replace them even at the same revision');
  console.log('PASS: all scripts parse; reviewed engine with savings metadata parses');
 })().catch(e=>{console.error(e);process.exitCode=1});
 

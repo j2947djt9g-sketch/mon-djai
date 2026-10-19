@@ -366,6 +366,8 @@ html[data-theme=dark] body[data-wall=plain] .wall{background:#100d17}
 }
 
 @media(max-width:720px){.home-grid{gap:12px;margin-top:12px}.home-grid .card{padding:13px}.home-grid .section-head .link{min-height:28px;padding:3px 0}}
+
+@media(max-width:360px){.balance-section{padding:12px;gap:9px}}
 </style>
 </head>
 <body data-wall="plain">
@@ -741,6 +743,13 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         if(navigator.onLine===false)throw Error('offline');
         const remote=await this.read();if(expectedEpoch!==this.epoch)return;
         const raw=localStorage.getItem(this.key(userId));this.record=this.decode(raw,userId);
+        // Older clients remove unknown savings fields while normalizing their cache.
+        // Never promote that reduced cache into a replacement for named cloud projects.
+        if(remote?.payload?.savingsSchema===1&&raw&&JSON.parse(raw).savingsSchema!==1){
+          if(this.record?.meta.dirty)this.setConflict(remote);
+          else this.adopt(remote,expectedEpoch);
+          return;
+        }
         if(this.record?.meta.dirty){
           const pending=this.record;
           if(remote&&JSON.stringify(this.wire(pending.payload))===JSON.stringify(this.wire(this.hooks.normalize(remote.payload)))){this.adopt(remote,expectedEpoch);return;}

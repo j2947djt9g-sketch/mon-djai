@@ -96,6 +96,13 @@
         if(navigator.onLine===false)throw Error('offline');
         const remote=await this.read();if(expectedEpoch!==this.epoch)return;
         const raw=localStorage.getItem(this.key(userId));this.record=this.decode(raw,userId);
+        // Older clients remove unknown savings fields while normalizing their cache.
+        // Never promote that reduced cache into a replacement for named cloud projects.
+        if(remote?.payload?.savingsSchema===1&&raw&&JSON.parse(raw).savingsSchema!==1){
+          if(this.record?.meta.dirty)this.setConflict(remote);
+          else this.adopt(remote,expectedEpoch);
+          return;
+        }
         if(this.record?.meta.dirty){
           const pending=this.record;
           if(remote&&JSON.stringify(this.wire(pending.payload))===JSON.stringify(this.wire(this.hooks.normalize(remote.payload)))){this.adopt(remote,expectedEpoch);return;}
@@ -145,3 +152,4 @@
   }
   root.ClairCloud=ClairCloud;
 })(window);
+
