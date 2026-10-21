@@ -11,8 +11,8 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
   for(const width of [320,390,768,1440]){
    const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors=[];
    page.on('pageerror',e=>errors.push(e.message));await page.clock.install({time:new Date('2026-10-21T12:00:00+02:00')});
-   await page.addInitScript(seed=>{window.CLAIR_ACCOUNT_CONFIG=null;if(!localStorage.getItem('clair-github-money-v3'))localStorage.setItem('clair-github-money-v3',JSON.stringify(seed));sessionStorage.setItem('clair-splash-v2','1');},seed);
-   await page.goto(url);await page.clock.runFor(500);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('.balance-section').waitFor();
+   await page.addInitScript(seed=>{window.CLAIR_ACCOUNT_CONFIG=null;if(!localStorage.getItem('clair-github-money-v3'))localStorage.setItem('clair-github-money-v3',JSON.stringify(seed));},seed);
+   await page.goto(url);await page.clock.runFor(3600);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('.balance-section').waitFor();
    assert.match(await page.locator('#reminders').innerText(),/Forfait.*dans 2 jours/);
    assert.match(await page.locator('.balance').innerText(),/100,00/);
    await page.clock.setSystemTime(new Date('2026-10-23T00:00:00+02:00'));await page.clock.fastForward(31000);
