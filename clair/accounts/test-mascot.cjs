@@ -11,20 +11,19 @@ function run({seen=false,user=false,local=false,recovery=false,reduced=false}={}
  vm.createContext(s);vm.runInContext(code+'welcome();',s);
  return {s,nodes,handlers,timers,inits:()=>inits,renders:()=>renders,setups:()=>setups};
 }
-const signup=run();assert.equal(signup.nodes.get('#welcome').open,true);assert.equal(signup.timers.length,1);assert.equal(signup.timers[0].ms,2000);assert(signup.nodes.get('#welcome .mascot-pose').classList.contains('welcome-playing'));signup.timers[0].fn();assert.equal(signup.nodes.get('#welcome').open,true);assert(!signup.nodes.get('#welcome .mascot-pose').classList.contains('welcome-playing'));
-signup.handlers['#welcome-skip:click']();assert.equal(signup.s.accountMode,'signup');assert.equal(signup.inits(),1);assert.equal(signup.renders(),1);
-const login=run();login.handlers['#welcome-login:click']();assert.equal(login.s.accountMode,'login');assert.equal(login.inits(),1);
-const returning=run({user:true});assert.equal(returning.timers.length,1);assert.equal(returning.nodes.get('#welcome-login').hidden,true);assert.equal(returning.timers[0].ms,2000);returning.timers[0].fn();assert.equal(returning.inits(),1);
-for(const options of [{seen:true},{recovery:true},{reduced:true}]){const r=run(options);assert.equal(r.inits(),1);assert(!r.nodes.get('#welcome').open);}
-const local=run({local:true});local.handlers['#welcome-skip:click']();assert.equal(local.setups(),1);
-assert.match(html,/mascot\(\[2,1,2,3\]\[s\]/);assert.match(html,/mascot\(signup\?1:0/);
-assert.match(html,/:has\(input:focus,select:focus,textarea:focus\)/);
-const sw=fs.readFileSync(__dirname+'/../sw.js','utf8');assert.doesNotMatch(sw,/assets\/mascotte-poses.png/);assert.match(sw,/const HOME=new URL\('index.html',BASE\).href/);
-console.log('PASS: explicit signup/login, returning session, recovery and reduced-motion bypass, local setup, four poses, compact input state and offline asset');
 
-const changed=run();changed.handlers['motion:change']({matches:true});assert(!changed.nodes.get('#welcome .mascot-pose').classList.contains('welcome-playing'));
-assert.equal(changed.nodes.get('#welcome').open,true);assert.equal(changed.nodes.get('#welcome-login').hidden,false);
-const changedReturning=run({user:true});changedReturning.handlers['motion:change']({matches:true});assert.equal(changedReturning.nodes.get('#welcome').open,false);assert.equal(changedReturning.inits(),1);assert.equal(changedReturning.timers[0].cancelled,true);assert(!changedReturning.nodes.get('#welcome .mascot-pose').classList.contains('welcome-playing'));
+const first=run();assert.equal(first.nodes.get('#welcome').open,true);assert(first.nodes.get('#welcome').classList.contains('splash-full'));assert.equal(first.timers[0].ms,2000);assert.equal(first.inits(),0);
+first.timers[0].fn();assert.equal(first.nodes.get('#welcome').open,false);assert.equal(first.inits(),1);assert.equal(first.s.accountMode,'login');first.timers[0].fn();first.handlers['#welcome:close']();assert.equal(first.inits(),1);
+const returning=run({seen:true,user:true});assert(returning.nodes.get('#welcome').classList.contains('splash-quick'));assert.equal(returning.timers[0].ms,450);returning.timers[0].fn();assert.equal(returning.inits(),1);
+const reduced=run({reduced:true});assert(reduced.nodes.get('#welcome').classList.contains('splash-static'));assert.equal(reduced.timers[0].ms,150);reduced.timers[0].fn();assert.equal(reduced.inits(),1);
+const recovery=run({recovery:true});assert.equal(recovery.inits(),1);assert(!recovery.nodes.get('#welcome').open);assert.equal(recovery.timers.length,0);
+const changed=run();changed.handlers['motion:change']({matches:true});assert(!changed.nodes.get('#welcome').open);assert.equal(changed.inits(),1);assert.equal(changed.timers[0].cancelled,true);
+const escape=run();escape.handlers['#welcome:cancel']();assert(!escape.nodes.get('#welcome').open);assert.equal(escape.inits(),1);
+const local=run({local:true});assert.equal(local.setups(),0);local.timers[0].fn();assert.equal(local.setups(),1);
+const welcome=html.match(/<dialog id="welcome"[\s\S]*?<\/dialog>/)[0];assert.doesNotMatch(welcome,/248|€|<button|welcome-preview|mascot/);assert.match(welcome,/<h1[^>]*>Clair<\/h1>/);assert.match(welcome,/Ton budget, l’esprit tranquille\./);assert.match(welcome,/<mask id="splash-reveal"/);
+assert.match(html,/mascot\(\[2,1,2,3\]\[s\]/);assert.match(html,/mascot\(signup\?1:0/);
+const sw=fs.readFileSync(__dirname+'/../sw.js','utf8');
 for(const name of ['01-bienvenue.png','01-bienvenue.webp','02-serenite.png','03-vigilance.png','04-prevision-tendue.png','05-solde-zero.png','06-solde-negatif-v2.webp']){assert(sw.includes('assets/mascotte/'+name));assert(fs.existsSync(__dirname+'/../assets/mascotte/'+name));}
-const css=html.slice(html.indexOf('<style>'),html.indexOf('</style>'));assert.doesNotMatch(css,/companion-greet|companion-celebrate/);assert.doesNotMatch(ui.slice(0,ui.indexOf('  function welcome(){')),/classList.add\('welcome-playing'\)/);
-console.log('PASS one two-second welcome, stop and static poster, fixed expressions elsewhere, offline assets');
+assert(html.includes(fs.readFileSync(__dirname+'/welcome.css','utf8').trimEnd()));
+console.log('PASS automatic Ruban opening: two seconds, brief returns, reduced motion, recovery bypass, local setup, Escape, and exactly one account initialization');
+console.log('PASS sample balance/buttons removed; account mascot and offline assets preserved');

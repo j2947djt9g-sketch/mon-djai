@@ -1,9 +1,26 @@
-/* Welcome screen follows Clair's Ruban identity. */
-#welcome{background:radial-gradient(ellipse at 30% 15%,#623399 0,transparent 65%),#211237;color:#fff;overflow-y:auto}
-#welcome .welcome-brand{display:flex;align-items:center;justify-content:center;gap:12px;font-size:34px;font-weight:800;letter-spacing:-1px;line-height:1.1}
-#welcome .welcome-brand .brand-mark{width:44px;height:44px;border-radius:11px}
-#welcome .welcome-brand svg{display:block;width:100%;height:100%}
-#welcome #welcome-skip{background:#fff;color:#5624ab}
-#welcome #welcome-login{color:#f2ebff}
-#welcome .welcome-credit{color:#d9caee}
-@media(max-height:700px){#welcome .welcome-brand{font-size:29px;gap:10px}#welcome .welcome-brand .brand-mark{width:36px;height:36px}}
+/* Automatic Clair opening: the original Ruban glyph, no sample budget. */
+#welcome{--splash-bg:#fbf9ff;--splash-ink:#30204e;--splash-muted:#76678c;border:0;border-radius:0;position:fixed;inset:0;max-width:none;max-height:none;width:100%;height:100%;height:100dvh;margin:0;padding:calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 44%,#8f60e912 0,transparent 48%),var(--splash-bg);color:var(--splash-ink);text-align:center;overflow:hidden}
+#welcome[open]{display:flex;align-items:center;justify-content:center}
+#welcome::backdrop{background:transparent;backdrop-filter:none}
+#welcome .splash-content{width:min(100%,420px);display:flex;flex-direction:column;align-items:center;gap:0}
+#welcome .splash-logo{display:block;width:clamp(156px,38vw,208px);height:auto;overflow:visible;filter:drop-shadow(0 10px 20px #7c45d914)}
+#welcome .splash-trace{stroke-dasharray:1;stroke-dashoffset:0}
+#welcome .splash-name{margin:6px 0 0;font-size:clamp(40px,9vw,50px);font-weight:780;letter-spacing:-2px;line-height:1.2;color:var(--splash-ink)}
+#welcome .splash-tagline{margin:12px 0 0;font-size:clamp(13px,3.5vw,15px);line-height:1.6;letter-spacing:.01em;color:var(--splash-muted)}
+#welcome .splash-sheen{opacity:0}
+#welcome.splash-full{animation:splash-exit .26s 1.74s ease-in both}
+#welcome.splash-full .splash-trace{animation:splash-draw .9s cubic-bezier(.35,0,.2,1) both}
+#welcome.splash-full .splash-name{animation:splash-copy .38s .86s ease-out both}
+#welcome.splash-full .splash-tagline{animation:splash-copy .35s 1.09s ease-out both}
+#welcome.splash-full .splash-sheen{animation:splash-sheen .44s .96s ease-out both}
+#welcome.splash-quick{animation:splash-exit .12s .33s ease-in both}
+#welcome.splash-quick .splash-trace{animation:splash-draw .18s ease-out both}
+#welcome.splash-quick .splash-name{animation:splash-copy .16s .07s ease-out both}
+#welcome.splash-quick .splash-tagline{animation:splash-copy .12s .14s ease-out both}
+@keyframes splash-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes splash-copy{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes splash-exit{from{opacity:1}to{opacity:0}}
+@keyframes splash-sheen{0%{opacity:0;transform:translateX(-180px) skewX(-16deg)}20%{opacity:.42}80%{opacity:.25}100%{opacity:0;transform:translateX(520px) skewX(-16deg)}}
+html[data-theme=dark] #welcome{--splash-bg:#15101f;--splash-ink:#f2ecff;--splash-muted:#b9accd}
+@media(prefers-color-scheme:dark){html[data-theme=auto] #welcome{--splash-bg:#15101f;--splash-ink:#f2ecff;--splash-muted:#b9accd}}
+@media(prefers-reduced-motion:reduce){#welcome,#welcome .splash-trace,#welcome .splash-name,#welcome .splash-tagline,#welcome .splash-sheen{animation:none!important}#welcome .splash-trace{stroke-dashoffset:0}}

@@ -1,7 +1,7 @@
 name: Clair code checks
 on:
   push:
-    branches: [main, clair-dashboard-savings-20261019, clair-ruban-history-20261019, clair-welcome-ruban-20261019, clair-subscriptions-reminders-20261021]
+    branches: [main, clair-dashboard-savings-20261019, clair-ruban-history-20261019, clair-welcome-ruban-20261019, clair-subscriptions-reminders-20261021, clair-ruban-splash-20261021]
     paths:
       - 'clair/**'
       - 'supabase/**'
