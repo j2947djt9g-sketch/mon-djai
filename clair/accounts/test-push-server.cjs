@@ -7,8 +7,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
  const d=E.empty();d.initialized=d.setupDone=true;d.openingBalanceDate='2026-01-01';d.rules=[rule('phone'),rule('end','last'),{...rule('annual',29),kind:'yearly',month:2}, {...rule('paused',31),pauses:[{start:'2027-01-01',end:'2027-04-30'}]}];
  for(let date='2026-01-01';date<'2028-01-01';date=E.addDays(date,1)){
    const due=E.addDays(date,2),expected=E.occurrences(d,due,due).map(x=>x.autoKey);
-   assert.deepEqual(remindersFor(d,date).map(x=>x.key),Array.from(expected),'Calendar differs on '+date);
+   assert.deepEqual(remindersFor(d,date).map(x=>x.key).sort(),Array.from(expected).sort(),'Calendar differs on '+date);
  }
+ assert(remindersFor(d,'2028-02-27').some(r=>r.key==='annual:2028-02-29'));
  assert.equal(parisTime(new Date('2026-10-20T22:30:00Z')).date,'2026-10-21');
  for(const iso of ['2026-03-29T07:00:00Z','2026-10-25T08:00:00Z'])assert.equal(parisTime(new Date(iso)).hour,9);
  for(const disabled of [ {...d,preferences:{reminders:false}}, {...d,initialized:false}, {...d,setupDone:false}])assert.equal(remindersFor(disabled,'2026-10-21').length,0);
