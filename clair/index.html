@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="auto" data-app-version="2026-10-19.5">
+<html lang="fr" data-theme="auto" data-app-version="2026-10-21.1">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#783bf1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://hkssnbvktfscizojhftl.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
@@ -670,14 +670,13 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
     const scheduled = d.transactions.filter(t => t.date > date && t.date <= end);
     return { predicted, scheduled, cents: predicted.reduce((n, t) => n + t.amountCents, 0) + scheduled.filter(t => t.type === 'expense').reduce((n, t) => n + t.amountCents, 0) };
   }
-  /* Échéances mensuelles/annuelles : prochaine occurrence par règle + charges passées non confirmées (31 j). */
-  function upcoming(d, date = today(), horizon = 62) {
+  /* Prochaine échéance future par habitude ; les débits comptés restent dans le journal. */
+  function upcoming(d, date = today(), horizon = 400) {
     const rules = new Map(d.rules.filter(r => r.kind !== 'weekly').map(r => [r.id, r]));
     const future = occurrences({ ...d, rules: [...rules.values()] }, addDays(date, 1), addDays(date, horizon));
     const seen = new Set(), next = [];
     for (const o of future) if (!seen.has(o.ruleId)) { seen.add(o.ruleId); next.push({ ...o, status: 'future' }); }
-    const past = d.transactions.filter(t => t.type === 'expense' && t.autoKey && rules.has(t.ruleId) && !t.paymentConfirmed && t.date <= date && t.date >= addDays(date, -31)).map(t => ({ ...t, status: t.date < date ? 'unconfirmed' : 'today' }));
-    return [...past, ...next].map(o => ({ ...o, dueDate: o.autoKey.slice(-10), days: daysBetween(date, o.autoKey.slice(-10)), reminderEnabled: rules.get(o.ruleId).reminderEnabled })).sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.id.localeCompare(b.id));
+    return next.map(o => ({ ...o, dueDate: o.autoKey.slice(-10), days: daysBetween(date, o.autoKey.slice(-10)), reminderEnabled: rules.get(o.ruleId).reminderEnabled })).sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.id.localeCompare(b.id));
   }
   const reminderDate = due => addDays(due, -2);
   /* Données minimales pour le serveur de rappels : uniquement les règles choisies. */
@@ -905,7 +904,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 (function () {
   'use strict';
   /* Configuration du serveur de rappels (version hébergée uniquement). Clé publique anon seulement. */
-  window.CLAIR_PUSH_CONFIG = window.CLAIR_PUSH_CONFIG || null;
+  window.CLAIR_PUSH_CONFIG = window.CLAIR_PUSH_CONFIG || {url:'https://hkssnbvktfscizojhftl.supabase.co/functions/v1/clair-reminders'};
   const E=window.ClairEngine, LOCAL_KEY='clair-github-money-v3', OLD_KEY='clair-github-money-v1';
   let KEY=LOCAL_KEY,BACKUP='clair-github-before-upgrade-v3',REMINDED='clair-github-reminded-v1',PUSH_KEY='clair-github-push-v1';
   const $ = s => document.querySelector(s);
@@ -997,7 +996,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       else renderAccountStatus();
     },
     recovery:user=>{accountRecovery=true;accountRecoveryUserId=user?.id||null;accountResetStep='password';close();},
-    opened:()=>{if(!accountResetStep)catchUp();},
+    opened:()=>{if(!accountResetStep){catchUp();queuePushSync();}},
     enter:(user,record)=>{
       close();wizard=null;undo=null;recovery=null;page='home';
       KEY=cloud.key(user.id);BACKUP=KEY+'-backup';REMINDED=KEY+'-reminded';PUSH_KEY=KEY+'-push';
@@ -1294,7 +1293,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if(action==='account-import')transferLegacy();
     if(action==='account-start-empty'){close();beginSetup();}
     if(action==='account-sync')await cloud.sync();
-    if(action==='account-logout')try{await cloud.logout();}catch(error){notify(error.message);}
+    if(action==='account-logout')try{await disablePush(true);await cloud.logout();}catch(error){notify(error.message);}
     if(action==='account-conflict')conflictDialog();
     if(action==='account-export-device')download(JSON.stringify(data,null,2),'Clair-copie-appareil.json');
     if(action==='account-export-online'&&cloud.conflict?.remote)download(JSON.stringify(cloud.conflict.remote.payload,null,2),'Clair-copie-en-ligne.json');
@@ -1347,48 +1346,79 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if(location.protocol==='file:')return 'file';
     const cfg=window.CLAIR_PUSH_CONFIG;
     if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))return 'unsupported';
-    if(!cfg||typeof cfg.url!=='string'||!/^https:\/\//.test(cfg.url)||typeof cfg.anonKey!=='string')return 'unconfigured';
+    if(!cfg||typeof cfg.url!=='string'||!/^https:\/\//.test(cfg.url)||!cloud.enabled)return 'unconfigured';
     return 'ready';
   }
-  async function pushApi(path,body){
+  async function pushApi(path,body,owner=cloud.user?.id){
+    if(!owner||cloud.user?.id!==owner)throw Error('Connecte-toi pour gérer les rappels.');
+    const {data:auth,error}=await cloud.client.auth.getSession();
+    if(error||auth.session?.user.id!==owner||!auth.session.access_token||cloud.user?.id!==owner)throw Error('Ta session a changé. Reconnecte-toi.');
     const cfg=window.CLAIR_PUSH_CONFIG,ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),15000);
-    try{const r=await fetch(cfg.url.replace(/\/$/,'')+path,{method:'POST',signal:ctrl.signal,credentials:'omit',headers:{'content-type':'application/json',apikey:cfg.anonKey,authorization:'Bearer '+cfg.anonKey},body:JSON.stringify(body)});
-      const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||('erreur '+r.status));return j;}
-    finally{clearTimeout(t);}
+    try{
+      const r=await fetch(cfg.url.replace(/\/$/,'')+path,{method:'POST',signal:ctrl.signal,credentials:'omit',headers:{'content-type':'application/json',apikey:window.CLAIR_ACCOUNT_CONFIG.key,authorization:'Bearer '+auth.session.access_token},body:JSON.stringify(body)});
+      const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||('erreur '+r.status));
+      if(cloud.user?.id!==owner)throw Error('Ta session a changé. Reconnecte-toi.');
+      return j;
+    }finally{clearTimeout(t);}
   }
   const randomHex=n=>[...crypto.getRandomValues(new Uint8Array(n))].map(b=>b.toString(16).padStart(2,'0')).join('');
   const b64u=s=>{const b=atob(s.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((s.length+3)%4));return Uint8Array.from(b,c=>c.charCodeAt(0));};
   async function enablePush(){
-    if(pushAvailability()!=='ready')return;pushBusy=true;render();
+    if(pushAvailability()!=='ready'||pushBusy)return;
+    const owner=cloud.user?.id,stateKey=PUSH_KEY,previous=pushState();
+    if(!owner){notify('Connecte-toi pour activer les notifications.');return;}
+    const ensureOwner=()=>{if(owner!==cloud.user?.id||PUSH_KEY!==stateKey)throw Error('Ta session a changé. Reconnecte-toi.');};
+    pushBusy=true;let created=null;render();
     try{
-      const perm=await Notification.requestPermission();
+      const perm=await Notification.requestPermission();ensureOwner();
       if(perm!=='granted')throw Error('Autorisation refusée par le navigateur. Tu peux la modifier dans les réglages du site.');
-      const reg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
-      const {publicKey}=await pushApi('/vapid',{});if(typeof publicKey!=='string')throw Error('Clé du serveur manquante.');
-      const prev=pushState(),device={deviceId:prev?.deviceId||randomHex(16),secret:prev?.secret||randomHex(32)};
-      let sub=await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe();
-      sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(publicKey)});
-      await pushApi('/subscribe',{...device,subscription:sub.toJSON(),...E.pushPayload(data)});
-      savePush({...device,active:true,lastSync:new Date().toISOString(),error:null});notify('Rappels en arrière-plan activés sur cet appareil.');
-    }catch(e){const s=pushState();if(s)savePush({...s,active:false,error:e.message});notify('Rappels non activés : '+e.message);}
-    finally{pushBusy=false;render();}
+      await cloud.sync();ensureOwner();
+      if(cloud.conflict||cloud.record?.meta.dirty)throw Error('Synchronise ton budget avant d’activer les rappels.');
+      const {publicKey}=await pushApi('/vapid',{},owner);ensureOwner();
+      if(typeof publicKey!=='string'||!publicKey)throw Error('Clé du service de rappels manquante.');
+      const reg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;ensureOwner();
+      let sub=await reg.pushManager.getSubscription();ensureOwner();
+      const key=b64u(publicKey),oldKey=sub?.options?.applicationServerKey;
+      const keyMatches=oldKey&&Array.from(new Uint8Array(oldKey)).join(',')===Array.from(key).join(',');
+      if(sub&&(!previous?.deviceId||!keyMatches)){await sub.unsubscribe();sub=null;ensureOwner();}
+      if(!sub){sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key});created=sub;}
+      ensureOwner();const deviceId=previous?.deviceId||randomHex(16);
+      await pushApi('/subscribe',{deviceId,subscription:sub.toJSON()},owner);ensureOwner();
+      savePush({deviceId,active:true,lastSync:new Date().toISOString(),error:null});created=null;
+      notify(data.preferences.reminders?'Notifications activées : rappel à J−2, vers 9 h (Paris).':'Notifications autorisées. Active aussi « Me rappeler 2 jours avant ».');
+    }catch(e){
+      if(created)try{await created.unsubscribe();}catch{}
+      if(owner===cloud.user?.id&&PUSH_KEY===stateKey){savePush({deviceId:previous?.deviceId||null,active:false,error:e.message});notify('Rappels non activés : '+e.message);}
+    }finally{pushBusy=false;render();}
   }
-  async function disablePush(){
-    const s=pushState();if(!s)return;pushBusy=true;render();
-    try{
-      if(s.active)await pushApi('/unsubscribe',{deviceId:s.deviceId,secret:s.secret});
-      const reg=await navigator.serviceWorker.getRegistration();const sub=await reg?.pushManager.getSubscription();if(sub)await sub.unsubscribe();
-      savePush({deviceId:s.deviceId,secret:s.secret,active:false,error:null});notify('Rappels en arrière-plan désactivés. Le serveur a supprimé cet appareil.');
-    }catch(e){savePush({...s,error:'Désactivation non confirmée : '+e.message});notify('La désactivation a échoué : '+e.message+' Les rappels peuvent encore arriver.');}
-    finally{pushBusy=false;render();}
+  async function disablePush(quiet=false){
+    const state=pushState(),owner=cloud.user?.id,stateKey=PUSH_KEY;
+    if(!state?.deviceId)return;pushBusy=true;let error=null;
+    try{await pushApi('/unsubscribe',{deviceId:state.deviceId},owner);}catch(e){error=e;}
+    let stopped=false;
+    try{const reg=await navigator.serviceWorker.getRegistration();const sub=await reg?.pushManager.getSubscription();if(sub)await sub.unsubscribe();stopped=true;}catch(e){error=error||e;}
+    if(PUSH_KEY===stateKey&&cloud.user?.id===owner){
+      savePush({deviceId:state.deviceId,active:!stopped&&Boolean(error),cleanupPending:Boolean(error),error:error?'Désactivation à vérifier à la prochaine connexion.':null});
+      if(!quiet)notify(error?'Notifications arrêtées sur cet appareil si le navigateur a accepté ; la désactivation du service reste à vérifier.':'Rappels en arrière-plan désactivés sur cet appareil.');
+    }
+    pushBusy=false;if(!quiet)render();
   }
   async function syncPush(){
-    const s=pushState();if(!s?.active||pushAvailability()!=='ready')return;
-    try{await pushApi('/schedule',{deviceId:s.deviceId,secret:s.secret,...E.pushPayload(data)});savePush({...s,lastSync:new Date().toISOString(),error:null});}
-    catch(e){savePush({...s,error:'Dernière mise à jour des rappels échouée : '+e.message});notify('Les rappels du serveur n’ont pas pu être mis à jour : '+e.message);}
+    const state=pushState(),owner=cloud.user?.id,stateKey=PUSH_KEY;
+    if(!owner||pushAvailability()!=='ready'||pushBusy)return;
+    if(state?.cleanupPending){await disablePush(true);return;}
+    if(!state?.active)return;
+    try{
+      const result=await pushApi('/status',{deviceId:state.deviceId},owner);
+      if(PUSH_KEY!==stateKey||cloud.user?.id!==owner)return;
+      const reg=await navigator.serviceWorker.getRegistration(),sub=await reg?.pushManager.getSubscription();
+      if(PUSH_KEY!==stateKey||cloud.user?.id!==owner)return;
+      const active=Boolean(result.active&&sub&&Notification.permission==='granted');
+      savePush({...state,active,lastSync:new Date().toISOString(),error:active?null:'Réactive les notifications sur cet appareil.'});
+    }catch(e){if(PUSH_KEY===stateKey&&cloud.user?.id===owner)savePush({...state,error:'Vérification des rappels impossible : '+e.message});}
     if(page==='settings')render();
   }
-  function queuePushSync(){if(!pushState()?.active)return;clearTimeout(pushTimer);pushTimer=setTimeout(syncPush,800);}
+  function queuePushSync(){const state=pushState();if(!state?.active&&!state?.cleanupPending)return;clearTimeout(pushTimer);pushTimer=setTimeout(syncPush,800);}
   function field(label,name,value='',type='text',extra='') {return `<label class="field"><span>${label}</span><input name="${name}" type="${type}" value="${esc(value)}" ${type==='text'?'autocomplete="off"':''} ${extra}></label>`;}
   function dialog(title,body,kind,state={}) {
     modal={kind,...state};$('#dialog').innerHTML=`<div class="dialog-inner"><div class="dialog-head"><h2 id="dialog-title">${title}</h2><button class="close" data-action="close" aria-label="Fermer">×</button></div>${kind==='wizard'?'':'<div id="form-error" class="notice error" role="alert"></div>'}${body}</div>`;
@@ -1571,8 +1601,8 @@ function journalResults(){
     if(av==='file')body='<p class="help">Tu utilises le fichier téléchargé. Les rappels quand l’app est fermée demandent la version hébergée de Clair (adresse https). Les rappels à l’écran et le calendrier fonctionnent ici.</p>';
     else if(av==='unsupported')body='<p class="help">Ce navigateur ne gère pas les notifications push. Sur iPhone (iOS 16.4 ou plus), ajoute d’abord Clair à l’écran d’accueil via Partager → « Sur l’écran d’accueil », puis ouvre-le depuis l’icône.</p>';
     else if(av==='unconfigured')body='<p class="help"><strong>Pas encore disponible sur ce site :</strong> le service de rappels n’est pas encore branché. Rien n’est actif en arrière-plan. Utilise le calendrier ci-dessous en attendant.</p>';
-    else body=`<p class="help">État : <strong>${s?.active?'actifs sur cet appareil':'désactivés'}</strong>${s?.lastSync&&s.active?' · mis à jour le '+esc(new Date(s.lastSync).toLocaleString('fr-FR',{timeZone:'Europe/Paris'})):''}</p>${s?.error?`<div class="notice error">${esc(s.error)} <button class="link" data-action="push-retry">Réessayer</button></div>`:''}<div class="actions">${s?.active?`<button class="button danger" data-action="push-off" ${pushBusy?'disabled':''}>Désactiver sur cet appareil</button>`:`<button class="button primary" data-action="push-on" ${pushBusy?'disabled':''}>${pushBusy?'Activation…':'Activer les notifications'}</button>`}</div>`;
-    return `<h3 style="margin-top:4px">Quand l’app est fermée</h3>${body}<p class="help" style="margin-top:10px">Ce qui est envoyé au serveur : uniquement le nom, le montant et les dates des loyers/abonnements dont le rappel est coché, plus un identifiant anonyme de l’appareil. Jamais ton solde, ton journal, tes budgets ni ta photo. Envoi à 9 h (Paris), 2 jours avant.</p>`;
+    else body=`<p class="help">État : <strong>${s?.active?'autorisés sur cet appareil'+(data.preferences.reminders?'':' · rappels en pause'):'désactivés'}</strong>${s?.lastSync&&s.active?' · mis à jour le '+esc(new Date(s.lastSync).toLocaleString('fr-FR',{timeZone:'Europe/Paris'})):''}</p>${s?.error?`<div class="notice error">${esc(s.error)} <button class="link" data-action="push-retry">Réessayer</button></div>`:''}<div class="actions">${s?.active?`<button class="button danger" data-action="push-off" ${pushBusy?'disabled':''}>Désactiver sur cet appareil</button>`:`<button class="button primary" data-action="push-on" ${pushBusy?'disabled':''}>${pushBusy?'Activation…':'Activer les notifications'}</button>`}</div>`;
+    return `<h3 style="margin-top:4px">Quand l’app est fermée</h3>${body}<p class="help" style="margin-top:10px">Le service lit les habitudes de ton budget synchronisé pour préparer les rappels. Il conserve l’abonnement de notification de cet appareil, lié à ton compte. La notification contient le nom, le montant et la date de l’échéance. Envoi à J−2 vers 9 h (Paris), même si Clair est fermé. Une connexion Internet et l’autorisation du système sont nécessaires.</p>`;
   }
   let installPrompt=null,installBusy=false,downloadBusy=false,chargeDraft=null;
 function isInstalled(){return Boolean(navigator.standalone||matchMedia('(display-mode: standalone)').matches);}
@@ -1592,7 +1622,7 @@ function settings(){const p=data.preferences;return heading('Clair','Réglages')
 `<div class="settings-links"><button class="settings-link" data-nav="rules"><span>Mes habitudes<small>Repas et abonnements</small></span>${icon('arrow')}</button><button class="settings-link" data-nav="budget"><span>Budget et épargne<small>Mes repères du mois</small></span>${icon('arrow')}</button></div><div class="settings-grid settings-simple">
 <section class="card install-card"><h2>Clair, à portée de main</h2><p class="help">${isInstalled()?'Ouvert comme une application.':'Un accès direct depuis ton écran d’accueil.'}</p><div class="actions"><button class="button primary" data-action="install" ${isInstalled()||installBusy?'disabled':''}>${isInstalled()?'Déjà installé':installBusy?'Installation…':'Installer Clair'}</button>${location.protocol!=='file:'?`<button class="button" data-action="download-app" ${downloadBusy?'disabled':''}>${downloadBusy?'Téléchargement…':'Télécharger le fichier'}</button>`:''}</div><details class="settings-more"><summary>Installation ou téléchargement ?</summary><p class="help">Installer ajoute Clair à ton écran d’accueil quand le navigateur le permet. Le fichier HTML est une copie à ouvrir dans un navigateur sur ordinateur. Les dépenses se transfèrent séparément avec « Sauvegarder mes données ».</p></details></section>
 <section class="card"><h2>Apparence</h2><p class="help" id="theme-l">Thème</p><div class="seg" role="radiogroup" aria-labelledby="theme-l">${[['light','Clair'],['dark','Sombre'],['auto','Auto']].map(([v,l])=>`<label><input type="radio" name="theme" value="${v}" data-pref="theme" ${p.theme===v?'checked':''}><span>${l}</span></label>`).join('')}</div><p class="help" id="wall-l" style="margin-top:18px">Fond d’écran</p><div class="walls" role="radiogroup" aria-labelledby="wall-l">${[['plain','Clair'],['aurora','Aurore'],['ocean','Océan'],['sunset','Couchant'],['forest','Forêt'],['photo','Ma photo']].map(([v,l])=>`<label><input type="radio" name="wallpaper" value="${v}" data-pref="wallpaper" ${p.wallpaper===v?'checked':''} ${v==='photo'&&!p.photo?'disabled':''}><span class="sw sw-${v}">${l}</span></label>`).join('')}</div><div class="actions"><label class="button small file">${p.photo?'Changer la photo':'Choisir une photo'}<input type="file" accept="image/jpeg,image/png,image/webp" data-photo></label>${p.photo?'<button class="link" data-action="photo-remove">Retirer</button>':''}</div></section>
-<section class="card" id="notification-settings"><h2>Rappels</h2><label class="switch"><input type="checkbox" role="switch" data-pref="reminders" ${p.reminders?'checked':''}>Me rappeler 2 jours avant</label><p class="help" style="margin-top:12px">À l’ouverture de Clair.${pushAvailability()!=='ready'?' Notifications app fermée : pas encore disponibles.':''}</p><button class="button" data-action="ics">Ajouter les échéances au calendrier</button><details class="settings-more"><summary>En savoir plus</summary><p class="help">Le calendrier contient les échéances des 12 prochains mois, avec une alerte 2 jours avant à 9 h. Importe le fichier dans un calendrier dédié « Clair ». Après une modification, remplace cet ancien calendrier : il ne se synchronise pas automatiquement.</p><button class="link" data-nav="rules">Choisir les habitudes à rappeler</button></details><details class="settings-more"><summary>Notifications app fermée</summary>${pushSection()}</details></section>
+<section class="card" id="notification-settings"><h2>Rappels</h2><label class="switch"><input type="checkbox" role="switch" data-pref="reminders" ${p.reminders?'checked':''}>Me rappeler 2 jours avant</label><p class="help" style="margin-top:12px">Dans Clair dès J−2. Pour recevoir aussi une notification lorsque l’app est fermée, active les notifications sur cet appareil.</p><button class="button" data-action="ics">Ajouter les échéances au calendrier</button><details class="settings-more"><summary>En savoir plus</summary><p class="help">Le calendrier contient les échéances des 12 prochains mois, avec une alerte 2 jours avant à 9 h. Importe le fichier dans un calendrier dédié « Clair ». Après une modification, remplace cet ancien calendrier : il ne se synchronise pas automatiquement.</p><button class="link" data-nav="rules">Choisir les habitudes à rappeler</button></details><details class="settings-more"><summary>Notifications app fermée</summary>${pushSection()}</details></section>
 <section class="card"><h2>Mes données</h2><p class="help">${cloud.enabled&&cloud.user?'Budget associé à ton compte. Une sauvegarde reste utile.':'Dans ce navigateur. Sauvegarde avant de changer d’appareil.'}</p><div class="actions"><button class="button primary" data-action="export">Sauvegarder mes données</button><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label></div><details class="settings-more"><summary>En savoir plus</summary><p class="help">${cloud.enabled?'Ton budget est envoyé au service de synchronisation de ton compte. La photo de fond reste sur cet appareil.':'Aucune connexion bancaire ni synchronisation entre appareils.'} L’import remplace les données actuelles après confirmation et conserve une copie précédente.</p></details></section>
 </div><details class="card settings-advanced"><summary>Réglages avancés</summary><div class="advanced-content"><h3>Ajuster mon solde</h3><p class="help">Solde de départ : ${euro(data.openingCents)} · ${esc(dateLabel(data.openingBalanceDate))}</p><div class="actions"><button class="button" data-action="reconcile">Ajuster le solde d’aujourd’hui</button><button class="button" data-action="opening">Corriger le solde de départ</button></div><h3>Exports et récupération</h3><div class="actions"><button class="button" data-action="csv">Télécharger le journal CSV</button><button class="button" data-action="backup">Récupérer la copie précédente</button></div><details class="settings-more"><summary>Comprendre les calculs</summary><p class="help">Les dépenses automatiques sont rattrapées à l’ouverture. Les dates suivent l’heure de Paris. Les échéances du 29 au 31 utilisent le dernier jour des mois plus courts. Les budgets sont des limites, pas des dépenses déduites.</p></details><hr class="sep"><button class="button danger" data-action="reset">Effacer et recommencer</button></div></details>`;}
 function paymentDetails(key){

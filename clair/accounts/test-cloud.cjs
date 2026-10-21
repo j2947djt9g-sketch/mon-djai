@@ -2,7 +2,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=r
 const source=fs.readFileSync(__dirname+'/cloud.js','utf8'),html=fs.readFileSync(__dirname+'/../index.html','utf8');
 const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);scripts.forEach(s=>new vm.Script(s));
 const ectx={window:{},Date,Intl};vm.createContext(ectx);vm.runInContext(scripts[0],ectx);const E=ectx.window.ClairEngine;
-assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'1b8a037aaa6b5683bb338d9117efff3afdb986fb82de6119449bf3b716b37a22');
+assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'dc71a063a12d67ef4bdb8d0d626e4c0274dd4c43b429d783379d0852ca431a17');
 let rows=new Map(),saveDelay=null,readDelay=null,loseResponse=false;
 function device(uid,storage=new Map()){
  let currentUser={id:uid,email:uid+'@example.test',user_metadata:{display_name:uid}};

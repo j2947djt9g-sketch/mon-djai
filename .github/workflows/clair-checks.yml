@@ -1,13 +1,15 @@
 name: Clair code checks
 on:
   push:
-    branches: [main, clair-dashboard-savings-20261019, clair-ruban-history-20261019, clair-welcome-ruban-20261019]
+    branches: [main, clair-dashboard-savings-20261019, clair-ruban-history-20261019, clair-welcome-ruban-20261019, clair-subscriptions-reminders-20261021]
     paths:
       - 'clair/**'
+      - 'supabase/**'
       - '.github/workflows/clair-checks.yml'
   pull_request:
     paths:
       - 'clair/**'
+      - 'supabase/**'
       - '.github/workflows/clair-checks.yml'
 permissions:
   contents: read
@@ -39,3 +41,35 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-browser.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-journal.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-welcome.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-subscriptions.cjs
+
+  reminders-sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_PASSWORD: clair_test_only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Check reminder permissions, claims, retries and account cleanup
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: clair_test_only
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE' > "$RUNNER_TEMP/clair-reminders-test.sql"
+          const fs=require('node:fs');
+          console.log('create role anon; create role authenticated; create role service_role bypassrls; create schema auth; create table auth.users(id uuid primary key);');
+          const sql=fs.readFileSync('supabase/reminders.sql','utf8').split('-- UTC cron')[0].replace(/^create extension.*$/gm,'');
+          console.log(sql);
+          NODE
+          psql -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/clair-reminders-test.sql"
+          psql -v ON_ERROR_STOP=1 -f supabase/verify-reminders.sql
