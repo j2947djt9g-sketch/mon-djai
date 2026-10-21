@@ -15,7 +15,7 @@ const db={
   initKeys:async(keys:{publicKey:string,privateKey:string})=>rest('clair_push_config?id=eq.true&public_key=is.null','PATCH',{public_key:keys.publicKey,private_key:keys.privateKey}),
   devices:async()=>{const rows=[];for(let offset=0;;offset+=500){const page=await rest('clair_push_devices?enabled=eq.true&select=*&order=device_id&limit=500&offset='+offset);rows.push(...page);if(page.length<500)break;}return rows;},
   device:async(id:string)=>(await rest('clair_push_devices?device_id=eq.'+filter(id)+'&select=*'))[0]||null,
-  deviceCount:async(uid:string)=>(await rest('clair_push_devices?user_id=eq.'+filter(uid)+'&select=device_id')).length,
+  deviceCount:async(uid:string)=>(await rest('clair_push_devices?user_id=eq.'+filter(uid)+'&enabled=eq.true&select=device_id')).length,
   budget:async(uid:string)=>(await rest('clair_budgets?user_id=eq.'+filter(uid)+'&select=payload'))[0]?.payload,
   subscribe:async(value:unknown)=>rest('clair_push_devices?on_conflict=device_id','POST',value,'resolution=merge-duplicates,return=representation'),
   disable:async(id:string)=>rest('clair_push_devices?device_id=eq.'+filter(id),'PATCH',{enabled:false}),
