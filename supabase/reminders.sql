@@ -1,6 +1,7 @@
 -- Additive deployment: no existing budget or account is modified.
 create extension if not exists pg_cron;
-create extension if not exists pg_net;
+create schema if not exists extensions;
+create extension if not exists pg_net with schema extensions;
 create table public.clair_push_config(
   id boolean primary key default true check(id),
   public_key text,
