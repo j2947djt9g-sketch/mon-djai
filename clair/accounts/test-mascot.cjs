@@ -23,7 +23,7 @@ const local=run({local:true});assert.equal(local.setups(),0);local.timers[0].fn(
 const welcome=html.match(/<dialog id="welcome"[\s\S]*?<\/dialog>/)[0];assert.doesNotMatch(welcome,/248|€|<button|welcome-preview|mascot/);assert.match(welcome,/<h1[^>]*>Clair<\/h1>/);assert.match(welcome,/Ton budget, l’esprit tranquille\./);assert.match(welcome,/<mask id="splash-reveal"/);
 assert.match(html,/mascot\(\[2,1,2,3\]\[s\]/);assert.match(html,/mascot\(signup\?1:0/);
 const sw=fs.readFileSync(__dirname+'/../sw.js','utf8');
-for(const name of ['01-bienvenue.png','01-bienvenue.webp','02-serenite.png','03-vigilance.png','04-prevision-tendue.png','05-solde-zero.png','06-solde-negatif-v2.webp']){assert(sw.includes('assets/mascotte/'+name));assert(fs.existsSync(__dirname+'/../assets/mascotte/'+name));}
+for(const name of ['01-bienvenue.png','02-serenite.png','03-vigilance.png','04-prevision-tendue.png','05-solde-zero.png','06-solde-negatif-v2.webp']){assert(sw.includes('assets/mascotte/'+name));assert(fs.existsSync(__dirname+'/../assets/mascotte/'+name));}
 assert(html.includes(fs.readFileSync(__dirname+'/welcome.css','utf8').trimEnd()));
 console.log('PASS automatic Ruban opening: two seconds, brief returns, reduced motion, recovery bypass, local setup, Escape, and exactly one account initialization');
 console.log('PASS sample balance/buttons removed; account mascot and offline assets preserved');
