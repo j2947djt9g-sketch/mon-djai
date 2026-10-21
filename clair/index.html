@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="auto" data-app-version="2026-10-21.2">
+<html lang="fr" data-theme="auto" data-app-version="2026-10-21.3">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#783bf1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://hkssnbvktfscizojhftl.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
@@ -421,31 +421,26 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
 
 @media(max-width:760px) and (max-height:600px){.account-device-badge{display:none}.account-mascot-stage{min-height:76px}.account-mascot-stage .mascot-pose{width:56px}.account-mascot-stage:before{width:64px;height:64px;left:calc(50% + 38px)}}
 
-/* Automatic Clair opening: the original Ruban glyph, no sample budget. */
-#welcome{--splash-bg:#fbf9ff;--splash-ink:#30204e;--splash-muted:#76678c;border:0;outline:0;border-radius:0;position:fixed;inset:0;max-width:none;max-height:none;width:100%;height:100%;height:100dvh;margin:0;padding:calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 44%,#8f60e912 0,transparent 48%),var(--splash-bg);color:var(--splash-ink);text-align:center;overflow:hidden}
+/* Automatic Clair opening: violet Ruban C and white LAIR on the same line. */
+#welcome{--splash-bg:#120e1b;--splash-ink:#fff;--splash-muted:#c6badb;border:0;outline:0;border-radius:0;position:fixed;inset:0;max-width:none;max-height:none;width:100%;height:100%;height:100dvh;margin:0;padding:calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 44%,#6939ae30 0,transparent 58%),var(--splash-bg);color:var(--splash-ink);text-align:center;overflow:hidden}
 #welcome[open]{display:flex;align-items:center;justify-content:center}
 #welcome::backdrop{background:transparent;backdrop-filter:none}
-#welcome .splash-content{width:min(100%,420px);display:flex;flex-direction:column;align-items:center;gap:0}
-#welcome .splash-logo{display:block;width:clamp(156px,38vw,208px);height:auto;overflow:visible;filter:drop-shadow(0 10px 20px #7c45d914)}
+#welcome .splash-content{width:min(100%,480px);display:flex;flex-direction:column;align-items:center;gap:0}
+#welcome .splash-brand{display:flex;align-items:center;justify-content:center;margin:0;white-space:nowrap}
+#welcome .splash-logo{display:block;flex:none;width:clamp(70px,22vw,98px);height:auto;margin-right:-6px;overflow:visible;filter:drop-shadow(0 10px 24px #8f60e938)}
 #welcome .splash-trace{stroke-dasharray:1;stroke-dashoffset:0}
-#welcome .splash-name{margin:6px 0 0;font-size:clamp(40px,9vw,50px);font-weight:780;letter-spacing:-2px;line-height:1.2;color:var(--splash-ink)}
-#welcome .splash-tagline{margin:12px 0 0;font-size:clamp(13px,3.5vw,15px);line-height:1.6;letter-spacing:.01em;color:var(--splash-muted)}
+#welcome .splash-name{display:block;font-size:clamp(78px,24vw,108px);font-weight:740;letter-spacing:-.045em;line-height:1;color:var(--splash-ink)}
+#welcome .splash-tagline{margin:24px 0 0;font-size:clamp(13px,3.5vw,15px);line-height:1.6;letter-spacing:.01em;color:var(--splash-muted)}
 #welcome .splash-sheen{opacity:0}
-#welcome.splash-full{animation:splash-exit .26s 1.74s ease-in both}
-#welcome.splash-full .splash-trace{animation:splash-draw .9s cubic-bezier(.35,0,.2,1) both}
-#welcome.splash-full .splash-name{animation:splash-copy .38s .86s ease-out both}
-#welcome.splash-full .splash-tagline{animation:splash-copy .35s 1.09s ease-out both}
-#welcome.splash-full .splash-sheen{animation:splash-sheen .44s .96s ease-out both}
-#welcome.splash-quick{animation:splash-exit .12s .33s ease-in both}
-#welcome.splash-quick .splash-trace{animation:splash-draw .18s ease-out both}
-#welcome.splash-quick .splash-name{animation:splash-copy .16s .07s ease-out both}
-#welcome.splash-quick .splash-tagline{animation:splash-copy .12s .14s ease-out both}
+#welcome.splash-full{animation:splash-exit .4s 3.1s ease-in both}
+#welcome.splash-full .splash-trace{animation:splash-draw 1.3s cubic-bezier(.35,0,.2,1) both}
+#welcome.splash-full .splash-name{animation:splash-copy .6s 1.1s ease-out both}
+#welcome.splash-full .splash-tagline{animation:splash-copy .5s 1.6s ease-out both}
+#welcome.splash-full .splash-sheen{animation:splash-sheen .6s 1.55s ease-out both}
 @keyframes splash-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
 @keyframes splash-copy{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 @keyframes splash-exit{from{opacity:1}to{opacity:0}}
 @keyframes splash-sheen{0%{opacity:0;transform:translateX(-180px) skewX(-16deg)}20%{opacity:.42}80%{opacity:.25}100%{opacity:0;transform:translateX(520px) skewX(-16deg)}}
-html[data-theme=dark] #welcome{--splash-bg:#15101f;--splash-ink:#f2ecff;--splash-muted:#b9accd}
-@media(prefers-color-scheme:dark){html[data-theme=auto] #welcome{--splash-bg:#15101f;--splash-ink:#f2ecff;--splash-muted:#b9accd}}
 @media(prefers-reduced-motion:reduce){#welcome,#welcome .splash-trace,#welcome .splash-name,#welcome .splash-tagline,#welcome .splash-sheen{animation:none!important}#welcome .splash-trace{stroke-dashoffset:0}}
 </style>
 </head>
@@ -454,7 +449,7 @@ html[data-theme=dark] #welcome{--splash-bg:#15101f;--splash-ink:#f2ecff;--splash
 <div class="shell"><aside class="sidebar"><div class="brand"><span class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><defs><linearGradient id="brand-main-1-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b4dff"/><stop offset="1" stop-color="#6528d7"/></linearGradient><linearGradient id="brand-main-1-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f0ff"/><stop offset="1" stop-color="#d7c3ff"/></linearGradient><linearGradient id="brand-main-1-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e9ddff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#brand-main-1-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="#fff"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#brand-main-1-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#brand-main-1-edge)"/></svg></span>clair</div><p class="tagline">Ton budget, l’esprit tranquille.</p><nav class="nav" aria-label="Navigation principale"></nav><div class="sidebar-foot"><p>Mon espace personnel.</p><button class="link" data-nav="settings">Sauvegarder mes données</button></div></aside>
 <main><header class="topbar"><div class="mobile-brand"><span class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><defs><linearGradient id="brand-main-2-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b4dff"/><stop offset="1" stop-color="#6528d7"/></linearGradient><linearGradient id="brand-main-2-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f0ff"/><stop offset="1" stop-color="#d7c3ff"/></linearGradient><linearGradient id="brand-main-2-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e9ddff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#brand-main-2-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="#fff"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#brand-main-2-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#brand-main-2-edge)"/></svg></span>clair</div><span class="top-date" id="today-label"></span><span class="status"><span class="dot" aria-hidden="true"></span><span id="status-label">Sur cet appareil</span></span></header><div id="alert" role="alert"></div><div id="reminders" aria-live="polite"></div><div id="sync-alert" aria-live="polite"></div><div id="page"></div></main></div>
 <nav class="bottom-nav" aria-label="Navigation mobile"></nav><dialog id="dialog" aria-labelledby="dialog-title"></dialog><div id="toast" role="status" aria-live="polite"></div>
-<dialog id="welcome" aria-labelledby="welcome-title" aria-describedby="welcome-tagline"><div class="splash-content"><svg class="splash-logo" xmlns="http://www.w3.org/2000/svg" viewBox="58 52 416 416" aria-hidden="true" focusable="false"><defs><linearGradient id="splash-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a179fc"/><stop offset="1" stop-color="#6230cc"/></linearGradient><linearGradient id="splash-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c5aafa"/><stop offset="1" stop-color="#7846d8"/></linearGradient><linearGradient id="splash-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#b596f9"/><stop offset="1" stop-color="#7942df"/></linearGradient><linearGradient id="splash-light"><stop stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><mask id="splash-reveal" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><path class="splash-trace" d="M367 170 306 132Q296 126 284 133L181 193Q164 203 164 226V290Q164 308 180 318L267 370Q280 378 294 370L365 329" fill="none" stroke="#fff" stroke-width="140" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/></mask><clipPath id="splash-outline"><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z"/></clipPath></defs><g mask="url(#splash-reveal)"><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="url(#splash-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#splash-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#splash-edge)"/><g clip-path="url(#splash-outline)"><rect class="splash-sheen" x="0" y="0" width="90" height="512" fill="url(#splash-light)"/></g></g></svg><h1 id="welcome-title" class="splash-name">Clair</h1><p id="welcome-tagline" class="splash-tagline">Ton budget, l’esprit tranquille.</p></div></dialog>
+<dialog id="welcome" aria-labelledby="welcome-title" aria-describedby="welcome-tagline"><div class="splash-content"><h1 id="welcome-title" class="splash-brand" aria-label="Clair"><svg class="splash-logo" xmlns="http://www.w3.org/2000/svg" viewBox="58 52 416 416" aria-hidden="true" focusable="false"><defs><linearGradient id="splash-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a179fc"/><stop offset="1" stop-color="#6230cc"/></linearGradient><linearGradient id="splash-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c5aafa"/><stop offset="1" stop-color="#7846d8"/></linearGradient><linearGradient id="splash-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#b596f9"/><stop offset="1" stop-color="#7942df"/></linearGradient><linearGradient id="splash-light"><stop stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><mask id="splash-reveal" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><path class="splash-trace" d="M367 170 306 132Q296 126 284 133L181 193Q164 203 164 226V290Q164 308 180 318L267 370Q280 378 294 370L365 329" fill="none" stroke="#fff" stroke-width="140" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/></mask><clipPath id="splash-outline"><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z"/></clipPath></defs><g mask="url(#splash-reveal)"><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="url(#splash-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#splash-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#splash-edge)"/><g clip-path="url(#splash-outline)"><rect class="splash-sheen" x="0" y="0" width="90" height="512" fill="url(#splash-light)"/></g></g></svg><span class="splash-name" aria-hidden="true">LAIR</span></h1><p id="welcome-tagline" class="splash-tagline">Ton budget, l’esprit tranquille.</p></div></dialog>
 <script>
 /* Clair — calculs en centimes, dates civiles, aucune requête réseau. */
 (function (root) {
@@ -989,7 +984,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       if(changed&&data.initialized)notify('Budget actualisé depuis ton compte.');
     },
     empty:()=>{
-      if(accountResetStep){accountDeferredSetup=true;return;}
+      if(accountResetStep||$('#welcome').open){accountDeferredSetup=true;return;}
       const legacy=legacyBudget();
       if(legacy?.initialized)dialog('Retrouver ton budget actuel',`<p>Ce navigateur contient déjà ${legacy.transactions.length} opérations. Tu peux les transférer vers ton compte.</p><p class="help">Le compte connecté : ${esc(cloud.user.email)}.</p><div class="actions"><button class="button primary" data-action="account-import">Transférer mon budget</button><button class="button" data-action="account-start-empty">Commencer un nouveau budget</button></div>`,'account-import');
       else if(!data.initialized)beginSetup();
@@ -1609,7 +1604,7 @@ function paymentDetails(key){
 }
   function render(){
     if(cloud.enabled&&accountResetStep){applyPrefs();if(!((accountResetStep==='email'&&$('#account-forgot-form'))||(accountResetStep==='password'&&cloud.ready&&cloud.user&&$('#account-password-form'))))$('#page').innerHTML=accountLayout(recoveryView());$('.nav').innerHTML='';$('.bottom-nav').innerHTML='';$('#reminders').innerHTML='';$('#sync-alert').innerHTML='';$('#status-label').textContent='Récupération du compte';updateRecoveryButtons();return;}
-    if(cloud.enabled&&(!cloud.user||!cloud.ready||cloud.status==='loading')){applyPrefs();$('#page').innerHTML=accountLayout(accountGate());$('.nav').innerHTML='';$('.bottom-nav').innerHTML='';$('#reminders').innerHTML='';$('#sync-alert').innerHTML='';$('#status-label').textContent=accountStatus();return;}
+    if(cloud.enabled&&(!cloud.user||!cloud.ready||cloud.status==='loading')){applyPrefs();$('#page').innerHTML=(!cloud.ready||cloud.status==='loading')?accountGate():accountLayout(accountGate());$('.nav').innerHTML='';$('.bottom-nav').innerHTML='';$('#reminders').innerHTML='';$('#sync-alert').innerHTML='';$('#status-label').textContent=accountStatus();return;}
     applyPrefs();
     $('.nav').innerHTML=navs.map(n=>`<button data-nav="${n.id}" class="${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'active':''}" ${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'aria-current="page"':''}><span aria-hidden="true">${icon(n.icon)}</span>${n.label}</button>`).join('');
     $('.bottom-nav').innerHTML=navs.map(n=>`<button data-nav="${n.id}" class="${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'active':''}" ${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'aria-current="page"':''}><span aria-hidden="true">${icon(n.icon)}</span>${n.label}</button>`).join('');
@@ -1783,21 +1778,23 @@ function submitCharge(f){
     const intro=$('#welcome'),motion=matchMedia('(prefers-reduced-motion: reduce)');
     const ready=()=>{if(cloud.enabled){if(!accountStarted){accountStarted=true;cloud.init().catch(()=>{cloud.ready=true;cloud.status='error';cloud.error='Connexion indisponible. Réessaie.';render();});}}else if(!loadError&&!data.initialized)beginSetup();};
     if(accountResetStep||loadError){ready();return;}
-    let seen=false;try{seen=sessionStorage.getItem('clair-splash-v2')==='1';sessionStorage.setItem('clair-splash-v2','1');}catch(_){}
     let timer,finished=false;
     const finish=()=>{
       if(finished)return;finished=true;clearTimeout(timer);
       motion.removeEventListener?.('change',reduce);
       if(intro.open)intro.close();
       ready();
+      if(accountDeferredSetup&&!accountResetStep){accountDeferredSetup=false;if(cloud.user&&!cloud.record&&!cloud.conflict&&cloud.status==='synced')cloud.hooks.empty();}
     };
     const reduce=event=>{if(event.matches)finish();};
     intro.addEventListener('close',finish,{once:true});
     intro.addEventListener('cancel',finish,{once:true});
-    intro.classList.add(motion.matches?'splash-static':seen?'splash-quick':'splash-full');
+    intro.classList.add(motion.matches?'splash-static':'splash-full');
     try{intro.showModal();}catch(_){finish();return;}
-    timer=setTimeout(finish,motion.matches?150:seen?450:2000);
+    timer=setTimeout(finish,motion.matches?150:3500);
     motion.addEventListener?.('change',reduce);
+    // Restore an existing account behind the opening, without a mascot loading step.
+    if(cloud.enabled)ready();
   }
   welcome();
   if(!loadError&&data.initialized)syncPush();
