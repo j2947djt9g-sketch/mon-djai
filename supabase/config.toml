@@ -1,0 +1,4 @@
+# Authentication is performed inside the handler: user JWT for device routes,
+# private cron secret for dispatch. No route accepts the public API key as identity.
+[functions.clair-reminders]
+verify_jwt = false

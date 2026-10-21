@@ -320,7 +320,7 @@
     if(action==='account-import')transferLegacy();
     if(action==='account-start-empty'){close();beginSetup();}
     if(action==='account-sync')await cloud.sync();
-    if(action==='account-logout')try{await cloud.logout();}catch(error){notify(error.message);}
+    if(action==='account-logout')try{await disablePush(true);await cloud.logout();}catch(error){notify(error.message);}
     if(action==='account-conflict')conflictDialog();
     if(action==='account-export-device')download(JSON.stringify(data,null,2),'Clair-copie-appareil.json');
     if(action==='account-export-online'&&cloud.conflict?.remote)download(JSON.stringify(cloud.conflict.remote.payload,null,2),'Clair-copie-en-ligne.json');
