@@ -15,10 +15,10 @@
     assert.equal(await page.locator('#welcome-title').innerText(),'Clair');assert.equal(await page.locator('#welcome-tagline').innerText(),'Ton budget, l’esprit tranquille.');
     assert.equal(await page.locator('#welcome button,#welcome .welcome-preview,#welcome .mascot-pose').count(),0);assert.equal(await page.locator('#welcome .splash-logo').count(),1);assert(!/\d|€/.test(await page.locator('#welcome').innerText()));
     const seek=async ms=>page.locator('#welcome').evaluate((el,ms)=>{for(const a of el.getAnimations({subtree:true})){a.pause();a.currentTime=ms;}},ms);
-    await seek(0);const initial=await page.locator('.splash-trace').evaluate(el=>Number(getComputedStyle(el).strokeDashoffset));
-    await seek(450);const midway=await page.locator('.splash-trace').evaluate(el=>Number(getComputedStyle(el).strokeDashoffset));
+    await seek(0);const initial=await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset));
+    await seek(450);const midway=await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset));
     assert(initial>.99&&midway>0&&midway<initial,'Ruban must draw progressively');
-    await seek(1500);assert((await page.locator('.splash-trace').evaluate(el=>Number(getComputedStyle(el).strokeDashoffset)))<.001);assert((await page.locator('.splash-name').evaluate(el=>Number(getComputedStyle(el).opacity)))>.99);
+    await seek(1500);assert((await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset)))<.001);assert((await page.locator('.splash-name').evaluate(el=>Number(getComputedStyle(el).opacity)))>.99);
     const geometry=await page.locator('#welcome').evaluate(el=>{const r=el.getBoundingClientRect(),content=el.querySelector('.splash-content').getBoundingClientRect();return {scroll:el.scrollWidth,w:r.width,h:r.height,x:content.x+content.width/2,y:content.y+content.height/2,bg:getComputedStyle(el).backgroundColor}});
     assert(geometry.scroll<=width+1);assert.equal(geometry.bg,'rgb(251, 249, 255)');assert(Math.abs(geometry.x-width/2)<2&&Math.abs(geometry.y-height/2)<2);
     if(process.env.CLAIR_PREVIEW==='1'&&width===390)console.log('CLAIR_SPLASH_PREVIEW='+((await page.screenshot({type:'jpeg',quality:75})).toString('base64')));
