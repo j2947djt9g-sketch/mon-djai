@@ -12,29 +12,45 @@
     const context=await browser.newContext({viewport:{width,height},reducedMotion:'no-preference',colorScheme:'light'}),page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',r=>r.abort());
     await page.clock.install({time:new Date('2026-10-21T12:00:00Z')});await page.goto(url);await page.locator('#welcome').waitFor({state:'visible'});
-    assert.equal(await page.locator('#welcome-title').innerText(),'Clair');assert.equal(await page.locator('#welcome-tagline').innerText(),'Ton budget, l’esprit tranquille.');
+    assert.equal(await page.locator('#welcome-title').getAttribute('aria-label'),'Clair');assert.equal(await page.locator('#welcome .splash-name').innerText(),'LAIR');assert.equal(await page.locator('#welcome-tagline').innerText(),'Ton budget, l’esprit tranquille.');
     assert.equal(await page.locator('#welcome button,#welcome .welcome-preview,#welcome .mascot-pose').count(),0);assert.equal(await page.locator('#welcome .splash-logo').count(),1);assert(!/\d|€/.test(await page.locator('#welcome').innerText()));
     const seek=async ms=>page.locator('#welcome').evaluate((el,ms)=>{for(const a of el.getAnimations({subtree:true})){a.pause();a.currentTime=ms;}},ms);
     await seek(0);const initial=await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset));
     await seek(450);const midway=await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset));
     assert(initial>.99&&midway>0&&midway<initial,'Ruban must draw progressively');
-    await seek(1500);assert((await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset)))<.001);assert((await page.locator('.splash-name').evaluate(el=>Number(getComputedStyle(el).opacity)))>.99);
+    await seek(2500);assert((await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset)))<.001);assert((await page.locator('.splash-name').evaluate(el=>Number(getComputedStyle(el).opacity)))>.99);
     const geometry=await page.locator('#welcome').evaluate(el=>{const r=el.getBoundingClientRect(),content=el.querySelector('.splash-content').getBoundingClientRect();return {scroll:el.scrollWidth,w:r.width,h:r.height,x:content.x+content.width/2,y:content.y+content.height/2,bg:getComputedStyle(el).backgroundColor}});
-    assert(geometry.scroll<=width+1);assert.equal(geometry.bg,'rgb(251, 249, 255)');assert(Math.abs(geometry.x-width/2)<2&&Math.abs(geometry.y-height/2)<2);
+    assert(geometry.scroll<=width+1);assert.equal(geometry.bg,'rgb(18, 14, 27)');assert(Math.abs(geometry.x-width/2)<2&&Math.abs(geometry.y-height/2)<2);
+    const brand=await page.locator('.splash-brand').evaluate(el=>{const a=el.querySelector('svg').getBoundingClientRect(),b=el.querySelector('span').getBoundingClientRect();return {offset:Math.abs(a.y+a.height/2-b.y-b.height/2),gap:b.left-a.right,color:getComputedStyle(el.querySelector('span')).color};});
+    assert(brand.offset<2&&brand.gap>=-7,'Name beside the C');assert.equal(brand.color,'rgb(255, 255, 255)');
     if(process.env.CLAIR_PREVIEW==='1'&&width===390)console.log('CLAIR_SPLASH_PREVIEW='+((await page.screenshot({type:'jpeg',quality:75})).toString('base64')));
-    await page.clock.runFor(2010);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form[data-mode="login"]').waitFor();
-    await page.reload();await page.locator('#welcome.splash-quick').waitFor({state:'visible'});await page.clock.runFor(500);await page.locator('#welcome').waitFor({state:'hidden'});
+    await page.clock.runFor(3000);assert(await page.locator('#welcome').isVisible());await page.clock.runFor(600);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form[data-mode="login"]').waitFor();
+    await page.reload();await page.locator('#welcome.splash-full').waitFor({state:'visible'});await page.clock.runFor(3600);await page.locator('#welcome').waitFor({state:'hidden'});
     assert.deepEqual(errors,[]);await context.close();
-    console.log('PASS splash Chromium '+width+'x'+height+': Ruban draw, name/signature, no sample balance/buttons, centered layout, automatic opening and brief return');
+    console.log('PASS splash Chromium '+width+'x'+height+': Ruban draw, name/signature, no sample balance/buttons, centered layout, 3.5s opening on each return');
    }
    for(const colorScheme of ['light','dark']){
     const context=await browser.newContext({reducedMotion:'reduce',colorScheme}),page=await context.newPage();await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',r=>r.abort());
     await page.clock.install();await page.goto(url);await page.locator('#welcome.splash-static').waitFor({state:'visible'});assert.equal(await page.locator('.splash-trace').evaluate(el=>getComputedStyle(el).animationName),'none');
-    if(colorScheme==='dark')assert.equal(await page.locator('#welcome').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(21, 16, 31)');
+    assert.equal(await page.locator('#welcome').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(18, 14, 27)');
     await page.clock.runFor(200);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form').waitFor();await context.close();
    }
    const escapeContext=await browser.newContext(),escapePage=await escapeContext.newPage();await escapeContext.route('https://hkssnbvktfscizojhftl.supabase.co/**',r=>r.abort());await escapePage.goto(url);await escapePage.locator('#welcome').waitFor({state:'visible'});await escapePage.keyboard.press('Escape');await escapePage.locator('#welcome').waitFor({state:'hidden'});await escapePage.locator('#account-form').waitFor();await escapeContext.close();
    console.log('PASS reduced motion, dark opening and Escape without a blocking introduction');
+   // Restore a fictional session with the actual SDK, including slow/offline budget reads.
+   const ctx=await browser.newContext({viewport:{width:390,height:844}}),pg=await ctx.newPage(),restoreErrors=[];pg.on('pageerror',e=>restoreErrors.push(e.message));await pg.clock.install({time:new Date('2026-10-21T12:00:00Z')});
+   const uid='00000000-0000-4000-8000-000000000021',expires=1792670400+86400;
+   const jwt=[{alg:'HS256',typ:'JWT'},{sub:uid,aud:'authenticated',exp:expires}].map(x=>Buffer.from(JSON.stringify(x)).toString('base64url')).join('.')+'.fictional';
+   const user={id:uid,email:'returning@example.test',aud:'authenticated',role:'authenticated',user_metadata:{display_name:'Test'}},session={access_token:jwt,refresh_token:'fictional-refresh',token_type:'bearer',expires_at:expires,expires_in:86400,user};
+   const payload={version:3,initialized:true,setupDone:true,openingCents:4200,openingBalanceDate:'2026-10-21',transactions:[],rules:[],skipped:[],budgets:{},budgetOverrides:{},customCategories:[],savingsGoal:0,savingsSchema:1,savingsProjects:[],fixedExpenses:[],preferences:{theme:'light',wallpaper:'plain',photo:null,reminders:false}};
+   await pg.addInitScript(({uid,session,payload})=>{localStorage.setItem('clair-account-session-v1',JSON.stringify(session));localStorage.setItem('clair-account-budget-v1-'+uid,JSON.stringify({...payload,_cloud:{userId:uid,revision:1,dirty:false,operationId:'fictional-operation'}}));window.accountScenes=0;new MutationObserver(records=>{for(const r of records)for(const n of r.addedNodes)if(n.nodeType===1&&(n.matches('.account-scene')||n.querySelector('.account-scene')))window.accountScenes++;}).observe(document,{childList:true,subtree:true});},{uid,session,payload});
+   let release,mode='slow';const held=new Promise(resolve=>release=resolve);
+   await ctx.route('https://hkssnbvktfscizojhftl.supabase.co/**',async route=>{const p=new URL(route.request().url()).pathname;if(p.endsWith('/clair_budgets')){if(mode==='slow')await held;if(mode==='offline'){await route.abort();return;}await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify([{payload,revision:1,operation_id:'fictional-operation',display_name:'Test'}])});}else await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(p.endsWith('/user')?user:{})});});
+   const requested=pg.waitForRequest(r=>new URL(r.url()).pathname.endsWith('/clair_budgets'));await pg.goto(url);await requested;assert(await pg.locator('#welcome').isVisible(),'Session must start restoring during the opening');
+   await pg.clock.runFor(3600);await pg.locator('#welcome').waitFor({state:'hidden'});await pg.locator('#account-loading').waitFor();assert.equal(await pg.locator('.account-scene').count(),0);mode='fast';release();await pg.locator('.balance-section').waitFor();assert.match(await pg.locator('.balance').innerText(),/42,00/);assert.equal(await pg.evaluate(()=>window.accountScenes),0);
+   await pg.reload();await pg.locator('.balance-section').waitFor();assert(await pg.locator('#welcome').isVisible());await pg.clock.runFor(3600);await pg.locator('#welcome').waitFor({state:'hidden'});assert.equal(await pg.locator('#account-form,.account-scene').count(),0);assert.equal(await pg.evaluate(()=>window.accountScenes),0);
+   mode='offline';await pg.reload();await pg.locator('.balance-section').waitFor();await pg.clock.runFor(3600);await pg.locator('#welcome').waitFor({state:'hidden'});assert.match(await pg.locator('.balance').innerText(),/42,00/);assert.equal(await pg.evaluate(()=>window.accountScenes),0);assert.deepEqual(restoreErrors,[]);await ctx.close();
+   console.log('PASS persisted session: early restore, direct budget on return, no mascot flash, slow network and offline cached budget');
    // Account entry uses real handlers with a mocked HTTP transport.
    for(const [width,height,colorScheme]of [[1440,1000,'light'],[390,844,'light'],[320,568,'light'],[768,844,'dark']]){
     const context=await browser.newContext({viewport:{width,height},reducedMotion:'reduce',colorScheme});

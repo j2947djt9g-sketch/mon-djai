@@ -7,7 +7,7 @@ const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,cr
 vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);let ui=scripts[3];const boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);ui=ui.slice(0,boot)+'window.test={cloud,render,accountGate,accountCard,accountSubmit,accountAction,accountStatus,legacyBudget,transferLegacy,setData(d){data=d},getData(){return data;}};})();';vm.runInContext(ui,sandbox);const t=sandbox.test;
 (async()=>{
  const legacy=sandbox.ClairEngine.empty();legacy.initialized=legacy.setupDone=true;legacy.openingCents=1700;storage.set('clair-github-money-v3',JSON.stringify(legacy));
- t.render();assert(!node('#page').innerHTML.includes('17,00'));t.cloud.ready=true;t.cloud.status='signed-out';t.render();assert(node('#page').innerHTML.includes('account-form'));assert(!node('#page').innerHTML.includes('17,00'));
+ t.render();assert(!node('#page').innerHTML.includes('17,00'));assert(!node('#page').innerHTML.includes('account-scene'),'No mascot scene during session restoration');t.cloud.ready=true;t.cloud.status='signed-out';t.render();assert(node('#page').innerHTML.includes('account-form'));assert(!node('#page').innerHTML.includes('17,00'));
  console.log('PASS: login gate hides existing budget until account authentication');
  const form={id:'account-form',dataset:{mode:'login'},values:{email:'a@example.test',password:'wrong'},querySelector:()=>({disabled:false}),reset(){}};
  storage.set('clair-auth-attempts-v1',JSON.stringify({count:3,until:Date.now()+60000}));

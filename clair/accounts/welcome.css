@@ -1,26 +1,21 @@
-/* Automatic Clair opening: the original Ruban glyph, no sample budget. */
-#welcome{--splash-bg:#fbf9ff;--splash-ink:#30204e;--splash-muted:#76678c;border:0;outline:0;border-radius:0;position:fixed;inset:0;max-width:none;max-height:none;width:100%;height:100%;height:100dvh;margin:0;padding:calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 44%,#8f60e912 0,transparent 48%),var(--splash-bg);color:var(--splash-ink);text-align:center;overflow:hidden}
+/* Automatic Clair opening: violet Ruban C and white LAIR on the same line. */
+#welcome{--splash-bg:#120e1b;--splash-ink:#fff;--splash-muted:#c6badb;border:0;outline:0;border-radius:0;position:fixed;inset:0;max-width:none;max-height:none;width:100%;height:100%;height:100dvh;margin:0;padding:calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 44%,#6939ae30 0,transparent 58%),var(--splash-bg);color:var(--splash-ink);text-align:center;overflow:hidden}
 #welcome[open]{display:flex;align-items:center;justify-content:center}
 #welcome::backdrop{background:transparent;backdrop-filter:none}
-#welcome .splash-content{width:min(100%,420px);display:flex;flex-direction:column;align-items:center;gap:0}
-#welcome .splash-logo{display:block;width:clamp(156px,38vw,208px);height:auto;overflow:visible;filter:drop-shadow(0 10px 20px #7c45d914)}
+#welcome .splash-content{width:min(100%,480px);display:flex;flex-direction:column;align-items:center;gap:0}
+#welcome .splash-brand{display:flex;align-items:center;justify-content:center;margin:0;white-space:nowrap}
+#welcome .splash-logo{display:block;flex:none;width:clamp(70px,22vw,98px);height:auto;margin-right:-6px;overflow:visible;filter:drop-shadow(0 10px 24px #8f60e938)}
 #welcome .splash-trace{stroke-dasharray:1;stroke-dashoffset:0}
-#welcome .splash-name{margin:6px 0 0;font-size:clamp(40px,9vw,50px);font-weight:780;letter-spacing:-2px;line-height:1.2;color:var(--splash-ink)}
-#welcome .splash-tagline{margin:12px 0 0;font-size:clamp(13px,3.5vw,15px);line-height:1.6;letter-spacing:.01em;color:var(--splash-muted)}
+#welcome .splash-name{display:block;font-size:clamp(78px,24vw,108px);font-weight:740;letter-spacing:-.045em;line-height:1;color:var(--splash-ink)}
+#welcome .splash-tagline{margin:24px 0 0;font-size:clamp(13px,3.5vw,15px);line-height:1.6;letter-spacing:.01em;color:var(--splash-muted)}
 #welcome .splash-sheen{opacity:0}
-#welcome.splash-full{animation:splash-exit .26s 1.74s ease-in both}
-#welcome.splash-full .splash-trace{animation:splash-draw .9s cubic-bezier(.35,0,.2,1) both}
-#welcome.splash-full .splash-name{animation:splash-copy .38s .86s ease-out both}
-#welcome.splash-full .splash-tagline{animation:splash-copy .35s 1.09s ease-out both}
-#welcome.splash-full .splash-sheen{animation:splash-sheen .44s .96s ease-out both}
-#welcome.splash-quick{animation:splash-exit .12s .33s ease-in both}
-#welcome.splash-quick .splash-trace{animation:splash-draw .18s ease-out both}
-#welcome.splash-quick .splash-name{animation:splash-copy .16s .07s ease-out both}
-#welcome.splash-quick .splash-tagline{animation:splash-copy .12s .14s ease-out both}
+#welcome.splash-full{animation:splash-exit .4s 3.1s ease-in both}
+#welcome.splash-full .splash-trace{animation:splash-draw 1.3s cubic-bezier(.35,0,.2,1) both}
+#welcome.splash-full .splash-name{animation:splash-copy .6s 1.1s ease-out both}
+#welcome.splash-full .splash-tagline{animation:splash-copy .5s 1.6s ease-out both}
+#welcome.splash-full .splash-sheen{animation:splash-sheen .6s 1.55s ease-out both}
 @keyframes splash-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
 @keyframes splash-copy{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 @keyframes splash-exit{from{opacity:1}to{opacity:0}}
 @keyframes splash-sheen{0%{opacity:0;transform:translateX(-180px) skewX(-16deg)}20%{opacity:.42}80%{opacity:.25}100%{opacity:0;transform:translateX(520px) skewX(-16deg)}}
-html[data-theme=dark] #welcome{--splash-bg:#15101f;--splash-ink:#f2ecff;--splash-muted:#b9accd}
-@media(prefers-color-scheme:dark){html[data-theme=auto] #welcome{--splash-bg:#15101f;--splash-ink:#f2ecff;--splash-muted:#b9accd}}
 @media(prefers-reduced-motion:reduce){#welcome,#welcome .splash-trace,#welcome .splash-name,#welcome .splash-tagline,#welcome .splash-sheen{animation:none!important}#welcome .splash-trace{stroke-dashoffset:0}}
