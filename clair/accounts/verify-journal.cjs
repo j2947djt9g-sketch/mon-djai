@@ -22,7 +22,7 @@
    for(const width of [1440,390,320,768]){
     const context=await browser.newContext({viewport:{width,height:width===1440?1000:844},colorScheme:'light'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.clock.install({time:new Date('2026-10-19T12:00:00Z')});
-    await page.addInitScript(seed=>{window.CLAIR_ACCOUNT_CONFIG=null;localStorage.setItem('clair-github-money-v3',JSON.stringify(seed));sessionStorage.setItem('clair-welcome-v1','1');},seed);
+    await page.addInitScript(seed=>{window.CLAIR_ACCOUNT_CONFIG=null;localStorage.setItem('clair-github-money-v3',JSON.stringify(seed));sessionStorage.setItem('clair-splash-v2','1');},seed);
     await page.goto(origin+'/index.html');await page.locator('.balance-section').waitFor();
     const nav=width<=720?'.bottom-nav':'.nav';await page.locator(nav+' [data-nav="journal"]').click();
     const rows=page.locator('#journal-results .row'),flow=kind=>page.locator('[data-action="journal-flow"][data-flow="'+kind+'"]');

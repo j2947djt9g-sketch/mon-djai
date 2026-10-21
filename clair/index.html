@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="auto" data-app-version="2026-10-21.1">
+<html lang="fr" data-theme="auto" data-app-version="2026-10-21.2">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#783bf1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://hkssnbvktfscizojhftl.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
@@ -242,12 +242,6 @@ input[type=date]{min-height:44px;display:block;width:100%}
 dialog{max-height:calc(100vh - 32px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);overflow-y:auto;overscroll-behavior:contain}
 .dialog-inner{min-width:0}.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 main{overflow-wrap:break-word}.topbar>*{min-width:0}
-#welcome{border:0;max-width:none;max-height:none;width:100%;height:100%;height:100dvh;margin:0;border-radius:0;background:radial-gradient(ellipse at 30% 20%,#702951,transparent 65%),#18121e;color:white;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));text-align:center}
-#welcome[open]{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px}
-#welcome .hello{font-family:"Snell Roundhand","Segoe Script",cursive;font-size:clamp(60px,17vw,110px);font-weight:400;line-height:1.3;margin:0;animation:hello-in .65s ease-out both}
-#welcome p{margin:0;line-height:1.7}#welcome .welcome-credit{color:#e6cfdc;font-size:14px}
-#welcome button{margin-top:24px;border:1px solid #ffffff55;border-radius:99px;background:#ffffff16;color:white;padding:12px 24px;min-height:44px;font:inherit}
-@keyframes hello-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:720px){
 main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 .topbar{gap:12px;align-items:center}.topbar .status{font-size:11px;max-width:48%;line-height:1.4;text-align:right}
@@ -258,7 +252,6 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 .bottom-nav{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
 .section-head{flex-wrap:wrap;gap:10px}.section-head h2{font-size:24px}
 }
-@media(prefers-reduced-motion:reduce){#welcome .hello{animation:none}}
 
 
 .account-card{max-width:500px;margin:24px auto}.account-card h1{font-size:30px;margin:20px 0 12px}.account-card form{display:grid;gap:16px}.account-card .brand-mark{margin-bottom:12px}
@@ -276,22 +269,10 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 /* Decorative companion; all guidance remains accessible as text. */
 .mascot-pose{display:block;width:126px;aspect-ratio:3/4;background-size:contain;background-position:center bottom;background-repeat:no-repeat;flex:none}
 .pose-0{background-image:url('assets/mascotte/01-bienvenue.png')}.pose-1{background-image:url('assets/mascotte/04-prevision-tendue.png')}.pose-2{background-image:url('assets/mascotte/03-vigilance.png')}.pose-3{background-image:url('assets/mascotte/02-serenite.png')}.pose-4{background-image:url('assets/mascotte/05-solde-zero.png')}.pose-5{background-image:url('assets/mascotte/06-solde-negatif-v2.webp')}
-#welcome .welcome-playing{background-image:url('assets/mascotte/01-bienvenue.webp')}
 .mascot-guide{display:flex;align-items:center;gap:18px;margin:16px 0 22px;padding:10px 18px;border:1px solid var(--line);border-radius:24px;background:var(--soft)}
 .mascot-copy{margin:0;line-height:1.5;color:var(--accent-text);font-size:15px;font-weight:600}
 .account-card .mascot-guide{justify-content:center}.account-card .mascot-pose{width:108px}
-#welcome .welcome-content{width:min(100%,420px);margin:auto;display:flex;align-items:center;flex-direction:column;gap:14px}
-#welcome .welcome-brand{font-size:36px;font-weight:850;letter-spacing:-2px}
-#welcome .mascot-pose{width:180px}
-#welcome h1{font-size:clamp(32px,7vw,44px);line-height:1.05;letter-spacing:-1.5px;color:white;margin:0}
-#welcome .welcome-actions{display:grid;gap:4px;width:100%;margin-top:4px}
-#welcome button{margin-top:0;width:100%;font-weight:650}
-#welcome #welcome-skip{background:white;color:#700d3b;border:0}
-#welcome #welcome-login{background:transparent;border:0;text-decoration:underline}
-#welcome button[hidden]{display:none}
-#welcome .welcome-credit{font-size:12px}
 @media(max-width:600px){.mascot-guide{gap:12px;padding:8px 12px}.mascot-pose{width:90px}.mascot-copy{font-size:14px}.account-card{margin:8px auto}.account-card h1{font-size:28px}.account-card:has(input:focus,select:focus,textarea:focus) .mascot-pose,dialog:has(input:focus,select:focus,textarea:focus) .mascot-pose{width:56px}.account-card:has(input:focus,select:focus,textarea:focus) .mascot-guide,dialog:has(input:focus,select:focus,textarea:focus) .mascot-guide{margin:8px 0;gap:10px}}
-@media(max-height:700px){#welcome{overflow-y:auto}#welcome .mascot-pose{width:110px}#welcome .welcome-content{gap:10px}}
 
 /* A compact companion beside the amount; forecasts and payment controls keep their place. */
 .balance-companion-row{--companion-size:190px;--companion-gap:18px;margin:8px 0 16px}
@@ -317,7 +298,6 @@ main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 .balance-section .balance-companion{filter:drop-shadow(0 0 12px var(--companion-glow)) drop-shadow(0 8px 10px rgba(22,6,25,.18))}
 .journal-companion-content[data-mascot-state="saved"] .mascot-pose{filter:drop-shadow(0 0 8px rgba(54,185,118,.4))}
 .journal-companion-content[data-mascot-state="saved"] .journal-companion-title{color:var(--ok)}
-@media(prefers-reduced-motion:reduce){#welcome .welcome-playing{background-image:url('assets/mascotte/01-bienvenue.png')}}
 /* Clair compact dashboard and named savings projects. */
 :root{--accent:#783bf1;--accent-strong:#6226cc;--accent-text:#6523c9;--soft:rgba(120,59,241,.09);--bg:#f6f4fb;--paper:rgba(255,255,255,.94);--paper-solid:#fff;--ink:#25133e;--muted:#6a607b;--line:rgba(87,51,135,.12);--side:rgba(255,255,255,.92);--red:#c91a3f}
 html[data-theme=dark]{--accent:#a981ff;--accent-strong:#8d5ded;--accent-text:#c1a3ff;--bg:#100d17;--paper:rgba(32,25,45,.95);--paper-solid:#21192e;--ink:#f5f0ff;--muted:#b8adc8;--line:rgba(204,181,255,.16);--side:rgba(25,19,36,.95);--red:#ff899d}
@@ -390,40 +370,11 @@ html[data-theme=dark]{--money-in:#78dda0;--money-out:#8cb5ff;--soft:rgba(169,129
 .journal-companion{margin:0 0 16px;padding:8px 14px;border-radius:18px}.journal-companion-content{min-height:62px;gap:12px}.journal-companion .mascot-pose{width:44px}.journal-companion-title{font-size:14px}.journal-companion .help{font-size:12px}
 .journal-list .row{gap:12px}.journal-list .row-amount{font-variant-numeric:tabular-nums}
 @media(max-width:720px){.journal-segments{max-width:none}.journal-segments button{font-size:12px;padding:8px 4px}.journal-list{padding:8px 12px}.journal-list .row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:6px 9px;padding:14px 0}.journal-list .row-icon{width:30px;height:30px;grid-row:1 / span 2;align-self:start}.journal-list .row-info{grid-column:2;grid-row:1 / span 2}.journal-list .row-name{font-size:13px}.journal-list .row-meta{font-size:11px}.journal-list .row-amount{grid-column:3;grid-row:1;font-size:13px;max-width:35vw;white-space:normal;overflow-wrap:anywhere;text-align:right}.journal-list .row .button.small{grid-column:3;grid-row:2;justify-self:end;min-height:32px;font-size:11px}}
-/* Welcome screen follows Clair's Ruban identity. */
-#welcome{background:radial-gradient(ellipse at 30% 15%,#623399 0,transparent 65%),#211237;color:#fff;overflow-y:auto}
-#welcome .welcome-brand{display:flex;align-items:center;justify-content:center;gap:12px;font-size:34px;font-weight:800;letter-spacing:-1px;line-height:1.1}
-#welcome .welcome-brand .brand-mark{width:44px;height:44px;border-radius:11px}
-#welcome .welcome-brand svg{display:block;width:100%;height:100%}
-#welcome #welcome-skip{background:#fff;color:#5624ab}
-#welcome #welcome-login{color:#f2ebff}
-#welcome .welcome-credit{color:#d9caee}
-@media(max-height:700px){#welcome .welcome-brand{font-size:29px;gap:10px}#welcome .welcome-brand .brand-mark{width:36px;height:36px}}
 
-/* Welcome identity: ribbon logo and lavender layout. */
-#welcome{background:radial-gradient(ellipse at 50% 22%,#e5d9ff 0,transparent 58%),#f8f5ff;color:#34235e;padding:calc(24px + env(safe-area-inset-top)) 22px calc(22px + env(safe-area-inset-bottom));overflow:auto}
-#welcome[open]{display:block}
-#welcome .welcome-content{min-height:100%;width:min(100%,440px);justify-content:center;gap:20px;padding:16px 0}
-#welcome .welcome-brand{flex-direction:column;gap:16px;font-size:48px;letter-spacing:-2px;color:#34235e}
-#welcome .welcome-brand .brand-mark{width:112px;height:112px;background:transparent;border-radius:25px;margin:0;box-shadow:0 14px 40px #7354d224}
-#welcome h1{color:#25134c;font-size:clamp(28px,7vw,38px);line-height:1.12;letter-spacing:-1px;margin:4px 0 0}
-#welcome p{font-size:15px;line-height:1.6;color:#63547e}
-#welcome .welcome-preview{display:flex;align-items:center;gap:16px;text-align:left;width:100%;border:1px solid #e9e0f7;border-radius:24px;background:#ffffffd9;padding:20px;box-shadow:0 12px 32px #7354d210}
-#welcome .welcome-wallet{display:grid;place-items:center;flex-shrink:0;width:52px;height:52px;border-radius:16px;background:#eee6ff;color:#6840c6;font-size:30px}
-#welcome .welcome-preview small{display:block;font-size:12px;color:#63547e;line-height:1.5}
-#welcome .welcome-preview strong{display:block;font-size:30px;letter-spacing:-1px;color:#25134c;margin:3px 0}
-#welcome .welcome-preview-status{display:block;font-size:13px;color:#197343}
-#welcome .welcome-preview .welcome-example{font-size:10px;margin-top:5px}
-#welcome .welcome-actions{gap:8px;margin:0}
-#welcome #welcome-skip{background:linear-gradient(120deg,#7354d2,#6840c6);color:white;border:0;min-height:54px;border-radius:18px;font-size:17px}
-#welcome #welcome-login{color:#6040aa;text-decoration:none;font-size:14px;min-height:44px}
-#welcome .welcome-credit{color:#78688f;font-size:11px}
 .account-card{border-color:var(--line);border-radius:24px;background:var(--paper-solid);box-shadow:0 12px 40px #7354d210}
 .account-card .brand-mark{width:52px;height:52px;border-radius:13px;background:transparent}
 .account-card .button.primary{background:var(--accent-strong);border-radius:14px}
-@media(max-width:360px),(max-height:740px){#welcome .welcome-content{gap:14px;padding:0}#welcome .welcome-brand{font-size:36px;gap:10px}#welcome .welcome-brand .brand-mark{width:76px;height:76px}#welcome h1{font-size:28px}#welcome .welcome-preview{padding:14px}#welcome p{font-size:13px}}
 
-@media(max-height:620px){#welcome{padding:calc(12px + env(safe-area-inset-top)) 18px calc(12px + env(safe-area-inset-bottom))}#welcome .welcome-content{gap:8px}#welcome .welcome-brand{font-size:28px;gap:6px}#welcome .welcome-brand .brand-mark{width:48px;height:48px;border-radius:12px}#welcome h1{font-size:24px}#welcome .welcome-preview{padding:10px 14px;border-radius:18px}#welcome .welcome-preview strong{font-size:24px}#welcome #welcome-skip{min-height:46px}#welcome .welcome-actions{gap:0}}
 
 /* Account entry: local assets, real forms, responsive companion panel. */
 body:has(.account-layout) .sidebar,body:has(.account-layout) .bottom-nav,body:has(.account-layout) .top-date{display:none}
@@ -469,6 +420,33 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
 @media(max-width:360px){body:has(.account-layout) main{padding-left:12px;padding-right:12px}.account-form-pane{padding:20px}.account-form-pane h1{font-size:25px}.account-form-pane .actions{flex-direction:column;gap:2px}.account-scene{padding:12px 16px}.account-mascot-stage .mascot-pose{width:64px}.account-mascot-stage .mascot-copy{font-size:11px}.account-form-signature{margin-top:18px}}
 
 @media(max-width:760px) and (max-height:600px){.account-device-badge{display:none}.account-mascot-stage{min-height:76px}.account-mascot-stage .mascot-pose{width:56px}.account-mascot-stage:before{width:64px;height:64px;left:calc(50% + 38px)}}
+
+/* Automatic Clair opening: the original Ruban glyph, no sample budget. */
+#welcome{--splash-bg:#fbf9ff;--splash-ink:#30204e;--splash-muted:#76678c;border:0;outline:0;border-radius:0;position:fixed;inset:0;max-width:none;max-height:none;width:100%;height:100%;height:100dvh;margin:0;padding:calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 44%,#8f60e912 0,transparent 48%),var(--splash-bg);color:var(--splash-ink);text-align:center;overflow:hidden}
+#welcome[open]{display:flex;align-items:center;justify-content:center}
+#welcome::backdrop{background:transparent;backdrop-filter:none}
+#welcome .splash-content{width:min(100%,420px);display:flex;flex-direction:column;align-items:center;gap:0}
+#welcome .splash-logo{display:block;width:clamp(156px,38vw,208px);height:auto;overflow:visible;filter:drop-shadow(0 10px 20px #7c45d914)}
+#welcome .splash-trace{stroke-dasharray:1;stroke-dashoffset:0}
+#welcome .splash-name{margin:6px 0 0;font-size:clamp(40px,9vw,50px);font-weight:780;letter-spacing:-2px;line-height:1.2;color:var(--splash-ink)}
+#welcome .splash-tagline{margin:12px 0 0;font-size:clamp(13px,3.5vw,15px);line-height:1.6;letter-spacing:.01em;color:var(--splash-muted)}
+#welcome .splash-sheen{opacity:0}
+#welcome.splash-full{animation:splash-exit .26s 1.74s ease-in both}
+#welcome.splash-full .splash-trace{animation:splash-draw .9s cubic-bezier(.35,0,.2,1) both}
+#welcome.splash-full .splash-name{animation:splash-copy .38s .86s ease-out both}
+#welcome.splash-full .splash-tagline{animation:splash-copy .35s 1.09s ease-out both}
+#welcome.splash-full .splash-sheen{animation:splash-sheen .44s .96s ease-out both}
+#welcome.splash-quick{animation:splash-exit .12s .33s ease-in both}
+#welcome.splash-quick .splash-trace{animation:splash-draw .18s ease-out both}
+#welcome.splash-quick .splash-name{animation:splash-copy .16s .07s ease-out both}
+#welcome.splash-quick .splash-tagline{animation:splash-copy .12s .14s ease-out both}
+@keyframes splash-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes splash-copy{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes splash-exit{from{opacity:1}to{opacity:0}}
+@keyframes splash-sheen{0%{opacity:0;transform:translateX(-180px) skewX(-16deg)}20%{opacity:.42}80%{opacity:.25}100%{opacity:0;transform:translateX(520px) skewX(-16deg)}}
+html[data-theme=dark] #welcome{--splash-bg:#15101f;--splash-ink:#f2ecff;--splash-muted:#b9accd}
+@media(prefers-color-scheme:dark){html[data-theme=auto] #welcome{--splash-bg:#15101f;--splash-ink:#f2ecff;--splash-muted:#b9accd}}
+@media(prefers-reduced-motion:reduce){#welcome,#welcome .splash-trace,#welcome .splash-name,#welcome .splash-tagline,#welcome .splash-sheen{animation:none!important}#welcome .splash-trace{stroke-dashoffset:0}}
 </style>
 </head>
 <body data-wall="plain">
@@ -476,7 +454,7 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
 <div class="shell"><aside class="sidebar"><div class="brand"><span class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><defs><linearGradient id="brand-main-1-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b4dff"/><stop offset="1" stop-color="#6528d7"/></linearGradient><linearGradient id="brand-main-1-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f0ff"/><stop offset="1" stop-color="#d7c3ff"/></linearGradient><linearGradient id="brand-main-1-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e9ddff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#brand-main-1-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="#fff"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#brand-main-1-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#brand-main-1-edge)"/></svg></span>clair</div><p class="tagline">Ton budget, l’esprit tranquille.</p><nav class="nav" aria-label="Navigation principale"></nav><div class="sidebar-foot"><p>Mon espace personnel.</p><button class="link" data-nav="settings">Sauvegarder mes données</button></div></aside>
 <main><header class="topbar"><div class="mobile-brand"><span class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><defs><linearGradient id="brand-main-2-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b4dff"/><stop offset="1" stop-color="#6528d7"/></linearGradient><linearGradient id="brand-main-2-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f0ff"/><stop offset="1" stop-color="#d7c3ff"/></linearGradient><linearGradient id="brand-main-2-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e9ddff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#brand-main-2-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="#fff"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#brand-main-2-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#brand-main-2-edge)"/></svg></span>clair</div><span class="top-date" id="today-label"></span><span class="status"><span class="dot" aria-hidden="true"></span><span id="status-label">Sur cet appareil</span></span></header><div id="alert" role="alert"></div><div id="reminders" aria-live="polite"></div><div id="sync-alert" aria-live="polite"></div><div id="page"></div></main></div>
 <nav class="bottom-nav" aria-label="Navigation mobile"></nav><dialog id="dialog" aria-labelledby="dialog-title"></dialog><div id="toast" role="status" aria-live="polite"></div>
-<dialog id="welcome" aria-labelledby="welcome-title"><div class="welcome-content"><div class="welcome-brand"><span class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><defs><linearGradient id="brand-welcome-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b4dff"/><stop offset="1" stop-color="#6528d7"/></linearGradient><linearGradient id="brand-welcome-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f0ff"/><stop offset="1" stop-color="#d7c3ff"/></linearGradient><linearGradient id="brand-welcome-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e9ddff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#brand-welcome-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="#fff"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#brand-welcome-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#brand-welcome-edge)"/></svg></span>Clair</div><h1 id="welcome-title">Ton budget,<br>l’esprit tranquille.</h1><p>Configure tes habitudes une fois.<br>Clair suit tes dépenses répétitives.</p><div class="welcome-preview" aria-label="Exemple fictif de budget"><span class="welcome-wallet" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7V5a2 2 0 0 1 2-2h12v4M4 7h15a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a1 1 0 0 1 1-1Z"/><path d="M21 12h-5v5h5"/><circle cx="17.5" cy="14.5" r=".6" fill="currentColor" stroke="none"/></svg></span><div><small>Après tes dépenses prévues</small><strong>248,00 €</strong><span class="welcome-preview-status">✓ Tout est anticipé</span><small class="welcome-example">Exemple fictif</small></div></div><div class="welcome-actions"><button type="button" id="welcome-skip" autofocus>Commencer →</button><button type="button" id="welcome-login">Déjà un compte ? Se connecter</button></div><p class="welcome-credit">Développé par El-Hadj</p></div></dialog>
+<dialog id="welcome" aria-labelledby="welcome-title" aria-describedby="welcome-tagline"><div class="splash-content"><svg class="splash-logo" xmlns="http://www.w3.org/2000/svg" viewBox="58 52 416 416" aria-hidden="true" focusable="false"><defs><linearGradient id="splash-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a179fc"/><stop offset="1" stop-color="#6230cc"/></linearGradient><linearGradient id="splash-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c5aafa"/><stop offset="1" stop-color="#7846d8"/></linearGradient><linearGradient id="splash-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#b596f9"/><stop offset="1" stop-color="#7942df"/></linearGradient><linearGradient id="splash-light"><stop stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><mask id="splash-reveal" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><path class="splash-trace" d="M367 170 306 132Q296 126 284 133L181 193Q164 203 164 226V290Q164 308 180 318L267 370Q280 378 294 370L365 329" fill="none" stroke="#fff" stroke-width="140" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/></mask><clipPath id="splash-outline"><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z"/></clipPath></defs><g mask="url(#splash-reveal)"><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="url(#splash-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#splash-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#splash-edge)"/><g clip-path="url(#splash-outline)"><rect class="splash-sheen" x="0" y="0" width="90" height="512" fill="url(#splash-light)"/></g></g></svg><h1 id="welcome-title" class="splash-name">Clair</h1><p id="welcome-tagline" class="splash-tagline">Ton budget, l’esprit tranquille.</p></div></dialog>
 <script>
 /* Clair — calculs en centimes, dates civiles, aucune requête réseau. */
 (function (root) {
@@ -1802,22 +1780,24 @@ function submitCharge(f){
   window.addEventListener('appinstalled',()=>{installPrompt=null;if(page==='settings')render();notify('Clair a été installé.');});
   render();if(!cloud.enabled)catchUp();
   function welcome(){
-    const intro=$('#welcome');
+    const intro=$('#welcome'),motion=matchMedia('(prefers-reduced-motion: reduce)');
     const ready=()=>{if(cloud.enabled){if(!accountStarted){accountStarted=true;cloud.init().catch(()=>{cloud.ready=true;cloud.status='error';cloud.error='Connexion indisponible. Réessaie.';render();});}}else if(!loadError&&!data.initialized)beginSetup();};
-    let seen=false;try{seen=sessionStorage.getItem('clair-welcome-v1')==='1';sessionStorage.setItem('clair-welcome-v1','1');}catch(_){}
-    if(accountResetStep||seen||matchMedia('(prefers-reduced-motion: reduce)').matches){ready();return;}
-    let timer;const pose=$('#welcome .mascot-pose');
-    const stop=()=>{clearTimeout(timer);pose?.classList.remove('welcome-playing');};
-    intro.addEventListener('close',()=>{stop();ready();},{once:true});
-    let newcomer=!data.initialized;
-    try{if(localStorage.getItem('clair-account-session-v1'))newcomer=false;}catch(_){}
-    $('#welcome-skip').textContent=newcomer&&cloud.enabled?'Commencer →':'Ouvrir Clair';
-    $('#welcome-login').hidden=!newcomer||!cloud.enabled;
-    $('#welcome-skip').addEventListener('click',()=>{if(newcomer&&cloud.enabled)accountMode='signup';intro.close();render();},{once:true});
-    $('#welcome-login').addEventListener('click',()=>{accountMode='login';intro.close();render();},{once:true});
-    pose?.classList.add('welcome-playing');intro.showModal();
-    timer=setTimeout(()=>{stop();if(!newcomer&&intro.open)intro.close();},2000);
-    matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',event=>{if(event.matches){stop();if(!newcomer&&intro.open)intro.close();}});
+    if(accountResetStep||loadError){ready();return;}
+    let seen=false;try{seen=sessionStorage.getItem('clair-splash-v2')==='1';sessionStorage.setItem('clair-splash-v2','1');}catch(_){}
+    let timer,finished=false;
+    const finish=()=>{
+      if(finished)return;finished=true;clearTimeout(timer);
+      motion.removeEventListener?.('change',reduce);
+      if(intro.open)intro.close();
+      ready();
+    };
+    const reduce=event=>{if(event.matches)finish();};
+    intro.addEventListener('close',finish,{once:true});
+    intro.addEventListener('cancel',finish,{once:true});
+    intro.classList.add(motion.matches?'splash-static':seen?'splash-quick':'splash-full');
+    try{intro.showModal();}catch(_){finish();return;}
+    timer=setTimeout(finish,motion.matches?150:seen?450:2000);
+    motion.addEventListener?.('change',reduce);
   }
   welcome();
   if(!loadError&&data.initialized)syncPush();
