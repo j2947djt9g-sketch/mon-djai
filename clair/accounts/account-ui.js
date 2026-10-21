@@ -23,7 +23,7 @@
       else renderAccountStatus();
     },
     recovery:user=>{accountRecovery=true;accountRecoveryUserId=user?.id||null;accountResetStep='password';close();},
-    opened:()=>{if(!accountResetStep)catchUp();},
+    opened:()=>{if(!accountResetStep){catchUp();queuePushSync();}},
     enter:(user,record)=>{
       close();wizard=null;undo=null;recovery=null;page='home';
       KEY=cloud.key(user.id);BACKUP=KEY+'-backup';REMINDED=KEY+'-reminded';PUSH_KEY=KEY+'-push';
