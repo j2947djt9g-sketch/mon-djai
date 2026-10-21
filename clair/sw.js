@@ -1,6 +1,6 @@
 /* Offline shell scoped to Clair only; financial data is not cached. */
 const BASE=new URL('./',self.location.href);
-const CACHE='clair-github-'+BASE.pathname+'v25';
+const CACHE='clair-github-'+BASE.pathname+'v26';
 const ASSETS=['assets/mascotte/01-bienvenue.png','assets/mascotte/02-serenite.png','assets/mascotte/03-vigilance.png','assets/mascotte/04-prevision-tendue.png','assets/mascotte/05-solde-zero.png','assets/mascotte/06-solde-negatif-v2.webp','index.html','manifest.webmanifest','icons/icon.svg','icons/icon-180.png','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'].map(p=>new URL(p,BASE).href);
 const HOME=new URL('index.html',BASE).href;
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
