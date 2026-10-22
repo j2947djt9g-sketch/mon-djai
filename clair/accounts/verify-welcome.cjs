@@ -11,7 +11,7 @@
    for(const [width,height]of [[1440,1000],[390,844],[320,568],[768,844]]){
     const context=await browser.newContext({viewport:{width,height},reducedMotion:'no-preference',colorScheme:'light'}),page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',r=>r.abort());
-    await page.clock.install({time:new Date('2026-10-21T12:00:00Z')});await page.goto(url);await page.locator('#welcome').waitFor({state:'visible'});
+    await page.clock.install({time:new Date('2026-10-21T12:00:00Z')});await page.clock.pauseAt(new Date('2026-10-21T12:00:01Z'));await page.goto(url);await page.locator('#welcome').waitFor({state:'visible'});
     assert.equal(await page.locator('#welcome-title').getAttribute('aria-label'),'Clair');assert.equal(await page.locator('.splash-name title').textContent(),'LAIR');assert.equal(await page.locator('#welcome-tagline').innerText(),'Ton budget, l’esprit tranquille.');
     assert.equal(await page.locator('#welcome button,#welcome .welcome-preview,#welcome .mascot-pose').count(),0);assert.equal(await page.locator('#welcome .splash-logo').count(),1);assert(!/\d|€/.test(await page.locator('#welcome').innerText()));
     const seek=async ms=>page.locator('#welcome').evaluate((el,ms)=>{for(const a of el.getAnimations({subtree:true})){a.pause();a.currentTime=ms;}},ms);
