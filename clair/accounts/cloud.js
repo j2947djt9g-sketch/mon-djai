@@ -145,12 +145,18 @@
     }
     async convertCurrency(to,revision,asOf){
       if(!this.user||!this.ready||this.busy||this.converting||this.conflict||this.status!=='synced'||this.record?.meta.dirty||this.record?.meta.revision!==revision)throw Error('Synchronise ton budget et recommence l’aperçu.');
-      const epoch=this.epoch;this.converting=true;this.busy=true;this.emit();
+      const epoch=this.epoch,startingRaw=localStorage.getItem(this.key());this.converting=true;this.busy=true;this.emit();
       try{
         const {data,error}=await this.client.rpc('convert_clair_currency',{p_currency:to,p_expected_revision:revision,p_operation_id:crypto.randomUUID(),p_as_of:asOf});
         if(epoch!==this.epoch)throw Error('Le compte a changé pendant la conversion.');
         if(error)throw Error(error.message||'Conversion indisponible. Ton budget est conservé.');
         if(!data?.saved){this.setConflict(data?.row||null);throw Error('Un autre appareil a modifié le budget. Vérifie la copie en ligne.');}
+        const latestRaw=localStorage.getItem(this.key());
+        if(latestRaw!==startingRaw){
+          const latest=this.decode(latestRaw,this.user.id);
+          if(latest?.meta.dirty){this.record=latest;this.hooks.apply?.(latest.payload,latestRaw);this.setConflict(data.row);throw Error('Un autre onglet a modifié le budget pendant la conversion. Les deux copies sont conservées.');}
+          if(latest&&latest.meta.revision>=data.row.revision){this.record=latest;this.status='synced';this.hooks.apply?.(latest.payload,latestRaw);return;}
+        }
         this.adopt(data.row,epoch);
       }catch(error){if(epoch===this.epoch&&!this.conflict){this.status='error';this.error='Vérification de la conversion en ligne nécessaire.';this.schedule();}throw error;
       }finally{this.converting=false;this.busy=false;this.emit();}

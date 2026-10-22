@@ -941,12 +941,18 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     }
     async convertCurrency(to,revision,asOf){
       if(!this.user||!this.ready||this.busy||this.converting||this.conflict||this.status!=='synced'||this.record?.meta.dirty||this.record?.meta.revision!==revision)throw Error('Synchronise ton budget et recommence l’aperçu.');
-      const epoch=this.epoch;this.converting=true;this.busy=true;this.emit();
+      const epoch=this.epoch,startingRaw=localStorage.getItem(this.key());this.converting=true;this.busy=true;this.emit();
       try{
         const {data,error}=await this.client.rpc('convert_clair_currency',{p_currency:to,p_expected_revision:revision,p_operation_id:crypto.randomUUID(),p_as_of:asOf});
         if(epoch!==this.epoch)throw Error('Le compte a changé pendant la conversion.');
         if(error)throw Error(error.message||'Conversion indisponible. Ton budget est conservé.');
         if(!data?.saved){this.setConflict(data?.row||null);throw Error('Un autre appareil a modifié le budget. Vérifie la copie en ligne.');}
+        const latestRaw=localStorage.getItem(this.key());
+        if(latestRaw!==startingRaw){
+          const latest=this.decode(latestRaw,this.user.id);
+          if(latest?.meta.dirty){this.record=latest;this.hooks.apply?.(latest.payload,latestRaw);this.setConflict(data.row);throw Error('Un autre onglet a modifié le budget pendant la conversion. Les deux copies sont conservées.');}
+          if(latest&&latest.meta.revision>=data.row.revision){this.record=latest;this.status='synced';this.hooks.apply?.(latest.payload,latestRaw);return;}
+        }
         this.adopt(data.row,epoch);
       }catch(error){if(epoch===this.epoch&&!this.conflict){this.status='error';this.error='Vérification de la conversion en ligne nécessaire.';this.schedule();}throw error;
       }finally{this.converting=false;this.busy=false;this.emit();}
@@ -1843,6 +1849,7 @@ function submitCharge(f){
     dialog(r?'Ajuster pour la suite.':'Une habitude en moins à saisir.',`<form id="rule-form">${r?'<div class="notice">La modification s’applique à partir de la date choisie. Les dépenses passées restent conservées.</div>':''}${field('Nom','name',v.name,'text','maxlength="100" required')}<div class="form-grid"><label class="field"><span>Fréquence</span><select name="kind" id="rule-kind"><option value="weekly" ${v.kind==='weekly'?'selected':''}>Certains jours de la semaine</option><option value="monthly" ${v.kind==='monthly'?'selected':''}>Chaque mois</option><option value="yearly" ${v.kind==='yearly'?'selected':''}>Chaque année</option></select></label><label class="field"><span>Catégorie</span><select name="categoryId">${options(v.categoryId)}</select></label></div>${v.kind==='weekly'?dayFields(v.amounts?.length===7?v.amounts:undefined,v.daysDraft):`<div class="form-grid">${field('Montant (€)','amount',v.amountText??(v.amountCents?amount(v.amountCents):''),'text','inputmode="decimal" required')}<label class="field"><span>Jour de l’échéance</span><select name="day"><option value="last" ${v.day==='last'?'selected':''}>Dernier jour du mois</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}" ${Number(v.day)===i+1?'selected':''}>Le ${i+1}</option>`).join('')}</select></label></div>${v.kind==='yearly'?`<label class="field"><span>Mois de l’échéance</span><select name="month">${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${Number(v.month)===i+1?'selected':''}>${esc(monthLabel('2026-'+String(i+1).padStart(2,'0')).split(' ')[0])}</option>`).join('')}</select></label>`:''}`}${field(r?'Appliquer le nouveau tarif à partir du':'Premier jour du suivi','start',draft?.start??(r?nextDay():v.start),'date',`min="${r?nextDay():data.openingBalanceDate}" required`)}<p class="help">Une date de début ne crée pas de paiement ce jour-là si ce n’est pas un jour d’échéance. Les mois courts utilisent leur dernier jour.</p>${context.fromChoices?'<div class="dialog-actions"><button type="button" class="button" data-action="rule-back">Retour aux choix</button><button class="button primary" type="submit">Activer cette règle</button></div>':formActions(r?'Appliquer la modification':'Activer cette règle')}</form>`,'rule',{...context,id:r?.id||null,ruleKind:v.kind});
   }
   let currencyPreviewState=null;
+  function currencyError(error){const target=$('#dialog #form-error');if(target){target.textContent=error.message;target.scrollIntoView({block:'nearest'});}else notify(error.message);}
   function currencyDialog(){
     if(!data.initialized)return;
     currencyPreviewState=null;
@@ -1867,7 +1874,6 @@ function submitCharge(f){
     }finally{button.disabled=false;}
   }
   function exportCurrencyBackup(){const raw=localStorage.getItem(BACKUP+'-currency');if(!raw)throw Error('Aucune sauvegarde de conversion sur cet appareil.');download(raw,'clair-avant-conversion.json');}
-
   function confirm(title,copy,callback,label='Confirmer'){dialog(title,`<p class="muted">${copy}</p><div class="dialog-actions"><button class="button" data-action="close">Annuler</button><button class="button primary" data-action="confirm">${label}</button></div>`,'confirm',{callback});}
   function pauseDialog(r,stop=false){dialog(stop?'Arrêter cette règle.':'Une pause dans le quotidien.',`<p class="help">Les opérations déjà comptées sont conservées. Pour annuler un repas déjà compté aujourd’hui, utilise « Annuler aujourd’hui ».</p><form id="pause-form">${field(stop?'Premier jour sans dépense':'Début de la pause','start',nextDay(),'date',`min="${nextDay()}" required`)}${stop?'':field('Dernier jour de la pause (inclus)','end',E.addDays(E.today(),7),'date',`min="${nextDay()}" required`)}${formActions(stop?'Arrêter la règle':'Suspendre')}</form>`,'pause',{id:r.id,stop});}
   function openBudget(categoryId='alimentation'){dialog('Une enveloppe pour le mois.',`<form id="budget-form"><label class="field"><span>Catégorie</span><select name="categoryId">${options(categoryId)}</select></label>${field('Limite (€) — 0 pour retirer la limite','amount',amount(budgetFor(categoryId)),'text','inputmode="decimal" required')}<label class="field"><span>Appliquer</span><select name="scope"><option value="recurring">Chaque mois</option><option value="month">Seulement ${esc(monthLabel(month))}</option><option value="reset">Revenir au montant habituel ce mois</option></select></label>${formActions()}</form>`,'budget');}
@@ -1893,8 +1899,8 @@ function submitCharge(f){
     if(b.dataset.nav){switchPage(b.dataset.nav);return;}const action=b.dataset.action, rid=b.dataset.id,r=data.rules.find(r=>r.id===rid),t=data.transactions.find(t=>t.id===rid);
     if(action==='currency-backup'){exportCurrencyBackup();return;}
     if(action==='currency-change'){currencyDialog();return;}
-    if(action==='currency-preview'){currencyPreview();return;}
-    if(action==='currency-apply'){await applyCurrency(b);return;}
+    if(action==='currency-preview'){try{currencyPreview();}catch(error){currencyError(error);}return;}
+    if(action==='currency-apply'){try{await applyCurrency(b);}catch(error){currencyError(error);}return;}
     if(action==='sound-preview'){if(event.isTrusted)await soundFeedback.preview();return;}
     if(action==='journal-flow'){journalFlow(b.dataset.flow);return;}
     if(action==='page-back'){switchPage(pageTrail.pop()||'settings',true);return;}

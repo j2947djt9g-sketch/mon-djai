@@ -1,4 +1,5 @@
   let currencyPreviewState=null;
+  function currencyError(error){const target=$('#dialog #form-error');if(target){target.textContent=error.message;target.scrollIntoView({block:'nearest'});}else notify(error.message);}
   function currencyDialog(){
     if(!data.initialized)return;
     currencyPreviewState=null;

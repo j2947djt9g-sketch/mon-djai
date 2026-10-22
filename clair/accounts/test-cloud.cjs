@@ -115,7 +115,10 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  await converter.cloud.convertCurrency('USD',1,E.today());assert.equal(converter.cloud.record.payload.currency,'USD');assert.equal(converter.cloud.record.payload.openingCents,112087);assert.equal(converter.cloud.record.payload.currencyRevision,1);
  const passive=device('converter');await passive.init();await converter.cloud.convertCurrency('XOF',2,E.today());await passive.cloud.sync();assert.equal(passive.cloud.status,'synced');assert.equal(passive.cloud.record.payload.currency,'XOF');
  const dirty=structuredClone(passive.cloud.record.payload);dirty.openingCents+=100;passive.edit(dirty);await assert.rejects(()=>passive.cloud.convertCurrency('EUR',3,E.today()),/Synchronise/);
- console.log('PASS explicit conversion: clean sync required, generation persisted, exact USD rate and passive second-device adoption');
+ const simultaneous=device('simultaneous-conversion');await simultaneous.init();simultaneous.edit(budget(100000));await simultaneous.cloud.sync();const otherTab=device('simultaneous-conversion',simultaneous.storage);await otherTab.init();
+ let releaseConversion;saveDelay=new Promise(resolve=>releaseConversion=resolve);const converting=simultaneous.cloud.convertCurrency('USD',1,E.today());otherTab.edit(budget(110000));releaseConversion();await assert.rejects(converting,/onglet/);saveDelay=null;
+ assert.equal(simultaneous.cloud.record.payload.openingCents,110000);assert.equal(simultaneous.cloud.record.payload.currency,'EUR');assert.equal(simultaneous.cloud.conflict.remote.payload.currency,'USD');assert.equal(rows.get('simultaneous-conversion').payload.openingCents,112087);
+ console.log('PASS explicit conversion: clean sync, generation, exact rates, second-device adoption and both copies preserved when another tab edits in flight');
  console.log('PASS: all scripts parse; reviewed engine with savings metadata parses');
 })().catch(e=>{console.error(e);process.exitCode=1});
 
