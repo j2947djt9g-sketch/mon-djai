@@ -42,7 +42,7 @@
    }
    for(const colorScheme of ['light','dark']){
     const context=await browser.newContext({reducedMotion:'reduce',colorScheme}),page=await context.newPage();await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',r=>r.abort());
-    await page.clock.install();await page.goto(url);await page.locator('#welcome.splash-static').waitFor({state:'visible'});assert.equal(await page.locator('.splash-trace').evaluate(el=>getComputedStyle(el).animationName),'none');assert((await page.locator('.splash-letter').evaluateAll(nodes=>nodes.map(el=>({offset:parseFloat(getComputedStyle(el).strokeDashoffset),animation:getComputedStyle(el).animationName})))).every(value=>value.offset===0&&value.animation==='none'),'Reduced motion shows the complete word immediately');
+    await page.clock.install({time:new Date('2026-10-21T12:00:00Z')});await page.clock.pauseAt(new Date('2026-10-21T12:00:01Z'));await page.goto(url);await page.locator('#welcome.splash-static').waitFor({state:'visible'});assert.equal(await page.locator('.splash-trace').evaluate(el=>getComputedStyle(el).animationName),'none');assert((await page.locator('.splash-letter').evaluateAll(nodes=>nodes.map(el=>({offset:parseFloat(getComputedStyle(el).strokeDashoffset),animation:getComputedStyle(el).animationName})))).every(value=>value.offset===0&&value.animation==='none'),'Reduced motion shows the complete word immediately');
     if(colorScheme==='dark')assert.equal(await page.locator('#welcome').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(16, 12, 25)');
     await page.clock.runFor(200);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form').waitFor();await context.close();
    }
