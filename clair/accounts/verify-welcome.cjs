@@ -12,24 +12,35 @@
     const context=await browser.newContext({viewport:{width,height},reducedMotion:'no-preference',colorScheme:'light'}),page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',r=>r.abort());
     await page.clock.install({time:new Date('2026-10-21T12:00:00Z')});await page.goto(url);await page.locator('#welcome').waitFor({state:'visible'});
-    assert.equal(await page.locator('#welcome-title').getAttribute('aria-label'),'Clair');assert.equal(await page.locator('.splash-name').innerText(),'LAIR');assert.equal(await page.locator('#welcome-tagline').innerText(),'Ton budget, l’esprit tranquille.');
+    assert.equal(await page.locator('#welcome-title').getAttribute('aria-label'),'Clair');assert.equal(await page.locator('.splash-name title').textContent(),'LAIR');assert.equal(await page.locator('#welcome-tagline').innerText(),'Ton budget, l’esprit tranquille.');
     assert.equal(await page.locator('#welcome button,#welcome .welcome-preview,#welcome .mascot-pose').count(),0);assert.equal(await page.locator('#welcome .splash-logo').count(),1);assert(!/\d|€/.test(await page.locator('#welcome').innerText()));
     const seek=async ms=>page.locator('#welcome').evaluate((el,ms)=>{for(const a of el.getAnimations({subtree:true})){a.pause();a.currentTime=ms;}},ms);
-    await seek(0);const initial=await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset));
-    await seek(450);const midway=await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset));
-    assert(initial>.99&&midway>0&&midway<initial,'Ruban must draw progressively');
-    await seek(2200);assert((await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset)))<.001);assert((await page.locator('.splash-name').evaluate(el=>Number(getComputedStyle(el).opacity)))>.99);
+    const offsets=async()=>page.locator('.splash-trace,.splash-letter').evaluateAll(nodes=>nodes.map(el=>parseFloat(getComputedStyle(el).strokeDashoffset)));
+    const partial=value=>value>0.001&&value<.999;
+    await seek(0);assert((await offsets()).every(value=>value>.999),'All letters start undrawn');const firstBox=await page.locator('.splash-wordmark').boundingBox();
+    await seek(600);let strokes=await offsets();assert(partial(strokes[0])&&strokes.slice(1).every(value=>value>.999),'C draws first');
+    await seek(1100);strokes=await offsets();assert(strokes[0]<.001&&partial(strokes[1])&&strokes.slice(2).every(value=>value>.999),'L follows C');
+    await seek(1550);strokes=await offsets();assert(strokes[1]<.001&&partial(strokes[2])&&strokes.slice(4).every(value=>value>.999),'A draws after L');
+    await seek(1960);strokes=await offsets();assert(strokes[2]<.001&&strokes[3]<.001&&partial(strokes[4])&&strokes[5]>.999,'I follows the completed A');
+    await seek(2200);strokes=await offsets();assert(strokes[4]<.001&&partial(strokes[5])&&strokes[6]>.999,'R traces its bowl before the diagonal');
+    await seek(2700);assert((await offsets()).every(value=>value<.001),'All strokes finish before the reading pause');assert.deepEqual(await page.locator('.splash-wordmark').boundingBox(),firstBox,'Drawing must never shift the wordmark');assert(firstBox.x>=0&&firstBox.x+firstBox.width<=width);
+    if(process.env.CLAIR_PREVIEW==='1'&&width===390){
+     const frames=[];for(const ms of [0,600,1100,1550,2200,2700]){await seek(ms);frames.push({ms,data:(await page.screenshot({type:'png',clip:{x:0,y:height/2-110,width,height:220}})).toString('base64')});}
+     const preview=await context.newPage();await preview.setContent('<canvas width="1170" height="500"></canvas>');
+     const sheet=await preview.evaluate(async frames=>{const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');ctx.fillStyle='#100c19';ctx.fillRect(0,0,1170,500);ctx.font='16px sans-serif';for(let i=0;i<frames.length;i++){const img=new Image();img.src='data:image/png;base64,'+frames[i].data;await img.decode();const x=i%3*390,y=Math.floor(i/3)*250;ctx.fillStyle='#c5b8dc';ctx.fillText((frames[i].ms/1000).toFixed(2)+' s',x+18,y+23);ctx.drawImage(img,x,y+30);}return canvas.toDataURL('image/jpeg',.8).split(',')[1]},frames);
+     console.log('CLAIR_LETTER_STAGES='+sheet);await preview.close();
+    }
     const geometry=await page.locator('#welcome').evaluate(el=>{const r=el.getBoundingClientRect(),content=el.querySelector('.splash-content').getBoundingClientRect();return {scroll:el.scrollWidth,w:r.width,h:r.height,x:content.x+content.width/2,y:content.y+content.height/2,bg:getComputedStyle(el).backgroundColor}});
     assert(geometry.scroll<=width+1);assert.equal(geometry.bg,'rgb(16, 12, 25)');assert(Math.abs(geometry.x-width/2)<2&&Math.abs(geometry.y-height/2)<2);
     if(process.env.CLAIR_PREVIEW==='1'&&width===390)console.log('CLAIR_SPLASH_PREVIEW='+((await page.screenshot({type:'jpeg',quality:75})).toString('base64')));
     await page.clock.runFor(3600);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form[data-mode="login"]').waitFor();
     await page.reload();await page.locator('#welcome.splash-full').waitFor({state:'visible'});await page.clock.runFor(3600);await page.locator('#welcome').waitFor({state:'hidden'});
     assert.deepEqual(errors,[]);await context.close();
-    console.log('PASS splash Chromium '+width+'x'+height+': Ruban draw, name/signature, no sample balance/buttons, centered layout, 3.5-second inline wordmark and direct session routing');
+    console.log('PASS splash Chromium '+width+'x'+height+': ordered C/L/A/I/R pen strokes, stable centered layout, complete 3.5-second opening and direct session routing');
    }
    for(const colorScheme of ['light','dark']){
     const context=await browser.newContext({reducedMotion:'reduce',colorScheme}),page=await context.newPage();await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',r=>r.abort());
-    await page.clock.install();await page.goto(url);await page.locator('#welcome.splash-static').waitFor({state:'visible'});assert.equal(await page.locator('.splash-trace').evaluate(el=>getComputedStyle(el).animationName),'none');
+    await page.clock.install();await page.goto(url);await page.locator('#welcome.splash-static').waitFor({state:'visible'});assert.equal(await page.locator('.splash-trace').evaluate(el=>getComputedStyle(el).animationName),'none');assert((await page.locator('.splash-letter').evaluateAll(nodes=>nodes.map(el=>({offset:parseFloat(getComputedStyle(el).strokeDashoffset),animation:getComputedStyle(el).animationName})))).every(value=>value.offset===0&&value.animation==='none'),'Reduced motion shows the complete word immediately');
     if(colorScheme==='dark')assert.equal(await page.locator('#welcome').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(16, 12, 25)');
     await page.clock.runFor(200);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form').waitFor();await context.close();
    }

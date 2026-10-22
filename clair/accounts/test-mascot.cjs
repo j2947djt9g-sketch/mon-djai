@@ -17,7 +17,7 @@ const recovery=run({recovery:true});assert.equal(recovery.inits(),1);assert(!rec
 const changed=run();changed.handlers['motion:change']({matches:true});assert(!changed.nodes.get('#welcome').open);assert.equal(changed.inits(),1);
 const escape=run();escape.handlers['#welcome:cancel']({preventDefault(){}});assert(!escape.nodes.get('#welcome').open);assert.equal(escape.inits(),1);
 const local=run({local:true});local.timers[0].fn();local.timers[2].fn();assert.equal(local.setups(),1);assert.equal(local.inits(),0);
-const welcome=html.match(/<dialog id="welcome"[\s\S]*?<\/dialog>/)[0];assert.doesNotMatch(welcome,/<button|welcome-preview|mascot/);assert.match(welcome,/aria-label="Clair"/);assert.match(welcome,/>LAIR<\/span>/);assert.match(welcome,/<mask id="splash-reveal"/);
+const welcome=html.match(/<dialog id="welcome"[\s\S]*?<\/dialog>/)[0];assert.doesNotMatch(welcome,/<button|welcome-preview|mascot/);assert.match(welcome,/aria-label="Clair"/);assert.match(welcome,/<title>LAIR<\/title>/);assert.match(welcome,/<mask id="splash-reveal"/);
 assert.match(html,/mascot\(\[2,1,2,3\]\[s\]/);assert.match(html,/mascot\(signup\?1:0/);assert.match(html,/dialog:has\(form\) \.mascot-pose/);assert.doesNotMatch(html,/dialog:has\(input:focus/);
 const sw=fs.readFileSync(__dirname+'/../sw.js','utf8');for(const name of ['01-bienvenue.png','02-serenite.png','03-vigilance.png','04-prevision-tendue.png','05-solde-zero.png','06-solde-negatif-v2.webp'])assert(sw.includes('assets/mascotte/'+name));
 assert(html.includes(fs.readFileSync(__dirname+'/welcome.css','utf8').trimEnd()));

@@ -10,7 +10,9 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
  try{
   for(const width of [320,390,768,1440]){
    const {context,page,errors}=await open(width,seed);await page.locator('.balance-section').waitFor();
-   await page.locator('[data-nav="settings"]:visible').first().click();await page.locator('.settings-link[data-nav="rules"]').click();await page.getByRole('button',{name:'Retour aux réglages'}).click();assert(await page.locator('.settings-links').isVisible());
+   await page.locator('[data-nav="settings"]:visible').first().click();await page.locator('.settings-link[data-nav="rules"]').click();
+   const back=page.getByRole('button',{name:'Retour aux réglages'}),backStyle=await back.evaluate(el=>({text:el.textContent.trim(),radius:getComputedStyle(el).borderRadius,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}));
+   assert.equal(backStyle.text,'');assert.equal(backStyle.radius,'50%');assert.equal(backStyle.width,44);assert.equal(backStyle.height,44);assert.equal(await back.locator('svg').count(),1);await back.click();assert(await page.locator('.settings-links').isVisible());
    await page.locator('.settings-link[data-nav="budget"]').click();await page.getByRole('button',{name:'Retour aux réglages'}).click();await page.locator('[data-nav="home"]:visible').first().click();await page.locator('.home-payments [data-nav="rules"]').click();await page.getByRole('button',{name:'Retour à l’accueil'}).click();assert(await page.locator('.balance-section').isVisible());
    await page.locator('.home-payments [data-nav="rules"]').click();await page.getByRole('button',{name:'+ Une habitude',exact:true}).click();await page.locator('[data-action="charge-preset"][data-index="1"]').click();
    await page.locator('#charge-flow-form [name="name"]').fill('Netflix personnel');await page.locator('#charge-flow-form [name="amount"]').fill('9,');await page.locator('[data-action="charge-back"]').click();await page.locator('[data-action="charge-preset"][data-index="0"]').click();await page.locator('#charge-flow-form [name="amount"]').fill('404');await page.locator('[data-action="charge-back"]').click();

@@ -4,27 +4,29 @@
 #welcome::backdrop{background:#100c19;backdrop-filter:none}
 #welcome .splash-content{position:relative;width:min(100%,460px);display:flex;flex-direction:column;align-items:center;isolation:isolate}
 #welcome .splash-halo{position:absolute;z-index:-1;width:320px;height:320px;top:50%;left:50%;border-radius:50%;background:radial-gradient(circle,#9b6cff24 0,#5c2c9020 36%,transparent 68%);transform:translate(-50%,-55%);pointer-events:none}
-#welcome .splash-wordmark{display:flex;align-items:center;justify-content:center;gap:clamp(3px,1vw,8px);margin:0;line-height:1;white-space:nowrap}
-#welcome .splash-logo{display:block;flex:none;width:clamp(76px,21vw,128px);height:auto;overflow:visible;filter:drop-shadow(0 0 24px #9257ef35)}
-#welcome .splash-trace{stroke-dasharray:1;stroke-dashoffset:0}
-#welcome .splash-name{display:block;margin:0 0 0 -2px;font-size:clamp(58px,16vw,98px);font-weight:650;letter-spacing:.025em;line-height:1;color:#fff}
+#welcome .splash-wordmark{--splash-mark-size:clamp(76px,21vw,128px);display:flex;align-items:center;justify-content:center;gap:0;margin:0;line-height:1;white-space:nowrap}
+#welcome .splash-logo{display:block;flex:none;width:var(--splash-mark-size);height:auto;overflow:visible;filter:drop-shadow(0 0 24px #9257ef35)}
+#welcome .splash-trace,#welcome .splash-letter{stroke-dasharray:1;stroke-dashoffset:0}
+#welcome .splash-name{display:block;flex:none;width:calc(var(--splash-mark-size)*2.133333);height:var(--splash-mark-size);margin:0 0 0 -5px;overflow:visible;color:#fff}
 #welcome .splash-tagline{margin:24px 0 0;font-size:clamp(12px,3.5vw,15px);font-weight:450;line-height:1.6;letter-spacing:.025em;color:var(--splash-muted)}
 #welcome .splash-rule{display:block;width:34px;height:2px;margin-top:22px;border-radius:4px;background:linear-gradient(90deg,#7440c9,#bd97ff);box-shadow:0 0 14px #9963ee50}
 #welcome .splash-sheen{opacity:0}
-#welcome.splash-full .splash-trace{animation:splash-draw 1.35s cubic-bezier(.25,.1,.18,1) both}
-#welcome.splash-full .splash-logo{animation:splash-settle 1.6s cubic-bezier(.2,.7,.3,1) both}
-#welcome.splash-full .splash-name{animation:splash-copy .7s 1.05s cubic-bezier(.2,.7,.3,1) both}
-#welcome.splash-full .splash-tagline{animation:splash-copy .55s 1.85s ease-out both}
-#welcome.splash-full .splash-rule{animation:splash-line .6s 2.1s ease-out both}
-#welcome.splash-full .splash-halo{animation:splash-glow 2.7s ease-out both}
-#welcome.splash-full .splash-sheen{animation:splash-sheen .85s 1.45s ease-out both}
+#welcome.splash-full .splash-trace{animation:splash-draw .8s .2s cubic-bezier(.35,.05,.25,1) both}
+#welcome.splash-full .splash-letter{animation:splash-draw var(--stroke-duration) var(--stroke-start) cubic-bezier(.35,.05,.25,1) both}
+#welcome .splash-letter-l{--stroke-start:.9s;--stroke-duration:.42s}
+#welcome .splash-letter-a{--stroke-start:1.25s;--stroke-duration:.52s}
+#welcome .splash-letter-a-bar{--stroke-start:1.66s;--stroke-duration:.18s}
+#welcome .splash-letter-i{--stroke-start:1.83s;--stroke-duration:.32s}
+#welcome .splash-letter-r{--stroke-start:2.02s;--stroke-duration:.43s}
+#welcome .splash-letter-r-leg{--stroke-start:2.38s;--stroke-duration:.22s}
+#welcome.splash-full .splash-tagline{animation:splash-copy .35s 2.65s ease-out both}
+#welcome.splash-full .splash-rule{animation:splash-line .3s 2.75s ease-out both}
+#welcome.splash-full .splash-halo{animation:splash-glow 2.8s .2s ease-out both}
 #welcome.splash-leaving{animation:splash-exit .35s ease-in both}
 @keyframes splash-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
 @keyframes splash-copy{from{opacity:0;transform:translateY(10px);filter:blur(4px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
-@keyframes splash-settle{from{transform:scale(.9);filter:drop-shadow(0 0 0 #9257ef00)}to{transform:scale(1);filter:drop-shadow(0 0 24px #9257ef35)}}
 @keyframes splash-exit{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.018)}}
 @keyframes splash-line{from{opacity:0;transform:scaleX(0)}to{opacity:1;transform:scaleX(1)}}
 @keyframes splash-glow{0%{opacity:0;transform:translate(-50%,-55%) scale(.7)}65%,100%{opacity:1;transform:translate(-50%,-55%) scale(1)}}
-@keyframes splash-sheen{0%{opacity:0;transform:translateX(-180px) skewX(-16deg)}25%{opacity:.35}75%{opacity:.22}100%{opacity:0;transform:translateX(520px) skewX(-16deg)}}
 .startup-wait{min-height:55vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.startup-wait h1{font-size:25px;margin-top:20px}.startup-spinner{width:28px;height:28px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:startup-spin .9s linear infinite}@keyframes startup-spin{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){#welcome,#welcome *, .startup-spinner{animation:none!important;transition:none!important}#welcome .splash-trace{stroke-dashoffset:0}}
+@media(prefers-reduced-motion:reduce){#welcome,#welcome *, .startup-spinner{animation:none!important;transition:none!important}#welcome .splash-trace,#welcome .splash-letter{stroke-dashoffset:0}}
