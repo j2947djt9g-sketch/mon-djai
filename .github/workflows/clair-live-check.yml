@@ -1,0 +1,51 @@
+name: Verify Clair publication
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'clair/index.html'
+      - 'clair/accounts/welcome.css'
+      - 'clair/sw.js'
+      - '.github/workflows/clair-live-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  published-files:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify the files actually served by GitHub Pages
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const { createHash } = require('node:crypto');
+          const files = ['index.html', 'accounts/welcome.css', 'sw.js'];
+          const hash = body => createHash('sha256').update(body).digest('hex');
+          const expected = new Map(files.map(file => [file, hash(fs.readFileSync('clair/' + file))]));
+          const version = fs.readFileSync('clair/index.html', 'utf8').match(/data-app-version="([^"]+)"/)?.[1];
+          (async () => {
+            let last = '';
+            for (let attempt = 1; attempt <= 18; attempt++) {
+              try {
+                await Promise.all(files.map(async file => {
+                  const url = new URL(file, 'https://j2947djt9g-sketch.github.io/mon-djai/clair/');
+                  url.searchParams.set('publish-check', process.env.GITHUB_SHA);
+                  const response = await fetch(url, { headers: { 'cache-control': 'no-cache' }, signal: AbortSignal.timeout(8000) });
+                  if (!response.ok) throw new Error(file + ': HTTP ' + response.status);
+                  const actual = hash(Buffer.from(await response.arrayBuffer()));
+                  if (actual !== expected.get(file)) throw new Error(file + ': published copy has not caught up');
+                }));
+                console.log('PASS LIVE: Clair ' + version + ' is published; HTML, animation CSS and service worker exactly match the tested source.');
+                return;
+              } catch (error) {
+                last = error.message;
+                console.log('Waiting for publication (' + attempt + '/18): ' + last);
+                if (attempt < 18) await new Promise(resolve => setTimeout(resolve, 5000));
+              }
+            }
+            throw new Error('Publication could not be confirmed: ' + last);
+          })().catch(error => { console.error(error.message); process.exitCode = 1; });
+          NODE
