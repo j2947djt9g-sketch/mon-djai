@@ -13,7 +13,12 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
   await page.goto(url);await page.locator('#welcome').waitFor({state:'visible'});await page.clock.runFor(500);if(!slow)await page.locator('.balance-section').waitFor();await page.clock.runFor(2650);
   assert.equal(await page.locator('#welcome.splash-leaving').count(),0,'Keep the complete word visible for the reading pause');assert.equal(await page.locator('#welcome').evaluate(el=>Number(getComputedStyle(el).opacity)),1);await page.clock.runFor(50);
   if(slow){assert(await page.locator('#welcome').isVisible(),'Keep the logo while session data is pending');assert.equal(await page.locator('#welcome.splash-leaving').count(),0);release();await page.locator('.balance-section').waitFor();}
-  await page.locator('#welcome.splash-leaving').waitFor();const homeBox=await page.locator('.balance-section').boundingBox();assert(await page.locator('#welcome').evaluate(el=>el.matches(':modal')),'Underlying actions stay blocked during the fade');
+  await page.locator('#welcome.splash-leaving').waitFor();
+  // The synthetic JS clock does not advance compositor animations. Place the
+  // unchanged letter drawing at the completed reading pause before seeking exit.
+  await page.locator('#welcome').evaluate(el=>{for(const animation of el.getAnimations({subtree:true})){if(animation.effect?.target!==el){animation.pause();animation.currentTime=3200;}}});
+  assert((await page.locator('.splash-trace,.splash-letter').evaluateAll(nodes=>nodes.map(el=>parseFloat(getComputedStyle(el).strokeDashoffset)))).every(value=>value<.001),'The complete word stays present throughout the fade');
+  const homeBox=await page.locator('.balance-section').boundingBox();assert(await page.locator('#welcome').evaluate(el=>el.matches(':modal')),'Underlying actions stay blocked during the fade');
   assert.equal(await page.locator('#welcome').evaluate(el=>getComputedStyle(el,'::backdrop').backgroundColor),'rgba(0, 0, 0, 0)','No opaque backdrop may hide the application during the crossfade');
   const exitSeek=async ms=>page.locator('#welcome').evaluate((el,ms)=>{const exit=el.getAnimations().find(a=>a.animationName==='splash-exit');if(!exit)throw Error('Missing exit animation');exit.pause();exit.currentTime=ms;},ms);
   const opacities=[];for(const ms of [0,175,350,525,700]){await exitSeek(ms);opacities.push(await page.locator('#welcome').evaluate(el=>Number(getComputedStyle(el).opacity)));assert.equal(await page.locator('#welcome').evaluate(el=>getComputedStyle(el).transform),'none','No scaling during the handoff');assert.deepEqual(await page.locator('.balance-section').boundingBox(),homeBox);}
