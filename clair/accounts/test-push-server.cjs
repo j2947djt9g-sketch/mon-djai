@@ -44,3 +44,4 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
  await call('subscribe',{deviceId:id,subscription:sub});await call('unsubscribe',{deviceId:id});assert.equal((await (await call('status',{deviceId:id})).json()).active,false);assert.equal(devices.get(id).enabled,false);
  console.log('PASS authenticated opt-in, ownership, private keys, cron authentication, 09:00 Paris, concurrent deduplication, latest account changes, expired endpoints and disabling');
 })().catch(error=>{console.error(error);process.exitCode=1});
+

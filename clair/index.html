@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="auto" data-app-version="2026-10-22.5">
+<html lang="fr" data-theme="auto" data-app-version="2026-10-22.6">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#783bf1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://hkssnbvktfscizojhftl.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
@@ -469,11 +469,45 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const safeId = x => typeof x === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(x) && !['__proto__', 'constructor', 'prototype'].includes(x);
   const KEY_RE = /^[a-zA-Z0-9_-]+:\d{4}-\d{2}-\d{2}$/;
-  function cents(value) {
+  // Money stays in integer hundredths for compatibility with existing budgets.
+  // CFA inputs and stored amounts must be whole francs; no exchange rate is applied.
+  const currencies = Object.freeze({
+    EUR: Object.freeze({label:'Euro (EUR)',unit:'€',spoken:'euros',digits:2}),
+    XOF: Object.freeze({label:'Franc CFA — Afrique de l’Ouest (XOF)',unit:'F CFA',spoken:'francs CFA XOF',digits:0}),
+    XAF: Object.freeze({label:'Franc CFA — Afrique centrale (XAF)',unit:'F CFA',spoken:'francs CFA XAF',digits:0}),
+    USD: Object.freeze({label:'Dollar américain (USD)',unit:'$US',spoken:'dollars américains',digits:2})
+  });
+  function currencyCode(value) {
+    if(value===undefined)return 'EUR';
+    if(typeof value!=='string'||!Object.prototype.hasOwnProperty.call(currencies,value))throw Error('Devise non prise en charge. Mets Clair à jour ou utilise une sauvegarde compatible.');
+    return value;
+  }
+  const moneyFormats=new Map();
+  function formatMoney(value,code='EUR') {
+    code=currencyCode(code);
+    if(!moneyFormats.has(code))moneyFormats.set(code,new Intl.NumberFormat('fr-FR',{style:'currency',currency:code}));
+    return moneyFormats.get(code).format(value/100);
+  }
+  function inputAmount(value,code='EUR') {return (value/100).toFixed(currencies[currencyCode(code)].digits).replace('.',',');}
+  function validateCurrency(d) {
+    const code=currencyCode(d.currency);
+    if(currencies[code].digits!==0)return;
+    const check=n=>{if(!Number.isSafeInteger(n)||n%100!==0)throw Error('Les montants en francs CFA doivent être des nombres entiers.');};
+    check(d.openingCents);
+    d.transactions.forEach(t=>check(t.amountCents));
+    d.rules.forEach(r=>{check(r.amountCents);r.amounts.forEach(check);});
+    d.savingsProjects.forEach(p=>check(p.targetCents));
+    Object.values(d.budgets).forEach(n=>check(cents(n,code)));
+    Object.values(d.budgetOverrides).forEach(o=>Object.values(o).forEach(n=>check(cents(n,code))));
+    check(cents(d.savingsGoal,code));d.fixedExpenses.forEach(x=>check(cents(x.amount,code)));
+  }
+
+  function cents(value, currency='EUR') {
     const s = String(value ?? '').trim().replace(/\s/g, '').replace(',', '.');
     if (!/^-?\d+(\.\d{1,2})?$/.test(s)) throw Error('Montant invalide : utilisez au maximum deux décimales.');
     const n = Math.round(Number(s) * 100);
     if (!Number.isSafeInteger(n) || Math.abs(n) > 10000000000) throw Error('Montant trop élevé.');
+    if(currencies[currencyCode(currency)].digits===0&&n%100!==0)throw Error('Indique un montant entier en francs CFA, sans décimales.');
     return n;
   }
   function validDate(s) {
@@ -505,7 +539,7 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
     if (wallpaper === 'photo' && !photo) wallpaper = 'plain';
     return { theme: THEMES.includes(p.theme) ? p.theme : 'auto', wallpaper, photo, reminders: p.reminders !== false };
   }
-  const empty = () => ({ version: 3, initialized: false, setupDone: false, openingCents: 0, openingBalanceDate: today(), transactions: [], rules: [], skipped: [], budgets: {}, budgetOverrides: {}, customCategories: [], savingsGoal: 0, savingsSchema: 1, savingsProjects: [], fixedExpenses: [], preferences: defaultPrefs() });
+  const empty = () => ({ version: 3, currency: 'EUR', initialized: false, setupDone: false, openingCents: 0, openingBalanceDate: today(), transactions: [], rules: [], skipped: [], budgets: {}, budgetOverrides: {}, customCategories: [], savingsGoal: 0, savingsSchema: 1, savingsProjects: [], fixedExpenses: [], preferences: defaultPrefs() });
   const savingsKinds = ['voyage','etudes','securite','achat','autre'];
   const savingsIcons = ['plane','book','shield','bag','heart','home','star'];
   const savingsColors = ['violet','blue','green','rose','amber'];
@@ -539,28 +573,28 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
     }
     validateSavings(d);
   }
-  function moneyMap(o) {
+  function moneyMap(o,currency) {
     const result = {};
     if (o && typeof o === 'object' && !Array.isArray(o)) for (const [k, v] of Object.entries(o)) {
-      if (safeId(k)) { const n = cents(v); if (n >= 0) result[k] = n / 100; }
+      if (safeId(k)) { const n = cents(v,currency); if (n >= 0) result[k] = n / 100; }
     }
     return result;
   }
   function normalize(input) {
     if (!input || typeof input !== 'object' || !Array.isArray(input.transactions)) throw Error('Sauvegarde Clair invalide.');
     if (input.transactions.length > 50000 || (input.rules || []).length > 500 || (Array.isArray(input.skipped) && input.skipped.length > 100000)) throw Error('Sauvegarde trop volumineuse.');
-    const d = empty();
+    const d = empty();d.currency=currencyCode(input.currency);
     const integer = n => { if (!Number.isSafeInteger(n) || Math.abs(n) > 10000000000) throw Error('Montant invalide.'); return n; };
     d.initialized = Boolean(input.initialized);
     d.setupDone = Boolean(input.setupDone);
-    d.openingCents = input.version === 3 ? integer(input.openingCents) : cents(input.openingBalance ?? 0);
+    d.openingCents = input.version === 3 ? integer(input.openingCents) : cents(input.openingBalance ?? 0,d.currency);
     d.openingBalanceDate = validDate(input.openingBalanceDate) ? input.openingBalanceDate : today();
     const ids = new Set(), keys = new Set();
     d.transactions = input.transactions.map((t, i) => {
       if (!t || !validDate(t.date)) throw Error('Une opération contient une date invalide.');
       const id = safeId(t.id) ? t.id : 'import-' + i;
       if (ids.has(id)) throw Error('Identifiant d’opération en double.'); ids.add(id);
-      const amountCents = input.version === 3 ? integer(t.amountCents) : cents(t.amount);
+      const amountCents = input.version === 3 ? integer(t.amountCents) : cents(t.amount,d.currency);
       if (amountCents < 0) throw Error('Une dépense doit avoir un montant positif.');
       const autoKey = typeof t.autoKey === 'string' && KEY_RE.test(t.autoKey) && validDate(t.autoKey.slice(-10)) ? t.autoKey : null;
       if (autoKey && keys.has(autoKey)) throw Error('Dépense automatique en double.'); if (autoKey) keys.add(autoKey);
@@ -573,11 +607,11 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
       if (t) { d.openingCents = t.amountCents; d.openingBalanceDate = t.date; d.transactions = d.transactions.filter(x => x !== t); }
     }
     d.customCategories = (Array.isArray(input.customCategories) ? input.customCategories : []).slice(0, 100).filter(x => x && safeId(x.id)).map(x => ({ id: x.id, label: text(x.label), icon: text(x.icon) }));
-    d.budgets = moneyMap(input.budgets);
-    for (const [m, v] of Object.entries(input.budgetOverrides || {})) if (validDate(m + '-01')) d.budgetOverrides[m] = moneyMap(v);
-    d.savingsGoal = Math.max(0, cents(input.savingsGoal ?? 0)) / 100;
+    d.budgets = moneyMap(input.budgets,d.currency);
+    for (const [m, v] of Object.entries(input.budgetOverrides || {})) if (validDate(m + '-01')) d.budgetOverrides[m] = moneyMap(v,d.currency);
+    d.savingsGoal = Math.max(0, cents(input.savingsGoal ?? 0,d.currency)) / 100;
     normalizeSavings(input,d);
-    d.fixedExpenses = (Array.isArray(input.fixedExpenses) ? input.fixedExpenses : []).slice(0, 500).filter(x => x && safeId(x.id)).map(x => ({ id: x.id, name: text(x.name), amount: Math.max(0, cents(x.amount)) / 100, categoryId: safeId(x.categoryId) ? x.categoryId : 'autre', day: Math.max(1, Math.min(31, Math.trunc(Number(x.day) || 1))) }));
+    d.fixedExpenses = (Array.isArray(input.fixedExpenses) ? input.fixedExpenses : []).slice(0, 500).filter(x => x && safeId(x.id)).map(x => ({ id: x.id, name: text(x.name), amount: Math.max(0, cents(x.amount,d.currency)) / 100, categoryId: safeId(x.categoryId) ? x.categoryId : 'autre', day: Math.max(1, Math.min(31, Math.trunc(Number(x.day) || 1))) }));
     const rids = new Set();
     d.rules = (Array.isArray(input.rules) ? input.rules : []).map(r => {
       if (!r || !safeId(r.id) || rids.has(r.id) || !validDate(r.start) || (r.end && (!validDate(r.end) || r.end < r.start))) throw Error('Règle automatique invalide.');
@@ -594,7 +628,7 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
     });
     d.skipped = [...new Set((Array.isArray(input.skipped) ? input.skipped : []).filter(x => typeof x === 'string' && KEY_RE.test(x)))];
     d.preferences = normPrefs(input.preferences);
-    return d;
+    validateCurrency(d);return d;
   }
   function dueAmount(r, date) {
     if (date < r.start || (r.end && date > r.end) || r.pauses.some(p => date >= p.start && date <= p.end)) return 0;
@@ -681,7 +715,7 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
     for (const ch of line) { const b = enc.encode(ch).length; if (bytes + b > 75) { out += '\r\n '; bytes = 1; } out += ch; bytes += b; }
     return out;
   }
-  function ics(d, date = today(), now = new Date(), fmt = c => (c / 100).toFixed(2).replace('.', ',') + ' €') {
+  function ics(d, date = today(), now = new Date(), fmt = c => formatMoney(c,d.currency)) {
     const end = addDays(monthOffset(date.slice(0, 7), 12) + '-01', -1);
     const rules = d.rules.filter(r => r.kind !== 'weekly');
     const occ = occurrences({ ...d, rules }, addDays(date, 1), end);
@@ -698,7 +732,7 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
     return { text: L.map(icsFold).join('\r\n') + '\r\n', count: occ.length };
   }
   const csvCell = x => '"' + String(x ?? '').replace(/"/g, '""').replace(/^[\s]*[=+@-]/, match => "'" + match) + '"';
-  root.ClairEngine = { csvCell, own, safeId, cents, validDate, addDays, daysBetween, today, lastDay, monthOffset, empty, normalize, normPrefs, dueAmount, occurrences, sync, balance, skip, reserve, upcoming, reminderDate, pushPayload, ics, icsFold, icsEscape, PHOTO_MAX_BYTES, savingsBalance, validateSavings, savingsKinds, savingsIcons, savingsColors };
+  root.ClairEngine = { currencies, currencyCode, formatMoney, inputAmount, validateCurrency, csvCell, own, safeId, cents, validDate, addDays, daysBetween, today, lastDay, monthOffset, empty, normalize, normPrefs, dueAmount, occurrences, sync, balance, skip, reserve, upcoming, reminderDate, pushPayload, ics, icsFold, icsEscape, PHOTO_MAX_BYTES, savingsBalance, validateSavings, savingsKinds, savingsIcons, savingsColors };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -828,6 +862,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         if(navigator.onLine===false)throw Error('offline');
         const remote=await this.read();if(expectedEpoch!==this.epoch)return;
         const raw=localStorage.getItem(this.key(userId));this.record=this.decode(raw,userId);
+        // Old clients can strip currency from their cache. Preserve both copies before any write.
+        if(remote?.payload?.initialized&&this.record?.payload.initialized&&(remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR')){this.setConflict(remote);return;}
         // Older clients remove unknown savings fields while normalizing their cache.
         // Never promote that reduced cache into a replacement for named cloud projects.
         if(remote?.payload?.savingsSchema===1&&raw&&JSON.parse(raw).savingsSchema!==1){
@@ -867,6 +903,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         if(!this.conflict.remote)throw Error('Aucune copie en ligne n’est disponible.');
         this.adopt(this.conflict.remote);return;
       }
+      if(this.conflict.remote?.payload.initialized&&this.record?.payload.initialized&&(this.conflict.remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR'))throw Error('Les copies utilisent des devises différentes. Sauvegarde cette copie, puis conserve la copie en ligne.');
       // The conflict UI exports the device copy before asking the user to choose.
       const meta={...this.record.meta,revision:this.conflict.remote?.revision||0,operationId:crypto.randomUUID(),dirty:true};
       // Commit metadata only after persistence succeeds, so a full storage leaves both copies intact.
@@ -894,8 +931,12 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   let KEY=LOCAL_KEY,BACKUP='clair-github-before-upgrade-v3',REMINDED='clair-github-reminded-v1',PUSH_KEY='clair-github-push-v1';
   const $ = s => document.querySelector(s);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const euro = n => new Intl.NumberFormat('fr-FR', {style:'currency',currency:'EUR'}).format(n / 100);
-  const amount = n => (n / 100).toFixed(2).replace('.', ',');
+  const activeCurrency = () => wizard?.currency||data.currency||'EUR';
+  const currencyMeta = () => E.currencies[activeCurrency()];
+  const euro = n => E.formatMoney(n,activeCurrency());
+  const amount = n => E.inputAmount(n,activeCurrency());
+  const parseMoney = value => E.cents(value,activeCurrency());
+  const mealDefaults = () => activeCurrency()==='EUR'?[0,300,300,300,300,300,0]:[0,0,0,0,0,0,0];
   const dateLabel = s => new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(s+'T12:00:00Z'));
   const shortDate = s => new Intl.DateTimeFormat('fr-FR',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'}).format(new Date(s+'T12:00:00Z'));
   const monthLabel = s => new Intl.DateTimeFormat('fr-FR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(s+'-01T12:00:00Z'));
@@ -909,7 +950,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   let data = E.empty(), snapshot = null, loadError = null, rawRecovery = '', page = 'home', pageTrail = [], month = E.today().slice(0,7), wizard = null, modal = null, undo = null, toastTimer, recovery = null, pushBusy = false, pushTimer = null;
   const cat = k => [...categories,...data.customCategories].find(c=>c.id===k)||categories.at(-1);
   const options = selected => [...categories,...data.customCategories.filter(c=>!categories.some(x=>x.id===c.id))].filter(c=>c.id!=='epargne'||selected==='epargne').map(c=>`<option value="${esc(c.id)}" ${c.id===selected?'selected':''}>${esc(c.label)}</option>`).join('');
-  const num = (s, allowZero=false) => { const n = E.cents(s || '0'); if (n < 0 || (!allowZero && n===0)) throw Error('Indique un montant supérieur à zéro.'); return n; };
+  const num = (s, allowZero=false) => { const n = parseMoney(s || '0'); if (n < 0 || (!allowZero && n===0)) throw Error('Indique un montant supérieur à zéro.'); return n; };
   function readStorage() {
     snapshot = localStorage.getItem(KEY);
     const legacy = localStorage.getItem(OLD_KEY);
@@ -985,7 +1026,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         snapshot=current; data=current?E.normalize(JSON.parse(current)):E.empty();
         close();render();notify('Un autre onglet a modifié les données. Vérifie-les puis recommence.');return false;
       }
-      change(data);E.sync(data);E.validateSavings(data);
+      change(data);E.validateCurrency(data);E.sync(data);E.validateSavings(data);
       const serialized=saveData(data);localStorage.setItem(KEY,serialized);snapshot=serialized;afterLocalSave();
       recovery=null;$('#alert').innerHTML='';render();if(message)notify(message);queuePushSync();if(withSound)soundFeedback.saved();return true;
     } catch(err) {
@@ -1454,7 +1495,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if(page==='settings')render();
   }
   function queuePushSync(){const state=pushState();if(!state?.active&&!state?.cleanupPending)return;clearTimeout(pushTimer);pushTimer=setTimeout(syncPush,800);}
-  function field(label,name,value='',type='text',extra='') {return `<label class="field"><span>${label}</span><input name="${name}" type="${type}" value="${esc(value)}" ${type==='text'?'autocomplete="off"':''} ${extra}></label>`;}
+  function field(label,name,value='',type='text',extra='') {if(label.includes('€')){label=label.replaceAll('€',currencyMeta().unit);if(currencyMeta().digits===0)extra=extra.replace('inputmode="decimal"','inputmode="numeric"').replace('0,00','0').replace('250,00','250000');}return `<label class="field"><span>${label}</span><input name="${name}" type="${type}" value="${esc(value)}" ${type==='text'?'autocomplete="off"':''} ${extra}></label>`;}
   function dialog(title,body,kind,state={}) {
     modal={kind,...state};$('#dialog').innerHTML=`<div class="dialog-inner"><div class="dialog-head"><h2 id="dialog-title">${title}</h2><button class="close" data-action="close" aria-label="Fermer">×</button></div>${kind==='wizard'?'':'<div id="form-error" class="notice error" role="alert"></div>'}${body}</div>`;
     if(!$('#dialog').open)$('#dialog').showModal();
@@ -1601,7 +1642,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   const isSuspended = r => r.pauses.some(p=>p.start<=nextDay()&&p.end>=nextDay());
   function rules(){const active=data.rules.filter(r=>!r.end||r.end>=E.today()),old=data.rules.filter(r=>r.end&&r.end<E.today());return pageBackLink()+heading('Au quotidien','Mes habitudes', 'Repas, loyer et abonnements, comptés automatiquement.',`<div class="actions"><button class="button primary" data-action="new-rule">+ Une habitude</button></div>`)+
     '<details class="settings-more"><summary>Comment ça fonctionne ?</summary><p class="help">Clair compte les dépenses prévues selon tes habitudes. Tu peux corriger une occurrence dans l’historique.</p></details>'+
-    (active.length?active.map(r=>ruleCard(r)).join(''):'<section class="card"><h2>Qu’est-ce qui revient souvent ?</h2><p class="muted">Un repas à 3 € certains jours, un abonnement ou ton loyer en fin de mois.</p><div class="actions"><button class="button primary" data-action="new-weekly">+ Repas réguliers</button><button class="button" data-action="new-rule">+ Loyer ou abonnement</button></div></section>')+
+    (active.length?active.map(r=>ruleCard(r)).join(''):'<section class="card"><h2>Qu’est-ce qui revient souvent ?</h2><p class="muted">Des repas certains jours, un abonnement ou ton loyer en fin de mois.</p><div class="actions"><button class="button primary" data-action="new-weekly">+ Repas réguliers</button><button class="button" data-action="new-rule">+ Loyer ou abonnement</button></div></section>')+
     (old.length?`<details><summary class="help">${old.length} ancienne${old.length>1?'s':''} règle${old.length>1?'s':''} — historique conservé</summary><div style="margin-top:14px">${old.map(r=>ruleCard(r,true)).join('')}</div></details>`:'')+
     (!data.setupDone?'<button class="button" data-action="setup">Terminer la configuration guidée</button>':'');}
   function ruleCard(r,archived=false){const susp=isSuspended(r);return `<section class="rule-card ${archived?'archived':''}"><div class="rule-head"><span class="row-icon" aria-hidden="true">${esc(cat(r.categoryId).icon)}</span><div class="row-info"><h3><button class="rule-title" data-action="edit-rule" data-id="${esc(r.id)}">${esc(r.name)}</button></h3><p class="help">${esc(ruleCopy(r))}</p></div><span class="badge">${archived?'Terminée':susp?'En pause':r.start>E.today()?'À venir':r.end?'Arrêt prévu':'Automatique'}</span></div><p class="schedule">À partir du ${esc(dateLabel(r.start))}${r.end?' · jusqu’au '+esc(dateLabel(r.end)):''}</p>${r.pauses.map((p,i)=>`<p class="help" style="margin:8px 0 0">Pause : ${esc(dateLabel(p.start))} → ${p.end===INFINITE?'jusqu’à reprise':esc(dateLabel(p.end))}${p.end>=nextDay()&&!archived?` <button class="link" data-action="resume" data-id="${esc(r.id)}" data-index="${i}">Reprendre dès demain</button>`:''}</p>`).join('')}${!archived?`<div class="rule-switches"><label class="switch"><input type="checkbox" role="switch" data-suspend="${esc(r.id)}" ${susp?'':'checked'}>${susp?'En pause · reprendre dès demain':'Active · suspendre dès demain'}</label>${r.kind!=='weekly'?`<label class="switch"><input type="checkbox" role="switch" data-reminder="${esc(r.id)}" ${r.reminderEnabled?'checked':''}>Rappel 2 jours avant</label>`:''}</div><div class="rule-actions"><button class="button small" data-action="edit-rule" data-id="${esc(r.id)}">Modifier</button><button class="button small" data-action="pause-rule" data-id="${esc(r.id)}">Vacances / pause</button><button class="button small" data-action="skip-today" data-id="${esc(r.id)}">Annuler aujourd’hui</button><button class="button small danger" data-action="stop-rule" data-id="${esc(r.id)}">Arrêter</button></div>`:''}</section>`;}
@@ -1629,7 +1670,7 @@ function journalResults(){
  const summary=$('#journal-more summary');if(summary)summary.textContent='Plus de filtres'+(kind!=='all'?' · 1 actif':'');
 }
 
-  const budgetFor = categoryId => E.own(data.budgetOverrides[month]||{},categoryId)?E.cents(data.budgetOverrides[month][categoryId]):E.cents(data.budgets[categoryId]||0);
+  const budgetFor = categoryId => E.own(data.budgetOverrides[month]||{},categoryId)?parseMoney(data.budgetOverrides[month][categoryId]):parseMoney(data.budgets[categoryId]||0);
   function budget(){const list=data.transactions.filter(t=>t.date.slice(0,7)===month&&t.date<=E.today()),income=list.filter(t=>t.type==='income'&&t.categoryId!=='epargne').reduce((n,t)=>n+t.amountCents,0),spent=list.filter(t=>t.type==='expense'&&t.categoryId!=='epargne').reduce((n,t)=>n+t.amountCents,0),savings=(data.savingsProjects||[]).reduce((n,p)=>n+E.savingsBalance(data,p.id),0);const by=new Map();list.filter(t=>t.type==='expense'&&t.categoryId!=='epargne').forEach(t=>by.set(t.categoryId,(by.get(t.categoryId)||0)+t.amountCents));const ids=[...new Set([...Object.keys(data.budgets),...Object.keys(data.budgetOverrides[month]||{}),...by.keys()])].filter(k=>k!=='epargne');return pageBackLink()+heading('Tes repères','Chaque euro a sa place.','Les enveloppes servent de limites. Elles ne créent pas de dépenses.',monthNav())+`<div class="stat-grid"><div class="stat"><small>Reçu ce mois</small><strong>${euro(income)}</strong></div><div class="stat"><small>Dépensé ce mois</small><strong>${euro(spent)}</strong></div><div class="stat"><small>Épargne suivie</small><strong>${euro(savings)}</strong></div></div><div class="grid"><section class="card"><div class="section-head"><h2>Mes enveloppes</h2><button class="link" data-action="budget-edit">Ajouter</button></div>${ids.length?ids.map(k=>{const planned=budgetFor(k),used=by.get(k)||0;return `<div class="budget-row"><div class="budget-row-top"><strong>${esc(cat(k).label)}</strong><button class="link" data-action="budget-edit" data-id="${esc(k)}">${planned?euro(planned):'Définir'}</button></div><p>${euro(used)} dépensés${planned?' · <span class="'+(used>planned?'negative':'')+'">'+euro(planned-used)+' restants</span>':''}${E.own(data.budgetOverrides[month]||{},k)?' · ajustement de ce mois':''}</p>${planned?`<div class="progress ${used>planned?'over':''}"><span style="width:${Math.min(100,Math.round(used/planned*100))}%"></span></div>`:''}</div>`;}).join(''):'<p class="help">Fixe une limite pour l’alimentation, les loisirs ou une autre catégorie.</p>'}</section>${savingsSection()}</div>`;}
   function pushSection(){
     const av=pushAvailability(),s=pushState();
@@ -1658,6 +1699,7 @@ function settings(){const p=data.preferences;return heading('Clair','Réglages')
 `<div class="settings-links"><button class="settings-link" data-nav="rules"><span>Mes habitudes<small>Repas et abonnements</small></span>${icon('arrow')}</button><button class="settings-link" data-nav="budget"><span>Budget et épargne<small>Mes repères du mois</small></span>${icon('arrow')}</button></div><div class="settings-grid settings-simple">
 <section class="card install-card"><h2>Clair, à portée de main</h2><p class="help">${isInstalled()?'Ouvert comme une application.':'Un accès direct depuis ton écran d’accueil.'}</p><div class="actions"><button class="button primary" data-action="install" ${isInstalled()||installBusy?'disabled':''}>${isInstalled()?'Déjà installé':installBusy?'Installation…':'Installer Clair'}</button>${location.protocol!=='file:'?`<button class="button" data-action="download-app" ${downloadBusy?'disabled':''}>${downloadBusy?'Téléchargement…':'Télécharger le fichier'}</button>`:''}</div><details class="settings-more"><summary>Installation ou téléchargement ?</summary><p class="help">Installer ajoute Clair à ton écran d’accueil quand le navigateur le permet. Le fichier HTML est une copie à ouvrir dans un navigateur sur ordinateur. Les dépenses se transfèrent séparément avec « Sauvegarder mes données ».</p></details></section>
 <section class="card"><h2>Apparence</h2><p class="help" id="theme-l">Thème</p><div class="seg" role="radiogroup" aria-labelledby="theme-l">${[['light','Clair'],['dark','Sombre'],['auto','Auto']].map(([v,l])=>`<label><input type="radio" name="theme" value="${v}" data-pref="theme" ${p.theme===v?'checked':''}><span>${l}</span></label>`).join('')}</div><p class="help" id="wall-l" style="margin-top:18px">Fond d’écran</p><div class="walls" role="radiogroup" aria-labelledby="wall-l">${[['plain','Clair'],['aurora','Aurore'],['ocean','Océan'],['sunset','Couchant'],['forest','Forêt'],['photo','Ma photo']].map(([v,l])=>`<label><input type="radio" name="wallpaper" value="${v}" data-pref="wallpaper" ${p.wallpaper===v?'checked':''} ${v==='photo'&&!p.photo?'disabled':''}><span class="sw sw-${v}">${l}</span></label>`).join('')}</div><div class="actions"><label class="button small file">${p.photo?'Changer la photo':'Choisir une photo'}<input type="file" accept="image/jpeg,image/png,image/webp" data-photo></label>${p.photo?'<button class="link" data-action="photo-remove">Retirer</button>':''}</div></section>
+<section class="card" id="currency-settings"><h2>Devise du budget</h2><p>${esc(E.currencies[data.currency].label)}</p><p class="help">Choisie au démarrage et conservée avec tes données. Les montants ne sont pas convertis automatiquement.</p></section>
 <section class="card" id="sound-settings"><h2>Sons</h2><label class="switch"><input type="checkbox" role="switch" data-sounds aria-describedby="sound-help" ${soundFeedback.enabled()&&soundFeedback.supported()?'checked':''} ${soundFeedback.supported()?'':'disabled'}>Sons de l’application</label><p class="help" id="sound-help" style="margin-top:12px">${soundFeedback.supported()?'Clics discrets et confirmations, sur cet appareil.':'Les sons ne sont pas disponibles dans ce navigateur.'}</p><div class="actions"><button type="button" class="button" data-action="sound-preview" ${soundFeedback.enabled()&&soundFeedback.supported()?'':'disabled'}>Écouter un aperçu</button></div></section>
 <section class="card" id="notification-settings"><h2>Rappels</h2><label class="switch"><input type="checkbox" role="switch" data-pref="reminders" ${p.reminders?'checked':''}>Me rappeler 2 jours avant</label><p class="help" style="margin-top:12px">Dans Clair dès J−2. Pour recevoir aussi une notification lorsque l’app est fermée, active les notifications sur cet appareil.</p><button class="button" data-action="ics">Ajouter les échéances au calendrier</button><details class="settings-more"><summary>En savoir plus</summary><p class="help">Le calendrier contient les échéances des 12 prochains mois, avec une alerte 2 jours avant à 9 h. Importe le fichier dans un calendrier dédié « Clair ». Après une modification, remplace cet ancien calendrier : il ne se synchronise pas automatiquement.</p><button class="link" data-nav="rules">Choisir les habitudes à rappeler</button></details><details class="settings-more"><summary>Notifications app fermée</summary>${pushSection()}</details></section>
 <section class="card"><h2>Mes données</h2><p class="help">${cloud.enabled&&cloud.user?'Budget associé à ton compte. Une sauvegarde reste utile.':'Dans ce navigateur. Sauvegarde avant de changer d’appareil.'}</p><div class="actions"><button class="button primary" data-action="export">Sauvegarder mes données</button><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label></div><details class="settings-more"><summary>En savoir plus</summary><p class="help">${cloud.enabled?'Ton budget est envoyé au service de synchronisation de ton compte. La photo de fond reste sur cet appareil.':'Aucune connexion bancaire ni synchronisation entre appareils.'} L’import remplace les données actuelles après confirmation et conserve une copie précédente.</p></details></section>
@@ -1679,21 +1721,25 @@ function paymentDetails(key){
     renderReminders();renderAccountStatus();
   }
   function readDayDraft(f){return dayNames.map((_,i)=>({enabled:Boolean(f.get('day-'+i)),price:String(f.get('price-'+i)??'')}));}
-  function dayFields(values=[0,300,300,300,300,300,0],draft=null){return `<div class="days">${dayOrder.map(i=>`<div class="day"><label><input type="checkbox" name="day-${i}" ${(draft?draft[i].enabled:values[i]>0)?'checked':''}>${dayNames[i].slice(0,3)}.</label><label class="sr-only" for="price-${i}">Montant le ${dayNames[i]}</label><input id="price-${i}" name="price-${i}" type="text" inputmode="decimal" value="${esc(draft?draft[i].price:amount(values[i]||300))}" aria-label="Montant le ${dayNames[i]} en euros"></div>`).join('')}</div>`;}
+  function dayFields(values=mealDefaults(),draft=null){return `<div class="days">${dayOrder.map(i=>`<div class="day"><label><input type="checkbox" name="day-${i}" ${(draft?draft[i].enabled:values[i]>0)?'checked':''}>${dayNames[i].slice(0,3)}.</label><label class="sr-only" for="price-${i}">Montant le ${dayNames[i]}</label><input id="price-${i}" name="price-${i}" type="text" inputmode="${currencyMeta().digits?'decimal':'numeric'}" value="${esc(draft?draft[i].price:(values[i]?amount(values[i]):activeCurrency()==='EUR'?'3,00':''))}" aria-label="Montant le ${dayNames[i]} en ${currencyMeta().spoken}"></div>`).join('')}</div>`;}
   function readDays(f){return dayNames.map((_,i)=>f.get('day-'+i)?num(f.get('price-'+i)):0);}
-  function beginSetup(){if(data.setupDone){close();page='rules';render();notify('Tes habitudes sont déjà configurées. Tu peux les modifier ici.');return;}wizard={step:0,existing:data.initialized,balance:amount(data.openingCents),start:nextDay(),days:[0,300,300,300,300,300,0],meals:false,charges:data.fixedExpenses.map(x=>({...x,enabled:false})),name:'Repas habituels'};wizardView();}
+  function beginSetup(){if(data.setupDone){close();page='rules';render();notify('Tes habitudes sont déjà configurées. Tu peux les modifier ici.');return;}wizard={step:0,existing:data.initialized,currency:data.currency,balance:amount(data.openingCents),start:nextDay(),days:mealDefaults(),meals:false,charges:data.fixedExpenses.map(x=>({...x,enabled:false})),name:'Repas habituels'};wizardView();}
   function chargeFields(c,i){return `<div class="wizard-charge"><label class="check"><input name="charge-on-${i}" type="checkbox" ${c.enabled?'checked':''}>Compter automatiquement cette charge</label><div class="form-grid">${field('Nom','charge-name-'+i,c.name,'text','maxlength="100"')}${field('Montant (€)','charge-amount-'+i,c.amount?String(c.amount):'','text','inputmode="decimal"')}<label class="field"><span>Catégorie</span><select name="charge-category-${i}">${options(c.categoryId||'abonnements')}</select></label>${field('Premier jour du suivi','charge-start-'+i,c.start||wizard.start,'date',`min="${data.initialized?data.openingBalanceDate:E.today()}"`)}<label class="field"><span>Échéance chaque mois</span><select name="charge-day-${i}"><option value="last" ${c.day==='last'?'selected':''}>Dernier jour du mois</option>${Array.from({length:31},(_,n)=>`<option value="${n+1}" ${Number(c.day)===n+1?'selected':''}>Le ${n+1}</option>`).join('')}</select></label></div><button type="button" class="link" data-action="wizard-remove-charge" data-index="${i}">Retirer cette ligne</button></div>`;}
   // Static artwork throughout the app; only the entry screen plays an animation.
   function mascot(pose,message){return `<div class="mascot-guide"><span class="mascot-pose pose-${pose}" aria-hidden="true"></span><p class="mascot-copy">${esc(message)}</p></div>`;}
-  function wizardView(){const s=wizard.step;let body='';if(s===0)body=wizard.existing?`<p class="muted">Tes ${data.transactions.length} opérations et ton solde initial sont conservés. Ajoutons les habitudes qui te feront gagner du temps.</p><div class="notice">Les charges existantes ne deviendront automatiques que si tu les sélectionnes. Les règles déjà actives ne sont pas modifiées.</div>`:`<p class="muted">Combien as-tu réellement de disponible aujourd’hui, après tes dépenses déjà payées ?</p>${field('Mon solde actuel (€)','balance',wizard.balance==='0,00'?'':wizard.balance,'text','inputmode="decimal" required placeholder="Ex. 250,00"')}<p class="help">Le suivi démarre aujourd’hui. Par défaut, les automatismes commencent demain pour ne pas recompter ce que tu as déjà payé.</p>`;
+  function wizardView(){const s=wizard.step;let body='';if(s===0)body=wizard.existing?`<p class="muted">Tes ${data.transactions.length} opérations et ton solde initial sont conservés. Ajoutons les habitudes qui te feront gagner du temps.</p><div class="notice">Les charges existantes ne deviendront automatiques que si tu les sélectionnes. Les règles déjà actives ne sont pas modifiées.</div>`:`<label class="field"><span>Devise de mon budget</span><select name="currency" id="setup-currency" aria-describedby="currency-help">${Object.entries(E.currencies).map(([code,meta])=>`<option value="${code}" ${wizard.currency===code?'selected':''}>${meta.label}</option>`).join('')}</select></label><p class="help" id="currency-help">Cette devise sera utilisée pour tout ton budget. Aucun taux de change n’est appliqué. Si tu la changes pendant la configuration, les montants seront à ressaisir.</p><p class="muted">Combien as-tu réellement de disponible aujourd’hui, après tes dépenses déjà payées ?</p>${field('Mon solde actuel (€)','balance',parseMoney(wizard.balance||'0')===0?'':wizard.balance,'text','inputmode="decimal" required placeholder="Ex. 250,00"')}<p class="help">Le suivi démarre aujourd’hui. Par défaut, les automatismes commencent demain pour ne pas recompter ce que tu as déjà payé.</p>`;
     if(s===1)body=`<p class="muted">Quels jours prends-tu ton repas habituel ? Tu peux fixer un montant différent pour chaque jour.</p><label class="check"><input name="meals" type="checkbox" ${wizard.meals?'checked':''}>Activer les repas automatiques</label>${dayFields(wizard.days,wizard.daysDraft)}${field('Commencer les repas le','start',wizard.start,'date',`min="${data.initialized?data.openingBalanceDate:E.today()}" required`)}<p class="help">Les jours décochés ne coûtent rien. Les jours cochés sont comptés automatiquement à partir de cette date.</p>`;
     if(s===2)body=`<p class="muted">Ajoute ton loyer et tes abonnements. Saisis le montant réellement à ta charge, après les aides éventuelles.</p>${wizard.charges.length?wizard.charges.map(chargeFields).join(''):'<p class="help">Aucune charge ajoutée. Tu peux aussi les configurer plus tard.</p>'}<button type="button" class="button" data-action="wizard-add-charge">+ Loyer ou abonnement</button>`;
-    if(s===3){const enabled=wizard.charges.filter(c=>c.enabled);body=`<p class="muted">Tout est prêt. Tu pourras ajuster une dépense, changer les tarifs ou suspendre tes repas pendant les vacances.</p><section class="card soft"><h3>${wizard.meals?'Repas automatiques':'Repas : non activés'}</h3>${wizard.meals?`<p class="help">${esc(ruleCopy({kind:'weekly',amounts:wizard.days}))}<br>À partir du ${esc(dateLabel(wizard.start))}</p>`:''}<h3>${enabled.length} charge${enabled.length>1?'s':''} automatique${enabled.length>1?'s':''}</h3>${enabled.map(c=>`<p class="help" style="margin-bottom:8px">${esc(c.name)} · ${euro(num(c.amount))} · ${c.day==='last'?'fin de mois':'le '+c.day}<br>Suivi dès le ${esc(dateLabel(c.start||wizard.start))}</p>`).join('')}</section><div class="notice">Ce suivi estime tes dépenses selon tes réglages. Il ne lit pas ton compte bancaire. Les dates passées choisies seront rattrapées une seule fois.</div>`;}
+    if(s===3){const enabled=wizard.charges.filter(c=>c.enabled);body=`<p class="muted">Tout est prêt. Tu pourras ajuster une dépense, changer les tarifs ou suspendre tes repas pendant les vacances.</p><section class="card soft"><h3>Devise du budget</h3><p class="help">${esc(currencyMeta().label)}</p><h3>${wizard.meals?'Repas automatiques':'Repas : non activés'}</h3>${wizard.meals?`<p class="help">${esc(ruleCopy({kind:'weekly',amounts:wizard.days}))}<br>À partir du ${esc(dateLabel(wizard.start))}</p>`:''}<h3>${enabled.length} charge${enabled.length>1?'s':''} automatique${enabled.length>1?'s':''}</h3>${enabled.map(c=>`<p class="help" style="margin-bottom:8px">${esc(c.name)} · ${euro(num(c.amount))} · ${c.day==='last'?'fin de mois':'le '+c.day}<br>Suivi dès le ${esc(dateLabel(c.start||wizard.start))}</p>`).join('')}</section><div class="notice">Ce suivi estime tes dépenses selon tes réglages. Il ne lit pas ton compte bancaire. Les dates passées choisies seront rattrapées une seule fois.</div>`;}
     dialog(['Un bon point de départ.','Tes repas, déjà prévus.','Les charges qui reviennent.','Ton quotidien est prêt.'][s],`<div class="wizard-step">ÉTAPE ${s+1} SUR 4</div><div class="wizard-progress">${[0,1,2,3].map(i=>`<span class="${i<=s?'on':''}"></span>`).join('')}</div>${mascot([2,1,2,3][s],["Indique l’argent dont tu disposes aujourd’hui.","Choisis les jours qui correspondent à tes habitudes.","Configure tes charges une fois, Clair suivra les suivantes.","Vérifie tes réglages avant d’activer ton suivi."][s])}<form id="wizard-form" ${s===2?'novalidate':''}>${body}<div id="form-error" class="notice error" role="alert" tabindex="-1"></div><div class="dialog-actions">${s>0?'<button type="button" class="button" data-action="wizard-back">Retour</button>':''}<button class="button primary" type="submit">${s===3?'Activer mon suivi':'Continuer →'}</button></div></form>`,'wizard');}
+  function setSetupCurrency(code){
+    code=E.currencyCode(code);if(!wizard||wizard.existing||wizard.step!==0||wizard.currency===code)return;
+    wizard.currency=code;wizard.balance='';wizard.days=mealDefaults();wizard.daysDraft=null;wizard.charges=wizard.charges.map(c=>({...c,amount:''}));wizardView();$('#setup-currency').focus({preventScroll:true});
+  }
   function wizardInvalid(message,field){const error=new Error(message);error.field=field;throw error;}
   function collectWizard(validate=true){
     const f=new FormData($('#wizard-form'));
-    if(wizard.step===0&&!wizard.existing)wizard.balance=amount(E.cents(f.get('balance')));
+    if(wizard.step===0&&!wizard.existing){const code=E.currencyCode(f.get('currency')||wizard.currency);if(code!==wizard.currency){setSetupCurrency(code);wizardInvalid('La devise a changé. Indique ton solde dans cette devise.','balance');}try{wizard.balance=amount(parseMoney(f.get('balance')));}catch(error){wizardInvalid(error.message,'balance');}}
     if(wizard.step===1){
       wizard.meals=Boolean(f.get('meals'));wizard.daysDraft=readDayDraft(f);if(validate&&wizard.meals)wizard.days=readDays(f);wizard.start=f.get('start');
       if(validate&&(!E.validDate(wizard.start)||wizard.start<(wizard.existing?data.openingBalanceDate:E.today())))wizardInvalid('Choisis une date de début valide.','start');
@@ -1713,7 +1759,7 @@ function paymentDetails(key){
       }
     }
   }
-  function completeSetup(){const w=structuredClone(wizard);const success=commit(d=>{if(!w.existing){d.initialized=true;d.openingCents=E.cents(w.balance);d.openingBalanceDate=E.today();}if(w.meals)d.rules.push({id:id('rule'),name:'Repas habituels',categoryId:'alimentation',kind:'weekly',amounts:w.days,amountCents:0,start:w.start,end:null,pauses:[],day:1,month:1,originFixedId:null,reminderEnabled:false});for(const c of w.charges.filter(c=>c.enabled)){if(c.id&&d.rules.some(r=>r.originFixedId===c.id&&(!r.end||r.end>=c.start)))continue;d.rules.push({id:id('rule'),name:c.name,categoryId:c.categoryId||'abonnements',kind:'monthly',amountCents:num(c.amount),amounts:[],start:c.start,end:null,pauses:[],day:c.day==='last'?'last':Number(c.day),month:1,originFixedId:c.id||null,reminderEnabled:true});}d.setupDone=true;},'Tes automatismes sont prêts.');if(success){close();wizard=null;page='home';render();}}
+  function completeSetup(){const w=structuredClone(wizard);const success=commit(d=>{if(!w.existing){d.currency=w.currency;d.initialized=true;d.openingCents=E.cents(w.balance,w.currency);d.openingBalanceDate=E.today();}if(w.meals)d.rules.push({id:id('rule'),name:'Repas habituels',categoryId:'alimentation',kind:'weekly',amounts:w.days,amountCents:0,start:w.start,end:null,pauses:[],day:1,month:1,originFixedId:null,reminderEnabled:false});for(const c of w.charges.filter(c=>c.enabled)){if(c.id&&d.rules.some(r=>r.originFixedId===c.id&&(!r.end||r.end>=c.start)))continue;d.rules.push({id:id('rule'),name:c.name,categoryId:c.categoryId||'abonnements',kind:'monthly',amountCents:num(c.amount),amounts:[],start:c.start,end:null,pauses:[],day:c.day==='last'?'last':Number(c.day),month:1,originFixedId:c.id||null,reminderEnabled:true});}d.setupDone=true;},'Tes automatismes sont prêts.');if(success){close();wizard=null;page='home';render();}}
   function openTx(t=null,type='expense',categoryId='alimentation'){
     if(!data.initialized){beginSetup();return;}if(t?.categoryId==='epargne'||categoryId==='epargne'){savingsMove(t?.savingsProjectId||null,(t?.type||type)==='income'?'withdraw':'deposit',t);return;}const automatic=Boolean(t?.autoKey),mode=t?.type||type;
     dialog(t?'Ajuster cette opération.':mode==='income'?'De l’argent reçu.':'Une dépense à ajouter.',`<form id="tx-form">${automatic?'<div class="notice">Tu modifies uniquement cette occurrence. La règle et les autres jours restent identiques.</div>':''}<div class="form-grid">${field('Montant (€)','amount',t?amount(t.amountCents):'','text','inputmode="decimal" required autofocus')}${field('Date','date',t?.date||E.today(),'date',`${automatic?'readonly':''} required`)}</div>${field(mode==='income'?'Source (parents, bourse, salaire…)':'Nom de la dépense','name',t?.name|| (categoryId==='epargne'?'Mise de côté':''),'text','maxlength="100" required')}<label class="field"><span>Catégorie</span><select name="categoryId">${options(t?.categoryId||categoryId)}</select></label>${field('Note (facultative)','note',t?.note||'','text','maxlength="300"')}${t?`<button type="button" class="button danger small" data-action="delete-tx" data-id="${esc(t.id)}">${t.earlyPaid?'Annuler ce paiement anticipé':automatic?'Annuler cette dépense automatique':'Supprimer cette opération'}</button>`:''}${formActions(t?'Enregistrer la correction':'Ajouter')}</form>`,'tx',{id:t?.id||null,type:mode});
@@ -1750,13 +1796,13 @@ function submitCharge(f){
   function collectRuleDraft(f,previous={}){const draft={...previous};for(const key of ['name','categoryId','start','day','month'])if(f.get(key)!==null)draft[key]=String(f.get(key));if(f.get('amount')!==null)draft.amountText=String(f.get('amount'));if(modal?.ruleKind==='weekly')draft.daysDraft=readDayDraft(f);draft.kind=modal?.ruleKind||String(f.get('kind'));return draft;}
   function startRuleChoice(kind){const fromChoices=modal?.kind==='charge-flow'&&Boolean(chargeDraft),draft=fromChoices?chargeDraft.ruleDrafts[kind]||null:null;openRule(null,kind,draft,{fromChoices,entryKind:kind,frequencyDrafts:draft?.frequencyDrafts});}
   function openRule(r=null,kind='monthly',draft=null,context={}){
-    if(!data.initialized){beginSetup();return;}const v=draft||r||{name:kind==='weekly'?'Repas habituels':'',categoryId:kind==='weekly'?'alimentation':'abonnements',kind,amounts:[0,300,300,300,300,300,0],amountCents:0,start:nextDay(),day:'last',month:1};
+    if(!data.initialized){beginSetup();return;}const v=draft||r||{name:kind==='weekly'?'Repas habituels':'',categoryId:kind==='weekly'?'alimentation':'abonnements',kind,amounts:mealDefaults(),amountCents:0,start:nextDay(),day:'last',month:1};
     dialog(r?'Ajuster pour la suite.':'Une habitude en moins à saisir.',`<form id="rule-form">${r?'<div class="notice">La modification s’applique à partir de la date choisie. Les dépenses passées restent conservées.</div>':''}${field('Nom','name',v.name,'text','maxlength="100" required')}<div class="form-grid"><label class="field"><span>Fréquence</span><select name="kind" id="rule-kind"><option value="weekly" ${v.kind==='weekly'?'selected':''}>Certains jours de la semaine</option><option value="monthly" ${v.kind==='monthly'?'selected':''}>Chaque mois</option><option value="yearly" ${v.kind==='yearly'?'selected':''}>Chaque année</option></select></label><label class="field"><span>Catégorie</span><select name="categoryId">${options(v.categoryId)}</select></label></div>${v.kind==='weekly'?dayFields(v.amounts?.length===7?v.amounts:undefined,v.daysDraft):`<div class="form-grid">${field('Montant (€)','amount',v.amountText??(v.amountCents?amount(v.amountCents):''),'text','inputmode="decimal" required')}<label class="field"><span>Jour de l’échéance</span><select name="day"><option value="last" ${v.day==='last'?'selected':''}>Dernier jour du mois</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}" ${Number(v.day)===i+1?'selected':''}>Le ${i+1}</option>`).join('')}</select></label></div>${v.kind==='yearly'?`<label class="field"><span>Mois de l’échéance</span><select name="month">${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${Number(v.month)===i+1?'selected':''}>${esc(monthLabel('2026-'+String(i+1).padStart(2,'0')).split(' ')[0])}</option>`).join('')}</select></label>`:''}`}${field(r?'Appliquer le nouveau tarif à partir du':'Premier jour du suivi','start',draft?.start??(r?nextDay():v.start),'date',`min="${r?nextDay():data.openingBalanceDate}" required`)}<p class="help">Une date de début ne crée pas de paiement ce jour-là si ce n’est pas un jour d’échéance. Les mois courts utilisent leur dernier jour.</p>${context.fromChoices?'<div class="dialog-actions"><button type="button" class="button" data-action="rule-back">Retour aux choix</button><button class="button primary" type="submit">Activer cette règle</button></div>':formActions(r?'Appliquer la modification':'Activer cette règle')}</form>`,'rule',{...context,id:r?.id||null,ruleKind:v.kind});
   }
   function confirm(title,copy,callback,label='Confirmer'){dialog(title,`<p class="muted">${copy}</p><div class="dialog-actions"><button class="button" data-action="close">Annuler</button><button class="button primary" data-action="confirm">${label}</button></div>`,'confirm',{callback});}
   function pauseDialog(r,stop=false){dialog(stop?'Arrêter cette règle.':'Une pause dans le quotidien.',`<p class="help">Les opérations déjà comptées sont conservées. Pour annuler un repas déjà compté aujourd’hui, utilise « Annuler aujourd’hui ».</p><form id="pause-form">${field(stop?'Premier jour sans dépense':'Début de la pause','start',nextDay(),'date',`min="${nextDay()}" required`)}${stop?'':field('Dernier jour de la pause (inclus)','end',E.addDays(E.today(),7),'date',`min="${nextDay()}" required`)}${formActions(stop?'Arrêter la règle':'Suspendre')}</form>`,'pause',{id:r.id,stop});}
   function openBudget(categoryId='alimentation'){dialog('Une enveloppe pour le mois.',`<form id="budget-form"><label class="field"><span>Catégorie</span><select name="categoryId">${options(categoryId)}</select></label>${field('Limite (€) — 0 pour retirer la limite','amount',amount(budgetFor(categoryId)),'text','inputmode="decimal" required')}<label class="field"><span>Appliquer</span><select name="scope"><option value="recurring">Chaque mois</option><option value="month">Seulement ${esc(monthLabel(month))}</option><option value="reset">Revenir au montant habituel ce mois</option></select></label>${formActions()}</form>`,'budget');}
-  async function importFile(file){if(!file)return;if(file.size>8*1024*1024){notify('Sauvegarde trop volumineuse (maximum 8 Mo).');return;}try{const text=await file.text(), imported=E.normalize(JSON.parse(text));confirm('Importer cette sauvegarde ?',`${imported.transactions.length} opérations et ${imported.rules.length} règles remplaceront les données actuelles. Une copie précédente sera conservée.`,()=>{try{const old=localStorage.getItem(KEY)||localStorage.getItem(OLD_KEY)||rawRecovery;if(old)localStorage.setItem(BACKUP,old);const serialized=saveData(imported);localStorage.setItem(KEY,serialized);data=imported;snapshot=serialized;afterLocalSave();loadError=null;rawRecovery='';close();$('#alert').innerHTML='';page='home';catchUp();render();queuePushSync();notify('Sauvegarde importée.');if(!data.setupDone)beginSetup();}catch(e){notify('Import non enregistré : '+e.message+' Tes données actuelles sont conservées.');}});}catch(e){notify('Import refusé : '+e.message+' Tes données actuelles sont conservées.');}}
+  async function importFile(file){if(!file)return;if(file.size>8*1024*1024){notify('Sauvegarde trop volumineuse (maximum 8 Mo).');return;}try{const text=await file.text(), imported=E.normalize(JSON.parse(text));if(data.initialized&&imported.currency!==data.currency)throw Error('Cette sauvegarde utilise une autre devise ('+imported.currency+'). Recommence un budget vide avant de l’importer.');confirm('Importer cette sauvegarde ?',`${imported.transactions.length} opérations et ${imported.rules.length} règles remplaceront les données actuelles. Une copie précédente sera conservée.`,()=>{try{const old=localStorage.getItem(KEY)||localStorage.getItem(OLD_KEY)||rawRecovery;if(old)localStorage.setItem(BACKUP,old);const serialized=saveData(imported);localStorage.setItem(KEY,serialized);data=imported;snapshot=serialized;afterLocalSave();loadError=null;rawRecovery='';close();$('#alert').innerHTML='';page='home';catchUp();render();queuePushSync();notify('Sauvegarde importée.');if(!data.setupDone)beginSetup();}catch(e){notify('Import non enregistré : '+e.message+' Tes données actuelles sont conservées.');}});}catch(e){notify('Import refusé : '+e.message+' Tes données actuelles sont conservées.');}}
   function switchPage(p,back=false){if(!['home','journal','settings','rules','budget'].includes(p))return;if(!back){if(['rules','budget'].includes(p)){if(page!==p)pageTrail.push(page);}else pageTrail=[];}catchUp();page=p;render();window.scrollTo({top:0,behavior:'smooth'});}
   function suspendRule(rid,on){const t=nextDay();commit(d=>{const r=d.rules.find(x=>x.id===rid);if(!r)return;if(on){if(!r.pauses.some(p=>p.start<=t&&p.end>=t))r.pauses.push({start:t,end:INFINITE});}else{r.pauses=r.pauses.flatMap(p=>{if(p.end<t)return [p];if(p.start>=t)return [];return [{start:p.start,end:E.today()}];});}},on?'Habitude en pause à partir de demain.':'Habitude reprise à partir de demain.');}
   function pay(key){
@@ -1810,7 +1856,7 @@ function submitCharge(f){
     if(action==='export')download(JSON.stringify(data,null,2),'clair-sauvegarde-'+E.today()+'.json');
     if(action==='backup'){const v=localStorage.getItem(BACKUP);if(v)download(v,'clair-copie-precedente.json');else notify('Aucune copie précédente : exporte ta sauvegarde actuelle.');}
     if(action==='raw')download(rawRecovery,'clair-donnees-brutes.json');if(action==='recovery'&&recovery)download(JSON.stringify(recovery,null,2),'clair-copie-de-secours.json');
-    if(action==='csv'){const cell=E.csvCell;download('\uFEFFDate;Nom;Type;Montant EUR;Catégorie;Automatique;Note\r\n'+data.transactions.map(t=>[t.date,t.name,t.categoryId==='epargne'?(t.type==='income'?'Retrait d’épargne':'Mise de côté'):t.type==='income'?'Revenu':'Dépense',amount(t.amountCents),cat(t.categoryId).label,t.autoKey?'Oui':'Non',t.note].map(cell).join(';')).join('\r\n'),'clair-journal-'+E.today()+'.csv','text/csv;charset=utf-8');}
+    if(action==='csv'){const cell=E.csvCell;download('\uFEFFDate;Nom;Type;Montant '+data.currency+';Catégorie;Automatique;Note\r\n'+data.transactions.map(t=>[t.date,t.name,t.categoryId==='epargne'?(t.type==='income'?'Retrait d’épargne':'Mise de côté'):t.type==='income'?'Revenu':'Dépense',amount(t.amountCents),cat(t.categoryId).label,t.autoKey?'Oui':'Non',t.note].map(cell).join(';')).join('\r\n'),'clair-journal-'+E.today()+'.csv','text/csv;charset=utf-8');}
     if(action==='ics'){const {text,count}=E.ics(data,E.today(),new Date(),euro);if(!count){notify('Aucun loyer ni abonnement prévu dans les 12 prochains mois.');return;}download(text,'clair-echeances-'+E.today()+'.ics','text/calendar;charset=utf-8');notify(`${count} échéance${count>1?'s':''} exportée${count>1?'s':''}. Remplace l’ancien calendrier Clair après chaque changement.`);}
     if(action==='photo-remove')commit(d=>{d.preferences.photo=null;if(d.preferences.wallpaper==='photo')d.preferences.wallpaper='plain';},'Photo retirée.');
     if(action==='push-on')enablePush();if(action==='push-off')disablePush();if(action==='push-retry')syncPush();
@@ -1827,14 +1873,14 @@ function submitCharge(f){
     if(form.id==='pause-form'){const start=String(f.get('start')),end=String(f.get('end')||'');if(!E.validDate(start)||start<nextDay()||(!modal.stop&&(!E.validDate(end)||end<start)))throw Error('Choisis des dates valides à partir de demain.');const rid=modal.id,stop=modal.stop;success=commit(d=>{const r=d.rules.find(r=>r.id===rid);if(stop){if(start<=r.start)d.rules=d.rules.filter(x=>x.id!==rid);else r.end=E.addDays(start,-1);}else r.pauses.push({start,end});},stop?'Arrêt programmé.':'Pause enregistrée.');}
     if(form.id==='budget-form'){const categoryId=String(f.get('categoryId')),scope=f.get('scope'),n=num(f.get('amount'),true)/100;success=commit(d=>{if(scope==='recurring'){if(n)d.budgets[categoryId]=n;else delete d.budgets[categoryId];}else{d.budgetOverrides[month]||={};if(scope==='reset')delete d.budgetOverrides[month][categoryId];else d.budgetOverrides[month][categoryId]=n;}},'Enveloppe enregistrée.');}
 
-    if(form.id==='opening-form')success=commit(d=>{d.openingCents=E.cents(f.get('amount'));},'Solde initial corrigé.');
-    if(form.id==='reconcile-form'){const actual=E.cents(f.get('amount')),diff=actual-E.balance(data);success=commit(d=>{if(diff)d.transactions.push({id:id('tx'),type:diff>0?'income':'expense',amountCents:Math.abs(diff),date:E.today(),name:'Ajustement du solde',categoryId:'autre',note:'Rapprochement avec mon argent disponible',autoKey:null,ruleId:null});},diff?'Solde rapproché.':'Les soldes correspondent déjà.');}
+    if(form.id==='opening-form')success=commit(d=>{d.openingCents=parseMoney(f.get('amount'));},'Solde initial corrigé.');
+    if(form.id==='reconcile-form'){const actual=parseMoney(f.get('amount')),diff=actual-E.balance(data);success=commit(d=>{if(diff)d.transactions.push({id:id('tx'),type:diff>0?'income':'expense',amountCents:Math.abs(diff),date:E.today(),name:'Ajustement du solde',categoryId:'autre',note:'Rapprochement avec mon argent disponible',autoKey:null,ruleId:null});},diff?'Solde rapproché.':'Les soldes correspondent déjà.');}
     if(form.id==='reset-form'){if(f.get('confirmation')!=='EFFACER')throw Error('Écris EFFACER pour confirmer.');const raw=localStorage.getItem(KEY)||localStorage.getItem(OLD_KEY)||rawRecovery;if(raw)localStorage.setItem(BACKUP,raw);const fresh=E.empty(),serialized=saveData(fresh);localStorage.setItem(KEY,serialized);data=fresh;snapshot=serialized;afterLocalSave();loadError=null;rawRecovery='';$('#alert').innerHTML='';page='home';close();render();queuePushSync();beginSetup();return;}
     if(success)close();
   }catch(e){soundFeedback.cancelSave();const errorBox=$('#form-error');errorBox.textContent=e.message;errorBox.scrollIntoView({block:'nearest'});if(form.id==='wizard-form'){form.querySelectorAll('[aria-invalid]').forEach(el=>el.removeAttribute('aria-invalid'));const input=e.field?form.elements.namedItem(e.field):null;if(input){input.setAttribute('aria-invalid','true');input.setAttribute('aria-describedby','form-error');input.focus({preventScroll:true});}else errorBox.focus({preventScroll:true});}}});
   document.addEventListener('toggle',event=>{if(event.target.id==='journal-more')journalState.more=event.target.open;},true);
   document.addEventListener('input',event=>{if(event.target.id==='search')journalResults();});
-  document.addEventListener('change',async event=>{if(event.target.matches?.('[data-sounds]')){const persisted=soundFeedback.setEnabled(event.target.checked);updateSoundControls();if(event.target.checked&&event.isTrusted)soundFeedback.preview();if(!persisted)notify('Le choix des sons reste valable pour cette session, mais n’a pas pu être mémorisé.');return;}if(event.target.matches?.('[data-savings-kind]')){const f=event.target.form;if(f){f.elements.namedItem('icon').value=savingsDefaultIcons[event.target.value]||'star';if(!f.elements.namedItem('name').value.trim())f.elements.namedItem('name').value=savingsKindLabels[event.target.value]||'';}return;}const el=event.target;try{
+  document.addEventListener('change',async event=>{if(event.target.matches?.('#setup-currency')){setSetupCurrency(event.target.value);return;}if(event.target.matches?.('[data-sounds]')){const persisted=soundFeedback.setEnabled(event.target.checked);updateSoundControls();if(event.target.checked&&event.isTrusted)soundFeedback.preview();if(!persisted)notify('Le choix des sons reste valable pour cette session, mais n’a pas pu être mémorisé.');return;}if(event.target.matches?.('[data-savings-kind]')){const f=event.target.form;if(f){f.elements.namedItem('icon').value=savingsDefaultIcons[event.target.value]||'star';if(!f.elements.namedItem('name').value.trim())f.elements.namedItem('name').value=savingsKindLabels[event.target.value]||'';}return;}const el=event.target;try{
     if(el.matches('[data-import]')){importFile(el.files?.[0]);el.value='';}
     if(el.matches('[data-photo]')){const file=el.files?.[0];el.value='';if(!file)return;const photo=await photoToJpeg(file);commit(d=>{d.preferences.photo=photo;d.preferences.wallpaper='photo';},'Photo de fond enregistrée sur cet appareil.');return;}
     if(el.dataset.pref==='theme'||el.dataset.pref==='wallpaper'){const k=el.dataset.pref,v=el.value;commit(d=>{d.preferences=E.normPrefs({...d.preferences,[k]:v});});return;}

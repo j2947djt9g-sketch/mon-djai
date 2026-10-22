@@ -27,7 +27,7 @@ export function createHandler({db,authenticate,send,generateKeys,now=()=>new Dat
               const latest=await db.budget(device.user_id),fresh=remindersFor(latest,time.date).find(r=>r.key===reminder.key);
               const current=await db.device(device.device_id);
               if(!fresh||!current?.enabled||current.user_id!==device.user_id){await db.release(device.device_id,reminder.key,claim);continue;}
-              const amount=new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(fresh.amountCents/100);
+              const amount=new Intl.NumberFormat('fr-FR',{style:'currency',currency:latest.currency||'EUR'}).format(fresh.amountCents/100);
               await send(validateSubscription(current.subscription),{title:'Clair — dans 2 jours',body:fresh.name+' : '+amount+' à prévoir le '+fresh.due.slice(8)+'/'+fresh.due.slice(5,7)+'.',tag:'clair-'+fresh.key},c);
               await db.complete(device.device_id,reminder.key,claim);sent++;
             }catch(error){
@@ -64,3 +64,4 @@ export function createHandler({db,authenticate,send,generateKeys,now=()=>new Dat
     }
   };
 }
+

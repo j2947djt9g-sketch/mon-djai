@@ -2,7 +2,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=r
 const source=fs.readFileSync(__dirname+'/cloud.js','utf8'),html=fs.readFileSync(__dirname+'/../index.html','utf8');
 const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);scripts.forEach(s=>new vm.Script(s));
 const ectx={window:{},Date,Intl};vm.createContext(ectx);vm.runInContext(scripts[0],ectx);const E=ectx.window.ClairEngine;
-assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'dc71a063a12d67ef4bdb8d0d626e4c0274dd4c43b429d783379d0852ca431a17');
+assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'c3d5c69f14242e45472b4fa4a1c9847cf1b938fd31ca7b50c45a7873dff46b1e');
 let rows=new Map(),saveDelay=null,readDelay=null,loseResponse=false;
 function device(uid,storage=new Map()){
  let currentUser={id:uid,email:uid+'@example.test',user_metadata:{display_name:uid}};
@@ -103,6 +103,13 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  oldRaw._cloud.dirty=true;oldRaw._cloud.operationId=crypto.randomUUID();oldRaw.transactions.push({id:'old-addition',type:'expense',amountCents:200,date:E.today(),name:'Old addition',categoryId:'autre'});
  const dirtyOldCache=new Map([[secondSaver.cloud.key(),JSON.stringify(oldRaw)]]),dirtyUpgraded=device('named-savings',dirtyOldCache);await dirtyUpgraded.init();assert.equal(dirtyUpgraded.cloud.status,'conflict');assert.equal(rows.get('named-savings').payload.savingsProjects[0].id,'trip');assert(dirtyUpgraded.cloud.record.payload.transactions.some(t=>t.id==='old-addition'));
  console.log('PASS: an old clean cache recovers named projects; an old dirty cache cannot silently replace them even at the same revision');
+ for(const currency of ['USD','XOF','XAF']){
+  const uid='currency-'+currency,a=device(uid);await a.init();const d=budget(100000);d.currency=currency;a.edit(d);await a.cloud.sync();
+  const b=device(uid);await b.init();assert.equal(b.cloud.record.payload.currency,currency);assert.equal(b.cloud.record.payload.openingCents,100000);
+  const raw=JSON.parse(b.storage.get(b.cloud.key()));delete raw.currency;raw._cloud.dirty=true;raw._cloud.operationId=crypto.randomUUID();
+  const stale=device(uid,new Map([[b.cloud.key(),JSON.stringify(raw)]]));await stale.init();assert.equal(stale.cloud.status,'conflict');assert.equal(rows.get(uid).payload.currency,currency);assert.throws(()=>stale.cloud.resolve(false),/devises/);stale.cloud.resolve(true);assert.equal(stale.cloud.record.payload.currency,currency);
+ }
+ console.log('PASS currency saved on a second device; stale EUR copies preserve both budgets and require retaining remote currency');
  console.log('PASS: all scripts parse; reviewed engine with savings metadata parses');
 })().catch(e=>{console.error(e);process.exitCode=1});
 

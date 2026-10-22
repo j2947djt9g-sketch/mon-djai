@@ -5,6 +5,8 @@ export function parisTime(now=new Date()){
 }
 export function remindersFor(payload,date){
   if(!payload?.initialized||!payload.setupDone||payload.preferences?.reminders===false)return [];
+  const currency=payload.currency===undefined?'EUR':payload.currency;
+  if(!['EUR','USD','XOF','XAF'].includes(currency))return [];
   const due=new Date(Date.parse(date+'T12:00:00Z')+2*86400000).toISOString().slice(0,10);
   const day=Number(due.slice(8)),month=Number(due.slice(5,7));
   const last=new Date(Date.UTC(Number(due.slice(0,4)),month,0)).getUTCDate();
@@ -13,6 +15,7 @@ export function remindersFor(payload,date){
   const skipped=new Set(payload.skipped||[]);
   return (payload.rules||[]).filter(r=>{
     if(!['monthly','yearly'].includes(r.kind)||r.reminderEnabled===false||!(r.amountCents>0))return false;
+    if(['XOF','XAF'].includes(currency)&&r.amountCents%100!==0)return false;
     if(due<r.start||(r.end&&due>r.end)||due<payload.openingBalanceDate)return false;
     if((r.pauses||[]).some(p=>due>=p.start&&due<=p.end))return false;
     if((r.day==='last'?last:Math.min(r.day,last))!==day||(r.kind==='yearly'&&r.month!==month))return false;
@@ -26,3 +29,4 @@ export function validateSubscription(s){
   if(typeof s.keys?.p256dh!=='string'||!/^[A-Za-z0-9_-]{87}=?$/.test(s.keys.p256dh)||typeof s.keys?.auth!=='string'||!/^[A-Za-z0-9_-]{22}(==)?$/.test(s.keys.auth))throw Error('Clés de notification invalides.');
   return {endpoint:u.href,keys:{p256dh:s.keys.p256dh,auth:s.keys.auth}};
 }
+

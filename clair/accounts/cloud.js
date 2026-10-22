@@ -96,6 +96,8 @@
         if(navigator.onLine===false)throw Error('offline');
         const remote=await this.read();if(expectedEpoch!==this.epoch)return;
         const raw=localStorage.getItem(this.key(userId));this.record=this.decode(raw,userId);
+        // Old clients can strip currency from their cache. Preserve both copies before any write.
+        if(remote?.payload?.initialized&&this.record?.payload.initialized&&(remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR')){this.setConflict(remote);return;}
         // Older clients remove unknown savings fields while normalizing their cache.
         // Never promote that reduced cache into a replacement for named cloud projects.
         if(remote?.payload?.savingsSchema===1&&raw&&JSON.parse(raw).savingsSchema!==1){
@@ -135,6 +137,7 @@
         if(!this.conflict.remote)throw Error('Aucune copie en ligne n’est disponible.');
         this.adopt(this.conflict.remote);return;
       }
+      if(this.conflict.remote?.payload.initialized&&this.record?.payload.initialized&&(this.conflict.remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR'))throw Error('Les copies utilisent des devises différentes. Sauvegarde cette copie, puis conserve la copie en ligne.');
       // The conflict UI exports the device copy before asking the user to choose.
       const meta={...this.record.meta,revision:this.conflict.remote?.revision||0,operationId:crypto.randomUUID(),dirty:true};
       // Commit metadata only after persistence succeeds, so a full storage leaves both copies intact.
