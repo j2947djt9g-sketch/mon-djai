@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="auto" data-app-version="2026-10-22.4">
+<html lang="fr" data-theme="auto" data-app-version="2026-10-22.5">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#783bf1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://hkssnbvktfscizojhftl.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
@@ -918,6 +918,53 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if (!snapshot && legacy && !localStorage.getItem(BACKUP)) localStorage.setItem(BACKUP, legacy);
   }
   try { readStorage(); } catch(err) { loadError = 'Les données existantes n’ont pas pu être lues. Elles n’ont pas été effacées. ' + err.message; }
+  /* Device-local feedback. Audio is unlocked only by an explicit interaction. */
+  function createSoundFeedback(scope, storage, visible) {
+    const storageKey='clair-sounds-v1',voices=new Set();
+    let enabled=true,context=null,ready=Promise.resolve(false),generation=0,intentUntil=0,lastSelection=-Infinity;
+    const now=()=>scope.performance?.now?.()??Date.now();
+    const supported=()=>typeof (scope.AudioContext||scope.webkitAudioContext)==='function';
+    const allowed=()=>enabled&&visible();
+    function stopVoices(){for(const voice of [...voices]){try{voice.osc.stop();}catch{}try{voice.osc.disconnect();voice.gain.disconnect();}catch{}voices.delete(voice);}}
+    function pause(){generation++;intentUntil=0;stopVoices();}
+    function refresh(){try{enabled=storage.getItem(storageKey)!=='off';}catch{enabled=false;}if(!enabled)pause();}
+    refresh();
+    function setEnabled(value){enabled=Boolean(value);pause();try{storage.setItem(storageKey,enabled?'on':'off');return true;}catch{return false;}}
+    function unlock(){
+      if(!allowed()||!supported())return Promise.resolve(false);
+      try{
+        if(!context||context.state==='closed'){const Audio=scope.AudioContext||scope.webkitAudioContext;context=new Audio({latencyHint:'interactive'});}
+        return (context.state==='running'?Promise.resolve():Promise.resolve(context.resume())).then(()=>context.state==='running').catch(()=>false);
+      }catch{return Promise.resolve(false);}
+    }
+    function tone(frequency,start,duration,level,endFrequency=frequency){
+      const osc=context.createOscillator(),gain=context.createGain(),voice={osc,gain};voices.add(voice);
+      osc.type='sine';osc.frequency.setValueAtTime(frequency,start);osc.frequency.exponentialRampToValueAtTime(endFrequency,start+duration);
+      gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(level,start+.004);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
+      osc.connect(gain);gain.connect(context.destination);
+      osc.onended=()=>{voices.delete(voice);try{osc.disconnect();gain.disconnect();}catch{}};
+      osc.start(start);osc.stop(start+duration+.01);
+    }
+    function play(kind,fromGesture=false){
+      if(!allowed())return Promise.resolve(false);
+      if(fromGesture)ready=unlock();
+      const ticket=++generation;
+      return ready.then(ok=>{
+        if(!ok||ticket!==generation||!allowed()||context?.state!=='running')return false;
+        stopVoices();const start=context.currentTime+.004;
+        if(kind==='selection')tone(680,start,.045,.035,510);
+        else{tone(660,start,.065,.035);tone(880,start+.075,.11,.04);}
+        return true;
+      }).catch(()=>{stopVoices();return false;});
+    }
+    function selection(){intentUntil=0;const time=now();if(time-lastSelection<45)return Promise.resolve(false);lastSelection=time;return play('selection',true);}
+    function saveIntent(){intentUntil=allowed()?now()+2000:0;ready=unlock();}
+    function saved(){const active=intentUntil>0&&now()<=intentUntil;intentUntil=0;return active?play('saved'):Promise.resolve(false);}
+    function preview(){intentUntil=0;return play('saved',true);}
+    return {storageKey,supported,enabled:()=>enabled,setEnabled,refresh,pause,selection,saveIntent,saved,preview,cancelSave:()=>{intentUntil=0;}};
+  }
+  const soundFeedback=createSoundFeedback(window,localStorage,()=>!document.hidden&&!startupController?.active);
+  function updateSoundControls(){const toggle=$('[data-sounds]'),preview=$('[data-action="sound-preview"]');if(toggle)toggle.checked=soundFeedback.enabled()&&soundFeedback.supported();if(preview)preview.disabled=!soundFeedback.enabled()||!soundFeedback.supported();}
   function notify(message, callback=null) {
     clearTimeout(toastTimer); undo=callback;
     $('#toast').innerHTML=`<div class="toast">${esc(message)}${callback?'<button data-action="undo">Annuler</button>':''}</div>`;
@@ -927,7 +974,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     const url=URL.createObjectURL(new Blob([content],{type:mime})), a=document.createElement('a');
     a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
-  function commit(change, message='') {
+  function commit(change, message='', withSound=true) {
     if (cloud.enabled&&(!cloud.user||!cloud.ready||cloud.status==='loading')) { notify('Connecte-toi avant de modifier ton budget.'); return false; }
     if (cloud.conflict) { notify('Choisis d’abord la copie à conserver.'); conflictDialog(); return false; }
     if (loadError) { notify('Récupère ou importe tes données avant de continuer.'); return false; }
@@ -940,9 +987,9 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       }
       change(data);E.sync(data);E.validateSavings(data);
       const serialized=saveData(data);localStorage.setItem(KEY,serialized);snapshot=serialized;afterLocalSave();
-      recovery=null;$('#alert').innerHTML='';render();if(message)notify(message);queuePushSync();return true;
+      recovery=null;$('#alert').innerHTML='';render();if(message)notify(message);queuePushSync();if(withSound)soundFeedback.saved();return true;
     } catch(err) {
-      recovery=structuredClone(data);data=before;render();
+      soundFeedback.cancelSave();recovery=structuredClone(data);data=before;render();
       const quota=/quota/i.test(err.name+' '+err.message);
       $('#alert').innerHTML=`<div class="notice error">La modification n’a pas été enregistrée : ${esc(quota?'l’espace de stockage du navigateur est plein (une photo de fond trop lourde ?).':err.message)} <button class="link" data-action="recovery">Exporter la copie de secours</button></div>`;
       if($('#dialog').open){const target=$('#form-error');if(target){target.textContent=err.message;target.scrollIntoView({block:'nearest'});}}
@@ -953,7 +1000,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if(loadError || !data.initialized || !data.setupDone)return;
     try {
       const draft=structuredClone(data), count=E.sync(draft);
-      if(count)commit(d=>{d.transactions=draft.transactions;},`${count} dépense${count>1?'s':''} automatique${count>1?'s':''} ajoutée${count>1?'s':''}.`);
+      if(count)commit(d=>{d.transactions=draft.transactions;},`${count} dépense${count>1?'s':''} automatique${count>1?'s':''} ajoutée${count>1?'s':''}.`,false);
     } catch(err) { $('#alert').innerHTML=`<div class="notice error">Le rattrapage n’a pas pu être effectué : ${esc(err.message)} Tes données sont conservées.</div>`; }
   }
   /* ---------- Compte et synchronisation ---------- */
@@ -1611,6 +1658,7 @@ function settings(){const p=data.preferences;return heading('Clair','Réglages')
 `<div class="settings-links"><button class="settings-link" data-nav="rules"><span>Mes habitudes<small>Repas et abonnements</small></span>${icon('arrow')}</button><button class="settings-link" data-nav="budget"><span>Budget et épargne<small>Mes repères du mois</small></span>${icon('arrow')}</button></div><div class="settings-grid settings-simple">
 <section class="card install-card"><h2>Clair, à portée de main</h2><p class="help">${isInstalled()?'Ouvert comme une application.':'Un accès direct depuis ton écran d’accueil.'}</p><div class="actions"><button class="button primary" data-action="install" ${isInstalled()||installBusy?'disabled':''}>${isInstalled()?'Déjà installé':installBusy?'Installation…':'Installer Clair'}</button>${location.protocol!=='file:'?`<button class="button" data-action="download-app" ${downloadBusy?'disabled':''}>${downloadBusy?'Téléchargement…':'Télécharger le fichier'}</button>`:''}</div><details class="settings-more"><summary>Installation ou téléchargement ?</summary><p class="help">Installer ajoute Clair à ton écran d’accueil quand le navigateur le permet. Le fichier HTML est une copie à ouvrir dans un navigateur sur ordinateur. Les dépenses se transfèrent séparément avec « Sauvegarder mes données ».</p></details></section>
 <section class="card"><h2>Apparence</h2><p class="help" id="theme-l">Thème</p><div class="seg" role="radiogroup" aria-labelledby="theme-l">${[['light','Clair'],['dark','Sombre'],['auto','Auto']].map(([v,l])=>`<label><input type="radio" name="theme" value="${v}" data-pref="theme" ${p.theme===v?'checked':''}><span>${l}</span></label>`).join('')}</div><p class="help" id="wall-l" style="margin-top:18px">Fond d’écran</p><div class="walls" role="radiogroup" aria-labelledby="wall-l">${[['plain','Clair'],['aurora','Aurore'],['ocean','Océan'],['sunset','Couchant'],['forest','Forêt'],['photo','Ma photo']].map(([v,l])=>`<label><input type="radio" name="wallpaper" value="${v}" data-pref="wallpaper" ${p.wallpaper===v?'checked':''} ${v==='photo'&&!p.photo?'disabled':''}><span class="sw sw-${v}">${l}</span></label>`).join('')}</div><div class="actions"><label class="button small file">${p.photo?'Changer la photo':'Choisir une photo'}<input type="file" accept="image/jpeg,image/png,image/webp" data-photo></label>${p.photo?'<button class="link" data-action="photo-remove">Retirer</button>':''}</div></section>
+<section class="card" id="sound-settings"><h2>Sons</h2><label class="switch"><input type="checkbox" role="switch" data-sounds aria-describedby="sound-help" ${soundFeedback.enabled()&&soundFeedback.supported()?'checked':''} ${soundFeedback.supported()?'':'disabled'}>Sons de l’application</label><p class="help" id="sound-help" style="margin-top:12px">${soundFeedback.supported()?'Clics discrets et confirmations, sur cet appareil.':'Les sons ne sont pas disponibles dans ce navigateur.'}</p><div class="actions"><button type="button" class="button" data-action="sound-preview" ${soundFeedback.enabled()&&soundFeedback.supported()?'':'disabled'}>Écouter un aperçu</button></div></section>
 <section class="card" id="notification-settings"><h2>Rappels</h2><label class="switch"><input type="checkbox" role="switch" data-pref="reminders" ${p.reminders?'checked':''}>Me rappeler 2 jours avant</label><p class="help" style="margin-top:12px">Dans Clair dès J−2. Pour recevoir aussi une notification lorsque l’app est fermée, active les notifications sur cet appareil.</p><button class="button" data-action="ics">Ajouter les échéances au calendrier</button><details class="settings-more"><summary>En savoir plus</summary><p class="help">Le calendrier contient les échéances des 12 prochains mois, avec une alerte 2 jours avant à 9 h. Importe le fichier dans un calendrier dédié « Clair ». Après une modification, remplace cet ancien calendrier : il ne se synchronise pas automatiquement.</p><button class="link" data-nav="rules">Choisir les habitudes à rappeler</button></details><details class="settings-more"><summary>Notifications app fermée</summary>${pushSection()}</details></section>
 <section class="card"><h2>Mes données</h2><p class="help">${cloud.enabled&&cloud.user?'Budget associé à ton compte. Une sauvegarde reste utile.':'Dans ce navigateur. Sauvegarde avant de changer d’appareil.'}</p><div class="actions"><button class="button primary" data-action="export">Sauvegarder mes données</button><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label></div><details class="settings-more"><summary>En savoir plus</summary><p class="help">${cloud.enabled?'Ton budget est envoyé au service de synchronisation de ton compte. La photo de fond reste sur cet appareil.':'Aucune connexion bancaire ni synchronisation entre appareils.'} L’import remplace les données actuelles après confirmation et conserve une copie précédente.</p></details></section>
 </div><details class="card settings-advanced"><summary>Réglages avancés</summary><div class="advanced-content"><h3>Ajuster mon solde</h3><p class="help">Solde de départ : ${euro(data.openingCents)} · ${esc(dateLabel(data.openingBalanceDate))}</p><div class="actions"><button class="button" data-action="reconcile">Ajuster le solde d’aujourd’hui</button><button class="button" data-action="opening">Corriger le solde de départ</button></div><h3>Exports et récupération</h3><div class="actions"><button class="button" data-action="csv">Télécharger le journal CSV</button><button class="button" data-action="backup">Récupérer la copie précédente</button></div><details class="settings-more"><summary>Comprendre les calculs</summary><p class="help">Les dépenses automatiques sont rattrapées à l’ouverture. Les dates suivent l’heure de Paris. Les échéances du 29 au 31 utilisent le dernier jour des mois plus courts. Les budgets sont des limites, pas des dépenses déduites.</p></details><hr class="sep"><button class="button danger" data-action="reset">Effacer et recommencer</button></div></details>`;}
@@ -1716,8 +1764,19 @@ function submitCharge(f){
     if(c.status!=='future'){const before={paymentConfirmed:false,confirmedAt:null};if(commit(d=>{const t=d.transactions.find(t=>t.id===c.id);if(t){t.paymentConfirmed=true;t.confirmedAt=E.today();}},'')){close();notify(`Paiement de ${c.name} noté comme confirmé (déjà compté, rien n’est retiré en plus).`,()=>commit(d=>{const t=d.transactions.find(t=>t.id===c.id);if(t)Object.assign(t,before);},'Confirmation annulée.'));}return;}
     confirm('Payer maintenant ?',`${esc(c.name)} · ${esc(euro(c.amountCents))} sera enregistré aujourd’hui et retiré de ton solde. L’échéance du ${esc(dateLabel(c.dueDate))} ne sera pas comptée une deuxième fois.`,()=>{const txId=id('tx');if(commit(d=>{d.transactions.push({id:txId,type:'expense',amountCents:c.amountCents,name:c.name,categoryId:c.categoryId,date:E.today(),note:'Payé en avance',autoKey:c.autoKey,ruleId:c.ruleId,fixedExpenseId:c.fixedExpenseId||null,fixedMonth:c.fixedMonth||null,corrected:false,paymentConfirmed:true,confirmedAt:E.today(),earlyPaid:true});},''))notify('Paiement anticipé enregistré.',()=>commit(d=>{d.transactions=d.transactions.filter(t=>t.id!==txId);},'Paiement anticipé annulé.'));},'Payer maintenant');
   }
+  // Capture real interactions before actions replace their originating controls.
+  document.addEventListener('click',event=>{
+    if(!event.isTrusted||event.defaultPrevented||event.button>0)return;
+    const control=event.target.closest?.('button,summary,a[href]');
+    if(!control||control.disabled||control.getAttribute?.('aria-disabled')==='true'||control.dataset.action==='sound-preview')return;
+    soundFeedback.selection();
+    if(['confirm','undo','skip-today','resume','photo-remove','savings-restore'].includes(control.dataset.action))soundFeedback.saveIntent();
+  },true);
+  document.addEventListener('submit',event=>{if(event.isTrusted&&navigator.userActivation?.isActive!==false)soundFeedback.saveIntent();},true);
+  document.addEventListener('change',event=>{if(event.isTrusted&&!event.target.matches?.('[data-sounds]')&&event.target.matches?.('select,input[type="checkbox"],input[type="radio"]'))soundFeedback.selection();},true);
   document.addEventListener('click',async event=>{const b=event.target.closest('button');if(!b)return;try{
     if(b.dataset.nav){switchPage(b.dataset.nav);return;}const action=b.dataset.action, rid=b.dataset.id,r=data.rules.find(r=>r.id===rid),t=data.transactions.find(t=>t.id===rid);
+    if(action==='sound-preview'){if(event.isTrusted)await soundFeedback.preview();return;}
     if(action==='journal-flow'){journalFlow(b.dataset.flow);return;}
     if(action==='page-back'){switchPage(pageTrail.pop()||'settings',true);return;}
     if(action==='startup-retry'){location.reload();return;}
@@ -1772,10 +1831,10 @@ function submitCharge(f){
     if(form.id==='reconcile-form'){const actual=E.cents(f.get('amount')),diff=actual-E.balance(data);success=commit(d=>{if(diff)d.transactions.push({id:id('tx'),type:diff>0?'income':'expense',amountCents:Math.abs(diff),date:E.today(),name:'Ajustement du solde',categoryId:'autre',note:'Rapprochement avec mon argent disponible',autoKey:null,ruleId:null});},diff?'Solde rapproché.':'Les soldes correspondent déjà.');}
     if(form.id==='reset-form'){if(f.get('confirmation')!=='EFFACER')throw Error('Écris EFFACER pour confirmer.');const raw=localStorage.getItem(KEY)||localStorage.getItem(OLD_KEY)||rawRecovery;if(raw)localStorage.setItem(BACKUP,raw);const fresh=E.empty(),serialized=saveData(fresh);localStorage.setItem(KEY,serialized);data=fresh;snapshot=serialized;afterLocalSave();loadError=null;rawRecovery='';$('#alert').innerHTML='';page='home';close();render();queuePushSync();beginSetup();return;}
     if(success)close();
-  }catch(e){const errorBox=$('#form-error');errorBox.textContent=e.message;errorBox.scrollIntoView({block:'nearest'});if(form.id==='wizard-form'){form.querySelectorAll('[aria-invalid]').forEach(el=>el.removeAttribute('aria-invalid'));const input=e.field?form.elements.namedItem(e.field):null;if(input){input.setAttribute('aria-invalid','true');input.setAttribute('aria-describedby','form-error');input.focus({preventScroll:true});}else errorBox.focus({preventScroll:true});}}});
+  }catch(e){soundFeedback.cancelSave();const errorBox=$('#form-error');errorBox.textContent=e.message;errorBox.scrollIntoView({block:'nearest'});if(form.id==='wizard-form'){form.querySelectorAll('[aria-invalid]').forEach(el=>el.removeAttribute('aria-invalid'));const input=e.field?form.elements.namedItem(e.field):null;if(input){input.setAttribute('aria-invalid','true');input.setAttribute('aria-describedby','form-error');input.focus({preventScroll:true});}else errorBox.focus({preventScroll:true});}}});
   document.addEventListener('toggle',event=>{if(event.target.id==='journal-more')journalState.more=event.target.open;},true);
   document.addEventListener('input',event=>{if(event.target.id==='search')journalResults();});
-  document.addEventListener('change',async event=>{if(event.target.matches?.('[data-savings-kind]')){const f=event.target.form;if(f){f.elements.namedItem('icon').value=savingsDefaultIcons[event.target.value]||'star';if(!f.elements.namedItem('name').value.trim())f.elements.namedItem('name').value=savingsKindLabels[event.target.value]||'';}return;}const el=event.target;try{
+  document.addEventListener('change',async event=>{if(event.target.matches?.('[data-sounds]')){const persisted=soundFeedback.setEnabled(event.target.checked);updateSoundControls();if(event.target.checked&&event.isTrusted)soundFeedback.preview();if(!persisted)notify('Le choix des sons reste valable pour cette session, mais n’a pas pu être mémorisé.');return;}if(event.target.matches?.('[data-savings-kind]')){const f=event.target.form;if(f){f.elements.namedItem('icon').value=savingsDefaultIcons[event.target.value]||'star';if(!f.elements.namedItem('name').value.trim())f.elements.namedItem('name').value=savingsKindLabels[event.target.value]||'';}return;}const el=event.target;try{
     if(el.matches('[data-import]')){importFile(el.files?.[0]);el.value='';}
     if(el.matches('[data-photo]')){const file=el.files?.[0];el.value='';if(!file)return;const photo=await photoToJpeg(file);commit(d=>{d.preferences.photo=photo;d.preferences.wallpaper='photo';},'Photo de fond enregistrée sur cet appareil.');return;}
     if(el.dataset.pref==='theme'||el.dataset.pref==='wallpaper'){const k=el.dataset.pref,v=el.value;commit(d=>{d.preferences=E.normPrefs({...d.preferences,[k]:v});});return;}
@@ -1786,8 +1845,8 @@ function submitCharge(f){
   }catch(e){if($('#form-error')&&$('#dialog').open)$('#form-error').textContent=e.message;else{notify(e.message);render();}}});
   // A previous native close event can arrive after this dialog has reopened.
   $('#dialog').addEventListener('close',()=>{if(!$('#dialog').open){if(modal?.kind==='account-change-password'){$('#account-change-password-form')?.reset();accountChangeUserId=null;}modal=null;}});
-  window.addEventListener('storage',event=>{if(event.key!==KEY)return;if(cloud.enabled&&cloud.user){try{cloud.record=cloud.decode(event.newValue,cloud.user.id);}catch(error){notify(error.message);return;}} try{snapshot=event.newValue;data=snapshot?E.normalize(JSON.parse(snapshot)):E.empty();loadError=null;close();render();notify('Données actualisées depuis un autre onglet.');}catch(e){loadError=e.message;rawRecovery=event.newValue||'';render();}});
-  document.addEventListener('visibilitychange',async()=>{if(!document.hidden){if(cloud.enabled&&cloud.user)await cloud.sync();catchUp();render();}});
+  window.addEventListener('storage',event=>{if(event.key===soundFeedback.storageKey){soundFeedback.refresh();updateSoundControls();return;}if(event.key!==KEY)return;if(cloud.enabled&&cloud.user){try{cloud.record=cloud.decode(event.newValue,cloud.user.id);}catch(error){notify(error.message);return;}} try{snapshot=event.newValue;data=snapshot?E.normalize(JSON.parse(snapshot)):E.empty();loadError=null;close();render();notify('Données actualisées depuis un autre onglet.');}catch(e){loadError=e.message;rawRecovery=event.newValue||'';render();}});
+  document.addEventListener('visibilitychange',async()=>{if(document.hidden){soundFeedback.pause();return;}if(!document.hidden){if(cloud.enabled&&cloud.user)await cloud.sync();catchUp();render();}});
   window.addEventListener('online',()=>cloud.sync());
   setInterval(()=>{if(cloud.enabled&&cloud.user&&!document.hidden)cloud.sync();},60000);
   matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',applyPrefs);
