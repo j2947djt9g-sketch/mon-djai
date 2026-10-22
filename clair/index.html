@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="auto" data-app-version="2026-10-22.3">
+<html lang="fr" data-theme="auto" data-app-version="2026-10-22.4">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#783bf1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://hkssnbvktfscizojhftl.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
@@ -425,7 +425,7 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
 /* Automatic Clair opening: the original Ruban glyph, no sample budget. */
 #welcome{--splash-bg:#100c19;--splash-ink:#fff;--splash-muted:#c5b8dc;border:0;outline:0;border-radius:0;position:fixed;inset:0;max-width:none;max-height:none;width:100%;height:100%;height:100dvh;margin:0;padding:calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 43%,#6d3dbb24 0,transparent 58%),var(--splash-bg);color:var(--splash-ink);text-align:center;overflow:hidden}
 #welcome[open]{display:flex;align-items:center;justify-content:center}
-#welcome::backdrop{background:#100c19;backdrop-filter:none}
+#welcome::backdrop{background:transparent;backdrop-filter:none}
 #welcome .splash-content{position:relative;width:min(100%,460px);display:flex;flex-direction:column;align-items:center;isolation:isolate}
 #welcome .splash-halo{position:absolute;z-index:-1;width:320px;height:320px;top:50%;left:50%;border-radius:50%;background:radial-gradient(circle,#9b6cff24 0,#5c2c9020 36%,transparent 68%);transform:translate(-50%,-55%);pointer-events:none}
 #welcome .splash-wordmark{--splash-mark-size:clamp(76px,21vw,128px);display:flex;align-items:center;justify-content:center;gap:0;margin:0;line-height:1;white-space:nowrap}
@@ -446,10 +446,10 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
 #welcome.splash-full .splash-tagline{animation:splash-copy .35s 2.65s ease-out both}
 #welcome.splash-full .splash-rule{animation:splash-line .3s 2.75s ease-out both}
 #welcome.splash-full .splash-halo{animation:splash-glow 2.8s .2s ease-out both}
-#welcome.splash-leaving{animation:splash-exit .35s ease-in both}
+#welcome.splash-leaving{animation:splash-exit .7s cubic-bezier(.4,0,.2,1) both}
 @keyframes splash-draw{0%{stroke-dashoffset:1;opacity:0}1%{opacity:1}100%{stroke-dashoffset:0;opacity:1}}
 @keyframes splash-copy{from{opacity:0;transform:translateY(10px);filter:blur(4px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
-@keyframes splash-exit{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.018)}}
+@keyframes splash-exit{from{opacity:1}to{opacity:0}}
 @keyframes splash-line{from{opacity:0;transform:scaleX(0)}to{opacity:1;transform:scaleX(1)}}
 @keyframes splash-glow{0%{opacity:0;transform:translate(-50%,-55%) scale(.7)}65%,100%{opacity:1;transform:translate(-50%,-55%) scale(1)}}
 .startup-wait{min-height:55vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.startup-wait h1{font-size:25px;margin-top:20px}.startup-spinner{width:28px;height:28px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:startup-spin .9s linear infinite}@keyframes startup-spin{to{transform:rotate(360deg)}}
@@ -1807,7 +1807,7 @@ function submitCharge(f){
       if(!cloud.enabled&&!loadError&&!data.initialized)beginSetup();
       else if(accountDeferredSetup&&!accountResetStep){accountDeferredSetup=false;cloud.hooks?.empty?.();}
     };
-    const leave=(immediate=false)=>{if(finished||leaving)return;leaving=true;clearTimeout(timer);clearTimeout(maxTimer);if(immediate||motion.matches){reveal();return;}intro.classList.add('splash-leaving');exitTimer=setTimeout(reveal,350);};
+    const leave=(immediate=false)=>{if(finished)return;if(immediate||motion.matches){reveal();return;}if(leaving)return;leaving=true;clearTimeout(timer);clearTimeout(maxTimer);intro.classList.add('splash-leaving');exitTimer=setTimeout(reveal,700);};
     const refresh=()=>{if(finished)return;if(accountResetStep||loadError){leave(true);return;}if(elapsed&&(!cloud.enabled||(cloud.ready&&cloud.status!=='loading')))leave();};
     const reduce=event=>{if(event.matches){elapsed=true;leave(true);}};
     startupController={active:true,refresh};
@@ -1817,7 +1817,7 @@ function submitCharge(f){
     intro.addEventListener('cancel',event=>{event.preventDefault?.();leave(true);},{once:true});
     intro.classList.add(motion.matches?'splash-static':'splash-full');
     try{intro.showModal();}catch(_){startAccount();reveal();return;}
-    timer=setTimeout(()=>{elapsed=true;refresh();},motion.matches?150:3150);
+    timer=setTimeout(()=>{elapsed=true;refresh();},motion.matches?150:3200);
     maxTimer=setTimeout(()=>leave(true),12000);
     motion.addEventListener?.('change',reduce);startAccount();
   }

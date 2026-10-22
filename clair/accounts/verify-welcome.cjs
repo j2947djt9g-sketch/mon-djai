@@ -33,10 +33,12 @@
     const geometry=await page.locator('#welcome').evaluate(el=>{const r=el.getBoundingClientRect(),content=el.querySelector('.splash-content').getBoundingClientRect();return {scroll:el.scrollWidth,w:r.width,h:r.height,x:content.x+content.width/2,y:content.y+content.height/2,bg:getComputedStyle(el).backgroundColor}});
     assert(geometry.scroll<=width+1);assert.equal(geometry.bg,'rgb(16, 12, 25)');assert(Math.abs(geometry.x-width/2)<2&&Math.abs(geometry.y-height/2)<2);
     if(process.env.CLAIR_PREVIEW==='1'&&width===390)console.log('CLAIR_SPLASH_PREVIEW='+((await page.screenshot({type:'jpeg',quality:75})).toString('base64')));
-    await page.clock.runFor(3600);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form[data-mode="login"]').waitFor();
-    await page.reload();await page.locator('#welcome.splash-full').waitFor({state:'visible'});await page.clock.runFor(3600);await page.locator('#welcome').waitFor({state:'hidden'});
+    await page.clock.runFor(3200);await page.locator('#welcome.splash-leaving').waitFor();assert.equal(await page.locator('#welcome').evaluate(el=>getComputedStyle(el,'::backdrop').backgroundColor),'rgba(0, 0, 0, 0)');
+    await page.locator('#welcome').evaluate(el=>{const exit=el.getAnimations().find(a=>a.animationName==='splash-exit');exit.pause();exit.currentTime=350;});const opacity=await page.locator('#welcome').evaluate(el=>Number(getComputedStyle(el).opacity));assert(opacity>0&&opacity<1);await page.locator('#account-form[data-mode="login"]').waitFor();const loginBox=await page.locator('#account-form').boundingBox();
+    await page.clock.runFor(700);await page.locator('#welcome').waitFor({state:'hidden'});assert.deepEqual(await page.locator('#account-form').boundingBox(),loginBox,'Login form stays in place when the fade completes');
+    await page.reload();await page.locator('#welcome.splash-full').waitFor({state:'visible'});await page.clock.runFor(4000);await page.locator('#welcome').waitFor({state:'hidden'});
     assert.deepEqual(errors,[]);await context.close();
-    console.log('PASS splash Chromium '+width+'x'+height+': ordered C/L/A/I/R pen strokes, stable centered layout, complete 3.5-second opening and direct session routing');
+    console.log('PASS splash Chromium '+width+'x'+height+': unchanged ordered C/L/A/I/R strokes, stable centered layout, 3.9-second opening and crossfade into login');
    }
    for(const colorScheme of ['light','dark']){
     const context=await browser.newContext({reducedMotion:'reduce',colorScheme}),page=await context.newPage();await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',r=>r.abort());
