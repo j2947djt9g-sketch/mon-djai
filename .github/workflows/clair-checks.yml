@@ -77,3 +77,4 @@ jobs:
           NODE
           psql -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/clair-reminders-test.sql"
           psql -v ON_ERROR_STOP=1 -f supabase/verify-reminders.sql
+          psql -v ON_ERROR_STOP=1 -f clair/accounts/verify-currency.sql

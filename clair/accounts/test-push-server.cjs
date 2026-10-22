@@ -39,6 +39,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
  clock=new Date('2026-10-21T06:59:00Z');assert.equal((await (await call('dispatch',{},cron)).json()).outsideWindow,true);assert.equal(sent.length,0);
  clock=new Date('2026-10-21T07:00:00Z');await Promise.all([call('dispatch',{},cron),call('dispatch',{},cron)]);assert.equal(sent.length,1);assert.match(sent[0].body,/9,99/);assert.equal(sent[0].tag,'clair-phone:2026-10-23');assert(!JSON.stringify(sent).includes('openingCents'));
  await call('dispatch',{},cron);assert.equal(sent.length,1);
+ for(const currency of ['EUR','USD','XOF','XAF']){
+   const amountCents=currency.startsWith('X')?150000:999;latest={...latest,currency,rules:[{...rule('phone'),amountCents}]};claims.clear();await call('dispatch',{},cron);
+   assert(sent.at(-1).body.includes(new Intl.NumberFormat('fr-FR',{style:'currency',currency}).format(amountCents/100)));
+ }
+ sent=sent.slice(0,1);latest={...latest,currency:'EUR',rules:[rule('phone')]};
+ console.log('PASS push reminders format EUR USD XOF XAF without currency conversion');
  claims.clear();onBudget=n=>{if(n===2)latest={...latest,preferences:{reminders:false}}};budgetsRead=0;await call('dispatch',{},cron);assert.equal(sent.length,1);onBudget=null;
  latest={...latest,preferences:{reminders:true}};claims.clear();fail=true;await call('dispatch',{},cron);assert.equal(devices.get(id).enabled,false);fail=false;
  await call('subscribe',{deviceId:id,subscription:sub});await call('unsubscribe',{deviceId:id});assert.equal((await (await call('status',{deviceId:id})).json()).active,false);assert.equal(devices.get(id).enabled,false);
