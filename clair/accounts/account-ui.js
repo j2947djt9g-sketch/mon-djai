@@ -4,12 +4,14 @@
   const recoveryQuery=new URLSearchParams(location.search||'');
   const recoveryError=recoveryParams.get('error_code')||recoveryQuery.get('error_code')||recoveryParams.get('error')||recoveryQuery.get('error');
   let accountMode='login',accountBusy=false,accountRecovery=recoveryParams.get('type')==='recovery',accountStarted=false;
+  let startupController=null;
   let accountResetStep=accountRecovery?'checking':recoveryError?'expired':null;
   let accountResetEmail='',accountRecoveryUserId=null,accountDeferredSetup=false;
   let accountSignupResult=null,accountChangeUserId=null,accountChangeNonceRequired=false,accountChangeResendUntil=0;
   const cloud=new window.ClairCloud(window.CLAIR_ACCOUNT_CONFIG,{
     normalize: value=>E.normalize(value),
     status:()=>{
+      startupController?.refresh();
       if(accountResetStep){
         if(cloud.ready&&cloud.status!=='loading'&&
           (accountResetStep==='checking'||(accountResetStep==='password'&&cloud.user?.id!==accountRecoveryUserId)))
@@ -38,7 +40,7 @@
       if(changed&&data.initialized)notify('Budget actualisé depuis ton compte.');
     },
     empty:()=>{
-      if(accountResetStep){accountDeferredSetup=true;return;}
+      if(accountResetStep||startupController?.active){accountDeferredSetup=true;return;}
       const legacy=legacyBudget();
       if(legacy?.initialized)dialog('Retrouver ton budget actuel',`<p>Ce navigateur contient déjà ${legacy.transactions.length} opérations. Tu peux les transférer vers ton compte.</p><p class="help">Le compte connecté : ${esc(cloud.user.email)}.</p><div class="actions"><button class="button primary" data-action="account-import">Transférer mon budget</button><button class="button" data-action="account-start-empty">Commencer un nouveau budget</button></div>`,'account-import');
       else if(!data.initialized)beginSetup();
@@ -65,6 +67,7 @@
       '<p class="account-form-signature">Ton budget, l’esprit tranquille.</p></div></div>'+
       '<p class="account-screen-credit">Développé par El-Hadj</p>';
   }
+  function startupWaiting(){return '<section class="startup-wait" role="status" aria-live="polite"><span class="startup-spinner" aria-hidden="true"></span><h1>Ton espace se charge.</h1><p class="help">Encore un instant…</p><button class="button" type="button" data-action="startup-retry">Réessayer</button></section>';}
   function accountGate(){
     if(!cloud.ready||cloud.status==='loading')return '<section class="card" id="account-loading"><h1>Ouverture de ton compte…</h1><p class="help">Ta copie locale est conservée.</p></section>';
     const signup=accountMode==='signup';

@@ -1,26 +1,30 @@
 /* Automatic Clair opening: the original Ruban glyph, no sample budget. */
-#welcome{--splash-bg:#fbf9ff;--splash-ink:#30204e;--splash-muted:#76678c;border:0;outline:0;border-radius:0;position:fixed;inset:0;max-width:none;max-height:none;width:100%;height:100%;height:100dvh;margin:0;padding:calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 44%,#8f60e912 0,transparent 48%),var(--splash-bg);color:var(--splash-ink);text-align:center;overflow:hidden}
+#welcome{--splash-bg:#100c19;--splash-ink:#fff;--splash-muted:#c5b8dc;border:0;outline:0;border-radius:0;position:fixed;inset:0;max-width:none;max-height:none;width:100%;height:100%;height:100dvh;margin:0;padding:calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 43%,#6d3dbb24 0,transparent 58%),var(--splash-bg);color:var(--splash-ink);text-align:center;overflow:hidden}
 #welcome[open]{display:flex;align-items:center;justify-content:center}
-#welcome::backdrop{background:transparent;backdrop-filter:none}
-#welcome .splash-content{width:min(100%,420px);display:flex;flex-direction:column;align-items:center;gap:0}
-#welcome .splash-logo{display:block;width:clamp(156px,38vw,208px);height:auto;overflow:visible;filter:drop-shadow(0 10px 20px #7c45d914)}
+#welcome::backdrop{background:#100c19;backdrop-filter:none}
+#welcome .splash-content{position:relative;width:min(100%,460px);display:flex;flex-direction:column;align-items:center;isolation:isolate}
+#welcome .splash-halo{position:absolute;z-index:-1;width:320px;height:320px;top:50%;left:50%;border-radius:50%;background:radial-gradient(circle,#9b6cff24 0,#5c2c9020 36%,transparent 68%);transform:translate(-50%,-55%);pointer-events:none}
+#welcome .splash-wordmark{display:flex;align-items:center;justify-content:center;gap:clamp(3px,1vw,8px);margin:0;line-height:1;white-space:nowrap}
+#welcome .splash-logo{display:block;flex:none;width:clamp(76px,21vw,128px);height:auto;overflow:visible;filter:drop-shadow(0 0 24px #9257ef35)}
 #welcome .splash-trace{stroke-dasharray:1;stroke-dashoffset:0}
-#welcome .splash-name{margin:6px 0 0;font-size:clamp(40px,9vw,50px);font-weight:780;letter-spacing:-2px;line-height:1.2;color:var(--splash-ink)}
-#welcome .splash-tagline{margin:12px 0 0;font-size:clamp(13px,3.5vw,15px);line-height:1.6;letter-spacing:.01em;color:var(--splash-muted)}
+#welcome .splash-name{display:block;margin:0 0 0 -2px;font-size:clamp(58px,16vw,98px);font-weight:650;letter-spacing:.025em;line-height:1;color:#fff}
+#welcome .splash-tagline{margin:24px 0 0;font-size:clamp(12px,3.5vw,15px);font-weight:450;line-height:1.6;letter-spacing:.025em;color:var(--splash-muted)}
+#welcome .splash-rule{display:block;width:34px;height:2px;margin-top:22px;border-radius:4px;background:linear-gradient(90deg,#7440c9,#bd97ff);box-shadow:0 0 14px #9963ee50}
 #welcome .splash-sheen{opacity:0}
-#welcome.splash-full{animation:splash-exit .26s 1.74s ease-in both}
-#welcome.splash-full .splash-trace{animation:splash-draw .9s cubic-bezier(.35,0,.2,1) both}
-#welcome.splash-full .splash-name{animation:splash-copy .38s .86s ease-out both}
-#welcome.splash-full .splash-tagline{animation:splash-copy .35s 1.09s ease-out both}
-#welcome.splash-full .splash-sheen{animation:splash-sheen .44s .96s ease-out both}
-#welcome.splash-quick{animation:splash-exit .12s .33s ease-in both}
-#welcome.splash-quick .splash-trace{animation:splash-draw .18s ease-out both}
-#welcome.splash-quick .splash-name{animation:splash-copy .16s .07s ease-out both}
-#welcome.splash-quick .splash-tagline{animation:splash-copy .12s .14s ease-out both}
+#welcome.splash-full .splash-trace{animation:splash-draw 1.35s cubic-bezier(.25,.1,.18,1) both}
+#welcome.splash-full .splash-logo{animation:splash-settle 1.6s cubic-bezier(.2,.7,.3,1) both}
+#welcome.splash-full .splash-name{animation:splash-copy .7s 1.05s cubic-bezier(.2,.7,.3,1) both}
+#welcome.splash-full .splash-tagline{animation:splash-copy .55s 1.85s ease-out both}
+#welcome.splash-full .splash-rule{animation:splash-line .6s 2.1s ease-out both}
+#welcome.splash-full .splash-halo{animation:splash-glow 2.7s ease-out both}
+#welcome.splash-full .splash-sheen{animation:splash-sheen .85s 1.45s ease-out both}
+#welcome.splash-leaving{animation:splash-exit .35s ease-in both}
 @keyframes splash-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
-@keyframes splash-copy{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
-@keyframes splash-exit{from{opacity:1}to{opacity:0}}
-@keyframes splash-sheen{0%{opacity:0;transform:translateX(-180px) skewX(-16deg)}20%{opacity:.42}80%{opacity:.25}100%{opacity:0;transform:translateX(520px) skewX(-16deg)}}
-html[data-theme=dark] #welcome{--splash-bg:#15101f;--splash-ink:#f2ecff;--splash-muted:#b9accd}
-@media(prefers-color-scheme:dark){html[data-theme=auto] #welcome{--splash-bg:#15101f;--splash-ink:#f2ecff;--splash-muted:#b9accd}}
-@media(prefers-reduced-motion:reduce){#welcome,#welcome .splash-trace,#welcome .splash-name,#welcome .splash-tagline,#welcome .splash-sheen{animation:none!important}#welcome .splash-trace{stroke-dashoffset:0}}
+@keyframes splash-copy{from{opacity:0;transform:translateY(10px);filter:blur(4px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
+@keyframes splash-settle{from{transform:scale(.9);filter:drop-shadow(0 0 0 #9257ef00)}to{transform:scale(1);filter:drop-shadow(0 0 24px #9257ef35)}}
+@keyframes splash-exit{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.018)}}
+@keyframes splash-line{from{opacity:0;transform:scaleX(0)}to{opacity:1;transform:scaleX(1)}}
+@keyframes splash-glow{0%{opacity:0;transform:translate(-50%,-55%) scale(.7)}65%,100%{opacity:1;transform:translate(-50%,-55%) scale(1)}}
+@keyframes splash-sheen{0%{opacity:0;transform:translateX(-180px) skewX(-16deg)}25%{opacity:.35}75%{opacity:.22}100%{opacity:0;transform:translateX(520px) skewX(-16deg)}}
+.startup-wait{min-height:55vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.startup-wait h1{font-size:25px;margin-top:20px}.startup-spinner{width:28px;height:28px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:startup-spin .9s linear infinite}@keyframes startup-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#welcome,#welcome *, .startup-spinner{animation:none!important;transition:none!important}#welcome .splash-trace{stroke-dashoffset:0}}

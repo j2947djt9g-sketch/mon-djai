@@ -39,6 +39,7 @@ jobs:
           CLAIR_PREVIEW: '1'
         run: |
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-navigation.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-startup-session.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-browser.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-journal.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-welcome.cjs

@@ -6,7 +6,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const url='http://127.0.0.1:'+server.address().port+'/index.html';
  const browser=await chromium.launch({headless:true,...(process.env.CLAIR_CHROME_PATH?{executablePath:process.env.CLAIR_CHROME_PATH}:{})});
- async function open(width,data){const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.clock.install({time:new Date('2026-10-22T12:00:00+02:00')});await page.addInitScript(seed=>{window.CLAIR_ACCOUNT_CONFIG=null;localStorage.setItem('clair-github-money-v3',JSON.stringify(seed));sessionStorage.setItem('clair-splash-v2','1');},data);await page.goto(url);await page.clock.runFor(500);await page.locator('#welcome').waitFor({state:'hidden'});return {context,page,errors};}
+ async function open(width,data){const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce'}),page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.clock.install({time:new Date('2026-10-22T12:00:00+02:00')});await page.addInitScript(seed=>{window.CLAIR_ACCOUNT_CONFIG=null;localStorage.setItem('clair-github-money-v3',JSON.stringify(seed));sessionStorage.setItem('clair-splash-v2','1');},data);await page.goto(url);await page.clock.runFor(500);await page.locator('#welcome').waitFor({state:'hidden'});return {context,page,errors};}
  try{
   for(const width of [320,390,768,1440]){
    const {context,page,errors}=await open(width,seed);await page.locator('.balance-section').waitFor();

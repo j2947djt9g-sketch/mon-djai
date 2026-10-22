@@ -12,25 +12,25 @@
     const context=await browser.newContext({viewport:{width,height},reducedMotion:'no-preference',colorScheme:'light'}),page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',r=>r.abort());
     await page.clock.install({time:new Date('2026-10-21T12:00:00Z')});await page.goto(url);await page.locator('#welcome').waitFor({state:'visible'});
-    assert.equal(await page.locator('#welcome-title').innerText(),'Clair');assert.equal(await page.locator('#welcome-tagline').innerText(),'Ton budget, l’esprit tranquille.');
+    assert.equal(await page.locator('#welcome-title').getAttribute('aria-label'),'Clair');assert.equal(await page.locator('.splash-name').innerText(),'LAIR');assert.equal(await page.locator('#welcome-tagline').innerText(),'Ton budget, l’esprit tranquille.');
     assert.equal(await page.locator('#welcome button,#welcome .welcome-preview,#welcome .mascot-pose').count(),0);assert.equal(await page.locator('#welcome .splash-logo').count(),1);assert(!/\d|€/.test(await page.locator('#welcome').innerText()));
     const seek=async ms=>page.locator('#welcome').evaluate((el,ms)=>{for(const a of el.getAnimations({subtree:true})){a.pause();a.currentTime=ms;}},ms);
     await seek(0);const initial=await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset));
     await seek(450);const midway=await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset));
     assert(initial>.99&&midway>0&&midway<initial,'Ruban must draw progressively');
-    await seek(1500);assert((await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset)))<.001);assert((await page.locator('.splash-name').evaluate(el=>Number(getComputedStyle(el).opacity)))>.99);
+    await seek(2200);assert((await page.locator('.splash-trace').evaluate(el=>parseFloat(getComputedStyle(el).strokeDashoffset)))<.001);assert((await page.locator('.splash-name').evaluate(el=>Number(getComputedStyle(el).opacity)))>.99);
     const geometry=await page.locator('#welcome').evaluate(el=>{const r=el.getBoundingClientRect(),content=el.querySelector('.splash-content').getBoundingClientRect();return {scroll:el.scrollWidth,w:r.width,h:r.height,x:content.x+content.width/2,y:content.y+content.height/2,bg:getComputedStyle(el).backgroundColor}});
-    assert(geometry.scroll<=width+1);assert.equal(geometry.bg,'rgb(251, 249, 255)');assert(Math.abs(geometry.x-width/2)<2&&Math.abs(geometry.y-height/2)<2);
+    assert(geometry.scroll<=width+1);assert.equal(geometry.bg,'rgb(16, 12, 25)');assert(Math.abs(geometry.x-width/2)<2&&Math.abs(geometry.y-height/2)<2);
     if(process.env.CLAIR_PREVIEW==='1'&&width===390)console.log('CLAIR_SPLASH_PREVIEW='+((await page.screenshot({type:'jpeg',quality:75})).toString('base64')));
-    await page.clock.runFor(2010);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form[data-mode="login"]').waitFor();
-    await page.reload();await page.locator('#welcome.splash-quick').waitFor({state:'visible'});await page.clock.runFor(500);await page.locator('#welcome').waitFor({state:'hidden'});
+    await page.clock.runFor(3600);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form[data-mode="login"]').waitFor();
+    await page.reload();await page.locator('#welcome.splash-full').waitFor({state:'visible'});await page.clock.runFor(3600);await page.locator('#welcome').waitFor({state:'hidden'});
     assert.deepEqual(errors,[]);await context.close();
-    console.log('PASS splash Chromium '+width+'x'+height+': Ruban draw, name/signature, no sample balance/buttons, centered layout, automatic opening and brief return');
+    console.log('PASS splash Chromium '+width+'x'+height+': Ruban draw, name/signature, no sample balance/buttons, centered layout, 3.5-second inline wordmark and direct session routing');
    }
    for(const colorScheme of ['light','dark']){
     const context=await browser.newContext({reducedMotion:'reduce',colorScheme}),page=await context.newPage();await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',r=>r.abort());
     await page.clock.install();await page.goto(url);await page.locator('#welcome.splash-static').waitFor({state:'visible'});assert.equal(await page.locator('.splash-trace').evaluate(el=>getComputedStyle(el).animationName),'none');
-    if(colorScheme==='dark')assert.equal(await page.locator('#welcome').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(21, 16, 31)');
+    if(colorScheme==='dark')assert.equal(await page.locator('#welcome').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(16, 12, 25)');
     await page.clock.runFor(200);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form').waitFor();await context.close();
    }
    const escapeContext=await browser.newContext(),escapePage=await escapeContext.newPage();await escapeContext.route('https://hkssnbvktfscizojhftl.supabase.co/**',r=>r.abort());await escapePage.goto(url);await escapePage.locator('#welcome').waitFor({state:'visible'});await escapePage.keyboard.press('Escape');await escapePage.locator('#welcome').waitFor({state:'hidden'});await escapePage.locator('#account-form').waitFor();await escapeContext.close();
