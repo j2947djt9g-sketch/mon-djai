@@ -45,7 +45,7 @@
       else if(pathname.endsWith('/recover')){calls.recovery++;await route.fulfill({status:200,contentType:'application/json',body:'{}'});}
       else await route.fulfill({status:200,contentType:'application/json',body:'{}'});
     });
-    await page.goto(url);await page.locator('#account-form[data-mode="login"]').waitFor();
+    await page.goto(url);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form[data-mode="login"]').waitFor();
     assert.equal(await page.locator('.account-layout').count(),1);
     assert.equal(await page.locator('.account-scene .mascot-pose').count(),1);
     assert.equal(await page.locator('.account-form-pane .brand-mark').count(),0);
@@ -55,7 +55,7 @@
     assert.equal(geometry.cols,width>760?2:1);assert.equal(geometry.panel,colorScheme==='dark'?'#1c152c':'#fff');
     assert(!/Changer l.image|Design Split|bout en bout|v2.4/.test(await page.locator('.account-layout').innerText()));
     const source=await page.locator('.account-scene .mascot-pose').evaluate(el=>getComputedStyle(el).backgroundImage);
-    const imagePath=source.match(/url\(["']?([^"')]+)["']?\)/)[1];assert((await context.request.get(imagePath)).ok(),'mascot asset missing');
+    const imageMatch=source.match(/url\(["']?([^"')]+)["']?\)/);assert(imageMatch,'Account mascot must have a local image');const imagePath=imageMatch[1];assert((await context.request.get(imagePath)).ok(),'mascot asset missing');
     if(process.env.CLAIR_PREVIEW==='1'&&(width===1440||width===390||colorScheme==='dark'))console.log('CLAIR_AUTH_PREVIEW_'+width+'='+((await page.screenshot({type:'jpeg',quality:65})).toString('base64')));
     await page.locator('#account-form input[name="email"]').fill('demo@example.test');
     await page.locator('#account-form input[name="password"]').fill('fictional-password-42');
