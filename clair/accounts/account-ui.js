@@ -21,7 +21,7 @@
         if(!editing)render();
         return;
       }
-      if(!cloud.user||!cloud.ready||cloud.status==='loading'||$('#account-form')||$('#account-loading'))render();
+      if(!cloud.user||!cloud.ready||cloud.status==='loading'||$('#account-form')||$('#account-loading')||$('#startup-loading'))render();
       else renderAccountStatus();
     },
     recovery:user=>{accountRecovery=true;accountRecoveryUserId=user?.id||null;accountResetStep='password';close();},
@@ -67,7 +67,7 @@
       '<p class="account-form-signature">Ton budget, l’esprit tranquille.</p></div></div>'+
       '<p class="account-screen-credit">Développé par El-Hadj</p>';
   }
-  function startupWaiting(){return '<section class="startup-wait" role="status" aria-live="polite"><span class="startup-spinner" aria-hidden="true"></span><h1>Ton espace se charge.</h1><p class="help">Encore un instant…</p><button class="button" type="button" data-action="startup-retry">Réessayer</button></section>';}
+  function startupWaiting(){return '<section id="startup-loading" class="startup-wait" role="status" aria-live="polite"><span class="startup-spinner" aria-hidden="true"></span><h1>Ton espace se charge.</h1><p class="help">Encore un instant…</p><button class="button" type="button" data-action="startup-retry">Réessayer</button></section>';}
   function accountGate(){
     if(!cloud.ready||cloud.status==='loading')return '<section class="card" id="account-loading"><h1>Ouverture de ton compte…</h1><p class="help">Ta copie locale est conservée.</p></section>';
     const signup=accountMode==='signup';
