@@ -17,7 +17,7 @@
     const seek=async ms=>page.locator('#welcome').evaluate((el,ms)=>{for(const a of el.getAnimations({subtree:true})){a.pause();a.currentTime=ms;}},ms);
     const offsets=async()=>page.locator('.splash-trace,.splash-letter').evaluateAll(nodes=>nodes.map(el=>parseFloat(getComputedStyle(el).strokeDashoffset)));
     const partial=value=>value>0.001&&value<.999;
-    await seek(0);assert((await offsets()).every(value=>value>.999),'All letters start undrawn');const firstBox=await page.locator('.splash-wordmark').boundingBox();
+    await seek(0);assert((await offsets()).every(value=>value>.999),'All letters start undrawn');assert((await page.locator('.splash-trace,.splash-letter').evaluateAll(nodes=>nodes.map(el=>Number(getComputedStyle(el).opacity)))).every(value=>value===0),'No round pen tips may flash before drawing');const firstBox=await page.locator('.splash-wordmark').boundingBox();
     await seek(600);let strokes=await offsets();assert(partial(strokes[0])&&strokes.slice(1).every(value=>value>.999),'C draws first');
     await seek(1100);strokes=await offsets();assert(strokes[0]<.001&&partial(strokes[1])&&strokes.slice(2).every(value=>value>.999),'L follows C');
     await seek(1550);strokes=await offsets();assert(strokes[1]<.001&&partial(strokes[2])&&strokes.slice(4).every(value=>value>.999),'A draws after L');
