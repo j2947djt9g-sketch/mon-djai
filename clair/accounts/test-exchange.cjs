@@ -1,0 +1,15 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(__dirname+'/../index.html','utf8'),box={window:{},Intl,Date};vm.createContext(box);vm.runInContext([...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1],box);const E=box.window.ClairEngine,date='2026-10-23';
+assert.equal(E.exchangePolicy.usdAnnual.reduce((a,b)=>a+b,0)/10,1.12087);assert.equal(E.exchangeAmount(10000,'EUR','XOF'),6559600);assert.equal(E.exchangeAmount(100000,'XOF','XAF'),100000);
+const vectors=[];
+for(const from of ['EUR','USD','XOF','XAF'])for(const to of ['EUR','USD','XOF','XAF']){
+ const d=E.empty();Object.assign(d,{currency:from,initialized:true,setupDone:true,openingCents:10000000,openingBalanceDate:'2026-10-20',budgets:{alimentation:500},budgetOverrides:{'2026-11':{alimentation:600}},savingsGoal:1000,fixedExpenses:[{id:'phone',name:'Phone',amount:100,day:25,categoryId:'telephone'}]});
+ d.savingsProjects=[{id:'trip',name:'Trip',kind:'voyage',icon:'plane',color:'violet',targetCents:10000000,targetDate:null,archived:false}];
+ d.transactions=[{id:'deposit',date:'2026-10-21',type:'expense',amountCents:20000,name:'Saving',categoryId:'epargne',savingsProjectId:'trip'},{id:'withdraw',date:'2026-10-22',type:'income',amountCents:10000,name:'Withdrawal',categoryId:'epargne',savingsProjectId:'trip'},{id:'future',date:'2026-11-01',type:'expense',amountCents:30000,name:'Future',categoryId:'loisirs'}];
+ d.rules=[{id:'weekly',name:'Meals',kind:'weekly',amountCents:0,amounts:[0,10000,20000,0,0,0,0],categoryId:'alimentation',start:'2026-10-24',end:null,pauses:[],day:1,month:1},{id:'monthly',name:'Rent',kind:'monthly',amountCents:50000,amounts:[],categoryId:'logement',start:'2026-10-24',end:null,pauses:[],day:25,month:1}];
+ const input=E.normalize(d),before=JSON.stringify(input),out=E.convertCurrency(input,to,date);assert.equal(JSON.stringify(input),before);assert.equal(E.balance(out,date),E.exchangeAmount(E.balance(input,date),from,to));assert.equal(out.transactions.length,3);assert.deepEqual(Array.from(out.transactions,t=>t.id),['deposit','withdraw','future']);assert.equal(out.currencyRevision,from===to?0:1);assert.equal(out.currency,to);assert.equal(E.normalize(JSON.parse(JSON.stringify(out))).currencyRevision,out.currencyRevision);E.validateSavings(out);E.validateCurrency(out);
+ vectors.push({input,to,date,expected:out});
+}
+assert.throws(()=>E.exchangeAmount(100,'XOF','EUR'),/faible/);assert.throws(()=>E.exchangeAmount(10000000000,'EUR','XOF'),/capacité/);
+if(process.env.CLAIR_SQL_VECTORS==='1')for(const v of vectors){const quote=s=>"'"+JSON.stringify(s).replaceAll("'","''")+"'::jsonb";console.log('do $$ begin if public.clair_fx_payload('+quote(v.input)+",'"+v.to+"','"+v.date+"')<>"+quote(v.expected)+" then raise exception 'JS/SQL conversion mismatch: "+v.input.currency+' to '+v.to+"';end if;end;$$;");}
+else console.log('PASS 16 currency pairs: exact rational rates, all monetary fields, balance reconciliation, future entries, savings, nonmutation, precision and limits');

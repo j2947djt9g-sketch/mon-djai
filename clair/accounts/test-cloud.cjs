@@ -2,7 +2,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=r
 const source=fs.readFileSync(__dirname+'/cloud.js','utf8'),html=fs.readFileSync(__dirname+'/../index.html','utf8');
 const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);scripts.forEach(s=>new vm.Script(s));
 const ectx={window:{},Date,Intl};vm.createContext(ectx);vm.runInContext(scripts[0],ectx);const E=ectx.window.ClairEngine;
-assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'c3d5c69f14242e45472b4fa4a1c9847cf1b938fd31ca7b50c45a7873dff46b1e');
+assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'a872d4a66edebdb05cfc0b3cc58c9f11e14162d92c05b933bc5b257715b69dbb');
 let rows=new Map(),saveDelay=null,readDelay=null,loseResponse=false;
 function device(uid,storage=new Map()){
  let currentUser={id:uid,email:uid+'@example.test',user_metadata:{display_name:uid}};
@@ -10,6 +10,7 @@ function device(uid,storage=new Map()){
  const client={auth:{onAuthStateChange:f=>callback=f,getSession:async()=>({data:{session:{user:currentUser}}}),signOut:async()=>({})},
  from:()=>({select(){return this},eq(_field,value){this.uid=value;return this},async maybeSingle(){if(readDelay)await readDelay;return {data:structuredClone(rows.get(this.uid)||null)}}}),
  async rpc(name,params){const id=currentUser.id;if(saveDelay)await saveDelay;const row=rows.get(id);
+ if(name==='convert_clair_currency'&&row?.revision===params.p_expected_revision)params.p_payload=E.convertCurrency(row.payload,params.p_currency,params.p_as_of);
  if(row?.operation_id===params.p_operation_id)return {data:{saved:true,row:structuredClone(row)}};
  if((row?.revision||0)!==params.p_expected_revision)return {data:{saved:false,row:structuredClone(row||null)}};
  const next={payload:params.p_payload,revision:(row?.revision||0)+1,operation_id:params.p_operation_id,display_name:params.p_display_name};rows.set(id,structuredClone(next));writes.push(params);
@@ -110,6 +111,11 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
   const stale=device(uid,new Map([[b.cloud.key(),JSON.stringify(raw)]]));await stale.init();assert.equal(stale.cloud.status,'conflict');assert.equal(rows.get(uid).payload.currency,currency);assert.throws(()=>stale.cloud.resolve(false),/devises/);stale.cloud.resolve(true);assert.equal(stale.cloud.record.payload.currency,currency);
  }
  console.log('PASS currency saved on a second device; stale EUR copies preserve both budgets and require retaining remote currency');
+ const converter=device('converter');await converter.init();converter.edit(budget(100000));await converter.cloud.sync();
+ await converter.cloud.convertCurrency('USD',1,E.today());assert.equal(converter.cloud.record.payload.currency,'USD');assert.equal(converter.cloud.record.payload.openingCents,112087);assert.equal(converter.cloud.record.payload.currencyRevision,1);
+ const passive=device('converter');await passive.init();await converter.cloud.convertCurrency('XOF',2,E.today());await passive.cloud.sync();assert.equal(passive.cloud.status,'synced');assert.equal(passive.cloud.record.payload.currency,'XOF');
+ const dirty=structuredClone(passive.cloud.record.payload);dirty.openingCents+=100;passive.edit(dirty);await assert.rejects(()=>passive.cloud.convertCurrency('EUR',3,E.today()),/Synchronise/);
+ console.log('PASS explicit conversion: clean sync required, generation persisted, exact USD rate and passive second-device adoption');
  console.log('PASS: all scripts parse; reviewed engine with savings metadata parses');
 })().catch(e=>{console.error(e);process.exitCode=1});
 

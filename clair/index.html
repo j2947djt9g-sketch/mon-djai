@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="auto" data-app-version="2026-10-22.6">
+<html lang="fr" data-theme="auto" data-app-version="2026-10-23.1">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#783bf1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://hkssnbvktfscizojhftl.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
@@ -482,6 +482,36 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
     if(typeof value!=='string'||!Object.prototype.hasOwnProperty.call(currencies,value))throw Error('Devise non prise en charge. Mets Clair à jour ou utilise une sauvegarde compatible.');
     return value;
   }
+  // Eurostat/ECB annual EUR/USD averages, 2016–2025, equally weighted by year.
+  // EUR/CFA official fixed parity: 655.957 XOF or XAF per EUR (French Treasury).
+  // Sources and method: clair/accounts/exchange-rates.json.
+  const exchangePolicy=Object.freeze({id:'annual-mean-2016-2025',period:'2016–2025',usdAnnual:Object.freeze([1.1069,1.1297,1.1810,1.1195,1.1422,1.1827,1.0530,1.0813,1.0824,1.1300]),perEuro:Object.freeze({EUR:100000,USD:112087,XOF:65595700,XAF:65595700})});
+  function exchangeRate(from,to){return exchangePolicy.perEuro[currencyCode(to)]/exchangePolicy.perEuro[currencyCode(from)];}
+  function exchangeAmount(value,from,to){
+    if(!Number.isSafeInteger(value))throw Error('Montant invalide pour la conversion.');
+    const q=currencies[currencyCode(to)].digits===0?100n:1n;
+    const a=BigInt(Math.abs(value))*BigInt(exchangePolicy.perEuro[currencyCode(to)]),b=BigInt(exchangePolicy.perEuro[currencyCode(from)])*q;
+    const result=Number(((a*2n+b)/(2n*b))*q)*(value<0?-1:1);
+    if(!Number.isSafeInteger(result)||Math.abs(result)>10000000000)throw Error('Un montant converti dépasse la capacité du budget.');
+    if(value!==0&&result===0)throw Error('Un montant est trop faible pour être conservé dans cette devise. La conversion est annulée.');
+    return result;
+  }
+  function convertCurrency(input,to,asOf=today()){
+    const d=normalize(input),from=d.currency;to=currencyCode(to);if(to===from)return d;
+    if(!d.initialized||!validDate(asOf))throw Error('Configure ton budget avant de changer sa devise.');
+    const out=JSON.parse(JSON.stringify(d)),convert=n=>exchangeAmount(n,from,to),major=n=>convert(cents(n,from))/100;
+    out.currency=to;out.currencyRevision=(d.currencyRevision||0)+1;
+    out.openingCents=convert(d.openingCents);
+    out.transactions.forEach(t=>{t.amountCents=convert(t.amountCents);});
+    out.rules.forEach(r=>{r.amountCents=convert(r.amountCents);r.amounts=r.amounts.map(convert);});
+    out.savingsProjects.forEach(p=>{p.targetCents=convert(p.targetCents);});
+    out.fixedExpenses.forEach(x=>{x.amount=major(x.amount);});out.savingsGoal=major(d.savingsGoal);
+    out.budgets=Object.fromEntries(Object.entries(d.budgets).map(([k,n])=>[k,major(n)]));
+    out.budgetOverrides=Object.fromEntries(Object.entries(d.budgetOverrides).map(([m,o])=>[m,Object.fromEntries(Object.entries(o).map(([k,n])=>[k,major(n)]))]));
+    // Reconcile the rounded ledger with the directly converted balance today.
+    out.openingCents+=convert(balance(d,asOf))-balance(out,asOf);
+    return normalize(out);
+  }
   const moneyFormats=new Map();
   function formatMoney(value,code='EUR') {
     code=currencyCode(code);
@@ -583,7 +613,7 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
   function normalize(input) {
     if (!input || typeof input !== 'object' || !Array.isArray(input.transactions)) throw Error('Sauvegarde Clair invalide.');
     if (input.transactions.length > 50000 || (input.rules || []).length > 500 || (Array.isArray(input.skipped) && input.skipped.length > 100000)) throw Error('Sauvegarde trop volumineuse.');
-    const d = empty();d.currency=currencyCode(input.currency);
+    const d = empty();d.currency=currencyCode(input.currency);d.currencyRevision=input.currencyRevision??0;if(!Number.isSafeInteger(d.currencyRevision)||d.currencyRevision<0)throw Error('Version de devise invalide.');
     const integer = n => { if (!Number.isSafeInteger(n) || Math.abs(n) > 10000000000) throw Error('Montant invalide.'); return n; };
     d.initialized = Boolean(input.initialized);
     d.setupDone = Boolean(input.setupDone);
@@ -732,7 +762,7 @@ html[data-theme=dark] .account-layout{--auth-panel:#1c152c;--auth-scene:#2c1c46;
     return { text: L.map(icsFold).join('\r\n') + '\r\n', count: occ.length };
   }
   const csvCell = x => '"' + String(x ?? '').replace(/"/g, '""').replace(/^[\s]*[=+@-]/, match => "'" + match) + '"';
-  root.ClairEngine = { currencies, currencyCode, formatMoney, inputAmount, validateCurrency, csvCell, own, safeId, cents, validDate, addDays, daysBetween, today, lastDay, monthOffset, empty, normalize, normPrefs, dueAmount, occurrences, sync, balance, skip, reserve, upcoming, reminderDate, pushPayload, ics, icsFold, icsEscape, PHOTO_MAX_BYTES, savingsBalance, validateSavings, savingsKinds, savingsIcons, savingsColors };
+  root.ClairEngine = { exchangePolicy, exchangeRate, exchangeAmount, convertCurrency, currencies, currencyCode, formatMoney, inputAmount, validateCurrency, csvCell, own, safeId, cents, validDate, addDays, daysBetween, today, lastDay, monthOffset, empty, normalize, normPrefs, dueAmount, occurrences, sync, balance, skip, reserve, upcoming, reminderDate, pushPayload, ics, icsFold, icsEscape, PHOTO_MAX_BYTES, savingsBalance, validateSavings, savingsKinds, savingsIcons, savingsColors };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -863,7 +893,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         const remote=await this.read();if(expectedEpoch!==this.epoch)return;
         const raw=localStorage.getItem(this.key(userId));this.record=this.decode(raw,userId);
         // Old clients can strip currency from their cache. Preserve both copies before any write.
-        if(remote?.payload?.initialized&&this.record?.payload.initialized&&(remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR')){this.setConflict(remote);return;}
+        if(remote?.payload?.initialized&&this.record?.payload.initialized&&((remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR')||(remote.payload.currencyRevision||0)!==(this.record.payload.currencyRevision||0))){if(this.record.meta.dirty)this.setConflict(remote);else this.adopt(remote,expectedEpoch);return;}
         // Older clients remove unknown savings fields while normalizing their cache.
         // Never promote that reduced cache into a replacement for named cloud projects.
         if(remote?.payload?.savingsSchema===1&&raw&&JSON.parse(raw).savingsSchema!==1){
@@ -903,11 +933,23 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         if(!this.conflict.remote)throw Error('Aucune copie en ligne n’est disponible.');
         this.adopt(this.conflict.remote);return;
       }
-      if(this.conflict.remote?.payload.initialized&&this.record?.payload.initialized&&(this.conflict.remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR'))throw Error('Les copies utilisent des devises différentes. Sauvegarde cette copie, puis conserve la copie en ligne.');
+      if(this.conflict.remote?.payload.initialized&&this.record?.payload.initialized&&((this.conflict.remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR')||(this.conflict.remote.payload.currencyRevision||0)!==(this.record.payload.currencyRevision||0)))throw Error('Les copies utilisent des devises différentes ou une ancienne conversion. Sauvegarde cette copie, puis conserve la copie en ligne.');
       // The conflict UI exports the device copy before asking the user to choose.
       const meta={...this.record.meta,revision:this.conflict.remote?.revision||0,operationId:crypto.randomUUID(),dirty:true};
       // Commit metadata only after persistence succeeds, so a full storage leaves both copies intact.
       const raw=JSON.stringify({...this.record.payload,_cloud:meta});localStorage.setItem(this.key(),raw);this.record={payload:this.record.payload,meta};this.conflict=null;this.hooks.apply?.(this.record.payload,raw);this.status='pending';this.emit();this.schedule();
+    }
+    async convertCurrency(to,revision,asOf){
+      if(!this.user||!this.ready||this.busy||this.converting||this.conflict||this.status!=='synced'||this.record?.meta.dirty||this.record?.meta.revision!==revision)throw Error('Synchronise ton budget et recommence l’aperçu.');
+      const epoch=this.epoch;this.converting=true;this.busy=true;this.emit();
+      try{
+        const {data,error}=await this.client.rpc('convert_clair_currency',{p_currency:to,p_expected_revision:revision,p_operation_id:crypto.randomUUID(),p_as_of:asOf});
+        if(epoch!==this.epoch)throw Error('Le compte a changé pendant la conversion.');
+        if(error)throw Error(error.message||'Conversion indisponible. Ton budget est conservé.');
+        if(!data?.saved){this.setConflict(data?.row||null);throw Error('Un autre appareil a modifié le budget. Vérifie la copie en ligne.');}
+        this.adopt(data.row,epoch);
+      }catch(error){if(epoch===this.epoch&&!this.conflict){this.status='error';this.error='Vérification de la conversion en ligne nécessaire.';this.schedule();}throw error;
+      }finally{this.converting=false;this.busy=false;this.emit();}
     }
     async logout(){
       const uid=this.user?.id;
@@ -1017,6 +1059,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
   function commit(change, message='', withSound=true) {
     if (cloud.enabled&&(!cloud.user||!cloud.ready||cloud.status==='loading')) { notify('Connecte-toi avant de modifier ton budget.'); return false; }
+    if (cloud.converting) { notify('La conversion est en cours. Patiente un instant.'); return false; }
     if (cloud.conflict) { notify('Choisis d’abord la copie à conserver.'); conflictDialog(); return false; }
     if (loadError) { notify('Récupère ou importe tes données avant de continuer.'); return false; }
     const before=structuredClone(data);
@@ -1038,7 +1081,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     }
   }
   function catchUp() {
-    if(loadError || !data.initialized || !data.setupDone)return;
+    if(loadError || cloud.converting || !data.initialized || !data.setupDone)return;
     try {
       const draft=structuredClone(data), count=E.sync(draft);
       if(count)commit(d=>{d.transactions=draft.transactions;},`${count} dépense${count>1?'s':''} automatique${count>1?'s':''} ajoutée${count>1?'s':''}.`,false);
@@ -1699,7 +1742,7 @@ function settings(){const p=data.preferences;return heading('Clair','Réglages')
 `<div class="settings-links"><button class="settings-link" data-nav="rules"><span>Mes habitudes<small>Repas et abonnements</small></span>${icon('arrow')}</button><button class="settings-link" data-nav="budget"><span>Budget et épargne<small>Mes repères du mois</small></span>${icon('arrow')}</button></div><div class="settings-grid settings-simple">
 <section class="card install-card"><h2>Clair, à portée de main</h2><p class="help">${isInstalled()?'Ouvert comme une application.':'Un accès direct depuis ton écran d’accueil.'}</p><div class="actions"><button class="button primary" data-action="install" ${isInstalled()||installBusy?'disabled':''}>${isInstalled()?'Déjà installé':installBusy?'Installation…':'Installer Clair'}</button>${location.protocol!=='file:'?`<button class="button" data-action="download-app" ${downloadBusy?'disabled':''}>${downloadBusy?'Téléchargement…':'Télécharger le fichier'}</button>`:''}</div><details class="settings-more"><summary>Installation ou téléchargement ?</summary><p class="help">Installer ajoute Clair à ton écran d’accueil quand le navigateur le permet. Le fichier HTML est une copie à ouvrir dans un navigateur sur ordinateur. Les dépenses se transfèrent séparément avec « Sauvegarder mes données ».</p></details></section>
 <section class="card"><h2>Apparence</h2><p class="help" id="theme-l">Thème</p><div class="seg" role="radiogroup" aria-labelledby="theme-l">${[['light','Clair'],['dark','Sombre'],['auto','Auto']].map(([v,l])=>`<label><input type="radio" name="theme" value="${v}" data-pref="theme" ${p.theme===v?'checked':''}><span>${l}</span></label>`).join('')}</div><p class="help" id="wall-l" style="margin-top:18px">Fond d’écran</p><div class="walls" role="radiogroup" aria-labelledby="wall-l">${[['plain','Clair'],['aurora','Aurore'],['ocean','Océan'],['sunset','Couchant'],['forest','Forêt'],['photo','Ma photo']].map(([v,l])=>`<label><input type="radio" name="wallpaper" value="${v}" data-pref="wallpaper" ${p.wallpaper===v?'checked':''} ${v==='photo'&&!p.photo?'disabled':''}><span class="sw sw-${v}">${l}</span></label>`).join('')}</div><div class="actions"><label class="button small file">${p.photo?'Changer la photo':'Choisir une photo'}<input type="file" accept="image/jpeg,image/png,image/webp" data-photo></label>${p.photo?'<button class="link" data-action="photo-remove">Retirer</button>':''}</div></section>
-<section class="card" id="currency-settings"><h2>Devise du budget</h2><p>${esc(E.currencies[data.currency].label)}</p><p class="help">Choisie au démarrage et conservée avec tes données. Les montants ne sont pas convertis automatiquement.</p></section>
+<section class="card" id="currency-settings"><h2>Devise du budget</h2><p>${esc(E.currencies[data.currency].label)}</p><p class="help">Choisie au démarrage et conservée avec tes données.</p><button type="button" class="button" data-action="currency-change" ${!data.initialized||cloud.converting?'disabled':''}>Changer de devise</button><button type="button" class="link" data-action="currency-backup" ${localStorage.getItem(BACKUP+'-currency')?'':'disabled'}>Sauvegarde avant conversion</button><p class="help" style="margin-top:12px">Conversion indicative : moyenne EUR/USD 2016–2025, parité fixe pour le franc CFA. Aucun change bancaire.</p></section>
 <section class="card" id="sound-settings"><h2>Sons</h2><label class="switch"><input type="checkbox" role="switch" data-sounds aria-describedby="sound-help" ${soundFeedback.enabled()&&soundFeedback.supported()?'checked':''} ${soundFeedback.supported()?'':'disabled'}>Sons de l’application</label><p class="help" id="sound-help" style="margin-top:12px">${soundFeedback.supported()?'Clics discrets et confirmations, sur cet appareil.':'Les sons ne sont pas disponibles dans ce navigateur.'}</p><div class="actions"><button type="button" class="button" data-action="sound-preview" ${soundFeedback.enabled()&&soundFeedback.supported()?'':'disabled'}>Écouter un aperçu</button></div></section>
 <section class="card" id="notification-settings"><h2>Rappels</h2><label class="switch"><input type="checkbox" role="switch" data-pref="reminders" ${p.reminders?'checked':''}>Me rappeler 2 jours avant</label><p class="help" style="margin-top:12px">Dans Clair dès J−2. Pour recevoir aussi une notification lorsque l’app est fermée, active les notifications sur cet appareil.</p><button class="button" data-action="ics">Ajouter les échéances au calendrier</button><details class="settings-more"><summary>En savoir plus</summary><p class="help">Le calendrier contient les échéances des 12 prochains mois, avec une alerte 2 jours avant à 9 h. Importe le fichier dans un calendrier dédié « Clair ». Après une modification, remplace cet ancien calendrier : il ne se synchronise pas automatiquement.</p><button class="link" data-nav="rules">Choisir les habitudes à rappeler</button></details><details class="settings-more"><summary>Notifications app fermée</summary>${pushSection()}</details></section>
 <section class="card"><h2>Mes données</h2><p class="help">${cloud.enabled&&cloud.user?'Budget associé à ton compte. Une sauvegarde reste utile.':'Dans ce navigateur. Sauvegarde avant de changer d’appareil.'}</p><div class="actions"><button class="button primary" data-action="export">Sauvegarder mes données</button><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label></div><details class="settings-more"><summary>En savoir plus</summary><p class="help">${cloud.enabled?'Ton budget est envoyé au service de synchronisation de ton compte. La photo de fond reste sur cet appareil.':'Aucune connexion bancaire ni synchronisation entre appareils.'} L’import remplace les données actuelles après confirmation et conserve une copie précédente.</p></details></section>
@@ -1799,6 +1842,32 @@ function submitCharge(f){
     if(!data.initialized){beginSetup();return;}const v=draft||r||{name:kind==='weekly'?'Repas habituels':'',categoryId:kind==='weekly'?'alimentation':'abonnements',kind,amounts:mealDefaults(),amountCents:0,start:nextDay(),day:'last',month:1};
     dialog(r?'Ajuster pour la suite.':'Une habitude en moins à saisir.',`<form id="rule-form">${r?'<div class="notice">La modification s’applique à partir de la date choisie. Les dépenses passées restent conservées.</div>':''}${field('Nom','name',v.name,'text','maxlength="100" required')}<div class="form-grid"><label class="field"><span>Fréquence</span><select name="kind" id="rule-kind"><option value="weekly" ${v.kind==='weekly'?'selected':''}>Certains jours de la semaine</option><option value="monthly" ${v.kind==='monthly'?'selected':''}>Chaque mois</option><option value="yearly" ${v.kind==='yearly'?'selected':''}>Chaque année</option></select></label><label class="field"><span>Catégorie</span><select name="categoryId">${options(v.categoryId)}</select></label></div>${v.kind==='weekly'?dayFields(v.amounts?.length===7?v.amounts:undefined,v.daysDraft):`<div class="form-grid">${field('Montant (€)','amount',v.amountText??(v.amountCents?amount(v.amountCents):''),'text','inputmode="decimal" required')}<label class="field"><span>Jour de l’échéance</span><select name="day"><option value="last" ${v.day==='last'?'selected':''}>Dernier jour du mois</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}" ${Number(v.day)===i+1?'selected':''}>Le ${i+1}</option>`).join('')}</select></label></div>${v.kind==='yearly'?`<label class="field"><span>Mois de l’échéance</span><select name="month">${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${Number(v.month)===i+1?'selected':''}>${esc(monthLabel('2026-'+String(i+1).padStart(2,'0')).split(' ')[0])}</option>`).join('')}</select></label>`:''}`}${field(r?'Appliquer le nouveau tarif à partir du':'Premier jour du suivi','start',draft?.start??(r?nextDay():v.start),'date',`min="${r?nextDay():data.openingBalanceDate}" required`)}<p class="help">Une date de début ne crée pas de paiement ce jour-là si ce n’est pas un jour d’échéance. Les mois courts utilisent leur dernier jour.</p>${context.fromChoices?'<div class="dialog-actions"><button type="button" class="button" data-action="rule-back">Retour aux choix</button><button class="button primary" type="submit">Activer cette règle</button></div>':formActions(r?'Appliquer la modification':'Activer cette règle')}</form>`,'rule',{...context,id:r?.id||null,ruleKind:v.kind});
   }
+  let currencyPreviewState=null;
+  function currencyDialog(){
+    if(!data.initialized)return;
+    currencyPreviewState=null;
+    dialog('Changer de devise',`<p class="help">Tout ton budget sera converti : solde, historique, habitudes, budgets et épargne.</p><label class="field"><span>Nouvelle devise</span><select id="currency-target">${Object.entries(E.currencies).filter(([c])=>c!==data.currency).map(([c,m])=>`<option value="${c}">${esc(m.label)}</option>`).join('')}</select></label><p class="notice">Les conversions avec le dollar utilisent la moyenne annuelle 2016–2025 : 1 € = 1,12087 $US. Ce taux historique est indicatif et ne correspond pas au cours du jour. Pour le CFA : 1 € = 655,957 F CFA.</p><p class="help">Arrondi au centime en EUR/USD, au franc entier en CFA. Une sauvegarde locale sera conservée avant la conversion. Les conversions répétées peuvent cumuler des arrondis.</p><div id="form-error" class="notice error" role="alert"></div><div class="dialog-actions"><button type="button" class="button" data-action="close">Annuler</button><button type="button" class="button primary" data-action="currency-preview">Voir la conversion</button></div>`,'currency');
+  }
+  function currencyPreview(){
+    const to=$('#currency-target').value,next=E.convertCurrency(data,to),before=E.balance(data),after=E.balance(next),rate=E.exchangeRate(data.currency,to);
+    currencyPreviewState={to,snapshot,revision:cloud.record?.meta.revision||0};
+    dialog('Vérifier la conversion',`<p class="help">${esc(E.currencies[data.currency].label)} → ${esc(E.currencies[to].label)}</p><p><strong>${esc(E.formatMoney(before,data.currency))} → ${esc(E.formatMoney(after,to))}</strong></p><p class="help">Taux : 1 ${esc(data.currency)} ≈ ${esc(new Intl.NumberFormat('fr-FR',{maximumFractionDigits:8}).format(rate))} ${esc(to)}.</p><p class="notice">${data.currency==='USD'||to==='USD'?'Moyenne historique 2016–2025, valeur indicative.':'Parité fixe officielle euro/CFA.'} Ce changement convertit aussi les montants de ton historique et tes dépenses automatiques. Il ne change pas de l'argent auprès d'une banque.</p><p class="help">Les arrondis sont appliqués à chaque montant ; le solde initial est ajusté si nécessaire pour conserver le total converti affiché ci-dessus.</p><div id="form-error" class="notice error" role="alert"></div><div class="dialog-actions"><button type="button" class="button" data-action="currency-change">Retour</button><button type="button" class="button primary" data-action="currency-apply">Convertir mon budget</button></div>`,'currency-preview');
+  }
+  async function applyCurrency(button){
+    const choice=currencyPreviewState;if(!choice||button.disabled)return;
+    if(snapshot!==choice.snapshot||localStorage.getItem(KEY)!==snapshot)throw Error('Le budget a changé. Recommence l’aperçu avant de convertir.');
+    if(cloud.enabled&&(navigator.onLine===false||cloud.status!=='synced'||cloud.record?.meta.dirty||cloud.busy))throw Error('Attends que ton budget soit synchronisé avant de convertir.');
+    // A failed backup must block conversion, never discard the previous amounts.
+    localStorage.setItem(BACKUP+'-currency',JSON.stringify(data));
+    button.disabled=true;
+    try{
+      if(cloud.enabled)await cloud.convertCurrency(choice.to,choice.revision,E.today());
+      else{const next=E.convertCurrency(data,choice.to);if(!commit(d=>{for(const k of Object.keys(d))delete d[k];Object.assign(d,next);}))return;}
+      currencyPreviewState=null;close();render();notify('Ton budget a été converti. La copie précédente reste sur cet appareil.');soundFeedback.saved();
+    }finally{button.disabled=false;}
+  }
+  function exportCurrencyBackup(){const raw=localStorage.getItem(BACKUP+'-currency');if(!raw)throw Error('Aucune sauvegarde de conversion sur cet appareil.');download(raw,'clair-avant-conversion.json');}
+
   function confirm(title,copy,callback,label='Confirmer'){dialog(title,`<p class="muted">${copy}</p><div class="dialog-actions"><button class="button" data-action="close">Annuler</button><button class="button primary" data-action="confirm">${label}</button></div>`,'confirm',{callback});}
   function pauseDialog(r,stop=false){dialog(stop?'Arrêter cette règle.':'Une pause dans le quotidien.',`<p class="help">Les opérations déjà comptées sont conservées. Pour annuler un repas déjà compté aujourd’hui, utilise « Annuler aujourd’hui ».</p><form id="pause-form">${field(stop?'Premier jour sans dépense':'Début de la pause','start',nextDay(),'date',`min="${nextDay()}" required`)}${stop?'':field('Dernier jour de la pause (inclus)','end',E.addDays(E.today(),7),'date',`min="${nextDay()}" required`)}${formActions(stop?'Arrêter la règle':'Suspendre')}</form>`,'pause',{id:r.id,stop});}
   function openBudget(categoryId='alimentation'){dialog('Une enveloppe pour le mois.',`<form id="budget-form"><label class="field"><span>Catégorie</span><select name="categoryId">${options(categoryId)}</select></label>${field('Limite (€) — 0 pour retirer la limite','amount',amount(budgetFor(categoryId)),'text','inputmode="decimal" required')}<label class="field"><span>Appliquer</span><select name="scope"><option value="recurring">Chaque mois</option><option value="month">Seulement ${esc(monthLabel(month))}</option><option value="reset">Revenir au montant habituel ce mois</option></select></label>${formActions()}</form>`,'budget');}
@@ -1822,6 +1891,10 @@ function submitCharge(f){
   document.addEventListener('change',event=>{if(event.isTrusted&&!event.target.matches?.('[data-sounds]')&&event.target.matches?.('select,input[type="checkbox"],input[type="radio"]'))soundFeedback.selection();},true);
   document.addEventListener('click',async event=>{const b=event.target.closest('button');if(!b)return;try{
     if(b.dataset.nav){switchPage(b.dataset.nav);return;}const action=b.dataset.action, rid=b.dataset.id,r=data.rules.find(r=>r.id===rid),t=data.transactions.find(t=>t.id===rid);
+    if(action==='currency-backup'){exportCurrencyBackup();return;}
+    if(action==='currency-change'){currencyDialog();return;}
+    if(action==='currency-preview'){currencyPreview();return;}
+    if(action==='currency-apply'){await applyCurrency(b);return;}
     if(action==='sound-preview'){if(event.isTrusted)await soundFeedback.preview();return;}
     if(action==='journal-flow'){journalFlow(b.dataset.flow);return;}
     if(action==='page-back'){switchPage(pageTrail.pop()||'settings',true);return;}

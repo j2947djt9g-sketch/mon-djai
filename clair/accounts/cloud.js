@@ -97,7 +97,7 @@
         const remote=await this.read();if(expectedEpoch!==this.epoch)return;
         const raw=localStorage.getItem(this.key(userId));this.record=this.decode(raw,userId);
         // Old clients can strip currency from their cache. Preserve both copies before any write.
-        if(remote?.payload?.initialized&&this.record?.payload.initialized&&(remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR')){this.setConflict(remote);return;}
+        if(remote?.payload?.initialized&&this.record?.payload.initialized&&((remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR')||(remote.payload.currencyRevision||0)!==(this.record.payload.currencyRevision||0))){if(this.record.meta.dirty)this.setConflict(remote);else this.adopt(remote,expectedEpoch);return;}
         // Older clients remove unknown savings fields while normalizing their cache.
         // Never promote that reduced cache into a replacement for named cloud projects.
         if(remote?.payload?.savingsSchema===1&&raw&&JSON.parse(raw).savingsSchema!==1){
@@ -137,11 +137,23 @@
         if(!this.conflict.remote)throw Error('Aucune copie en ligne n’est disponible.');
         this.adopt(this.conflict.remote);return;
       }
-      if(this.conflict.remote?.payload.initialized&&this.record?.payload.initialized&&(this.conflict.remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR'))throw Error('Les copies utilisent des devises différentes. Sauvegarde cette copie, puis conserve la copie en ligne.');
+      if(this.conflict.remote?.payload.initialized&&this.record?.payload.initialized&&((this.conflict.remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR')||(this.conflict.remote.payload.currencyRevision||0)!==(this.record.payload.currencyRevision||0)))throw Error('Les copies utilisent des devises différentes ou une ancienne conversion. Sauvegarde cette copie, puis conserve la copie en ligne.');
       // The conflict UI exports the device copy before asking the user to choose.
       const meta={...this.record.meta,revision:this.conflict.remote?.revision||0,operationId:crypto.randomUUID(),dirty:true};
       // Commit metadata only after persistence succeeds, so a full storage leaves both copies intact.
       const raw=JSON.stringify({...this.record.payload,_cloud:meta});localStorage.setItem(this.key(),raw);this.record={payload:this.record.payload,meta};this.conflict=null;this.hooks.apply?.(this.record.payload,raw);this.status='pending';this.emit();this.schedule();
+    }
+    async convertCurrency(to,revision,asOf){
+      if(!this.user||!this.ready||this.busy||this.converting||this.conflict||this.status!=='synced'||this.record?.meta.dirty||this.record?.meta.revision!==revision)throw Error('Synchronise ton budget et recommence l’aperçu.');
+      const epoch=this.epoch;this.converting=true;this.busy=true;this.emit();
+      try{
+        const {data,error}=await this.client.rpc('convert_clair_currency',{p_currency:to,p_expected_revision:revision,p_operation_id:crypto.randomUUID(),p_as_of:asOf});
+        if(epoch!==this.epoch)throw Error('Le compte a changé pendant la conversion.');
+        if(error)throw Error(error.message||'Conversion indisponible. Ton budget est conservé.');
+        if(!data?.saved){this.setConflict(data?.row||null);throw Error('Un autre appareil a modifié le budget. Vérifie la copie en ligne.');}
+        this.adopt(data.row,epoch);
+      }catch(error){if(epoch===this.epoch&&!this.conflict){this.status='error';this.error='Vérification de la conversion en ligne nécessaire.';this.schedule();}throw error;
+      }finally{this.converting=false;this.busy=false;this.emit();}
     }
     async logout(){
       const uid=this.user?.id;
