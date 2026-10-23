@@ -1,0 +1,31 @@
+// Isolated UI and ledger tests: no external account or message.
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(__dirname+'/../index.html','utf8'),scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+const nodes=new Map(),storage=new Map(),events={};
+const node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',style:{},dataset:{},open:false,values:{},showModal(){this.open=true;},close(){this.open=false;},addEventListener(){},scrollIntoView(){},focus(){}});return nodes.get(s);};
+const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto:require('node:crypto').webcrypto,console,AbortController,FormData:class{constructor(f){this.values=f.values;}get(k){return this.values[k]??null;}},setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{protocol:'https:',href:'https://example.test/clair/?private=secret#access_token=secret'},navigator:{},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener:(k,f)=>{events[k]=f;}}};sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.scrollTo=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;
+vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
+let ui=scripts[3],boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);ui=ui.slice(0,boot)+`window.test={cloud,beginSetup,completeSetup,collectWizard,profile,openTutorial,finishTutorial,shareClair,dailyGoalCents,setData(d){data=d;snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot);},getData(){return data;},wizard(){return wizard;},guide(){return guide;},modal(){return modal;}};})();`;vm.runInContext(ui,sandbox);
+const E=sandbox.ClairEngine,t=sandbox.test,click=(action,extra={})=>events.click({target:{closest:()=>({dataset:{action,...extra}})}}),plain=x=>JSON.parse(JSON.stringify(x));
+(async()=>{
+ for(const code of ['EUR','USD','XOF','XAF']){
+  const d=E.empty();d.currency=code;t.setData(d);t.beginSetup();assert.equal(t.modal().kind,'tutorial');assert.equal(t.guide().step,0);
+  await click('tutorial-next');assert.equal(t.guide().step,1);await click('tutorial-back');assert.equal(t.guide().step,0);await click('tutorial-skip');assert.equal(t.modal().kind,'wizard');assert.equal(t.getData().preferences.guideVersion,1);
+  const w=t.wizard();assert.equal(w.meals,false);assert(w.days.every(x=>x===0));assert.equal(w.dailyGoalEnabled,false);
+  w.balance='100000';w.currency=code;w.step=1;node('#wizard-form').values={};t.collectWizard();assert.equal(w.meals,false);t.completeSetup();
+  assert.equal(t.getData().rules.length,0);assert.equal(t.getData().transactions.length,0);assert.equal(E.balance(t.getData()),10000000);assert.equal(t.getData().preferences.dailyGoal,null);
+  t.openTutorial(false);await click('tutorial-finish');assert.equal(t.guide(),null);assert.equal(t.getData().preferences.guideVersion,1);
+ }
+ console.log('PASS four currencies: tutorial skip/back/replay, no prefilled days, no automatic expense or goal, untouched balance');
+ const d=E.empty();d.initialized=d.setupDone=true;d.openingCents=100000;d.transactions=[{id:'expense',type:'expense',amountCents:2000,date:E.today(),name:'Repas',categoryId:'alimentation'}];t.setData(d);
+ const ledger=JSON.stringify(t.getData().transactions),balance=E.balance(t.getData());node('#profile-form').values={profileName:'<img src=x onerror=alert(1)>',dailyGoalEnabled:'on',dailyGoalAmount:'25,50'};await events.submit({target:{id:'profile-form',closest:()=>true,values:node('#profile-form').values},preventDefault(){}});
+ assert.equal(t.dailyGoalCents(),2550);assert.equal(E.balance(t.getData()),balance);assert.equal(JSON.stringify(t.getData().transactions),ledger);assert.match(t.profile(),/20,00/);assert.match(t.profile(),/5,50/);assert.match(t.profile(),/&lt;img/);assert.doesNotMatch(t.profile(),/<img src=x/);
+ const round=E.normalize(plain(t.getData()));assert.equal(round.preferences.dailyGoal.amountCents,2550);assert.equal(round.preferences.guideVersion,0);const converted=E.convertCurrency(round,'XOF');t.setData(converted);assert.equal(t.dailyGoalCents(),E.exchangeAmount(2550,'EUR','XOF'));assert.equal(t.getData().preferences.dailyGoal.currency,'EUR');
+ assert.equal(E.normPrefs({dailyGoal:{currency:'XOF',amountCents:125}}).dailyGoal,null);assert.equal(E.normPrefs({dailyGoal:{currency:'EUR',amountCents:-1}}).dailyGoal,null);assert.equal(E.normPrefs({profileName:'a'.repeat(100)}).profileName.length,64);
+ console.log('PASS optional objective never debits the ledger; escaped profile; backup round trip and currency conversion retain the objective; invalid stored goals are rejected');
+ let payload,copied='';sandbox.navigator.share=async p=>{payload=p;};await t.shareClair();assert.equal(payload.url,'https://j2947djt9g-sketch.github.io/mon-djai/clair/');assert.doesNotMatch(JSON.stringify(payload),/secret|Repas|img|100000/);
+ sandbox.navigator.share=async()=>{throw {name:'AbortError'}};sandbox.navigator.clipboard={writeText:async text=>copied=text};await t.shareClair();assert.equal(copied,'');delete sandbox.navigator.share;await t.shareClair();assert.equal(copied,payload.url);sandbox.navigator.clipboard.writeText=async()=>{throw Error('denied')};await t.shareClair();assert.equal(t.modal().kind,'share');assert.match(node('#dialog').innerHTML,/readonly/);
+ console.log('PASS native sharing, cancellation, clipboard and manual fallback only expose the canonical public app link');
+ t.cloud.user={id:'a'};t.openTutorial(true);t.cloud.user={id:'b'};const before=JSON.stringify(t.getData());t.finishTutorial();assert.equal(JSON.stringify(t.getData()),before);assert.equal(t.guide(),null);
+ console.log('PASS account change cannot save a previous user’s tutorial state');
+})().catch(error=>{console.error(error);process.exitCode=1;});
