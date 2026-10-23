@@ -2,3 +2,7 @@
 # private cron secret for dispatch. No route accepts the public API key as identity.
 [functions.clair-reminders]
 verify_jwt = false
+
+# Validates the user token against Auth and the live private admin allowlist.
+[functions.clair-masterboard]
+verify_jwt = false
