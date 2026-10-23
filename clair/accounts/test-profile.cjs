@@ -16,6 +16,7 @@ const E=sandbox.ClairEngine,t=sandbox.test,click=(action,extra={})=>events.click
   assert.equal(t.getData().rules.length,0);assert.equal(t.getData().transactions.length,0);assert.equal(E.balance(t.getData()),10000000);assert.equal(t.getData().preferences.dailyGoal,null);
   t.openTutorial(false);await click('tutorial-finish');assert.equal(t.guide(),null);assert.equal(t.getData().preferences.guideVersion,1);
  }
+ const weekly=E.empty();weekly.preferences.guideVersion=1;t.setData(weekly);t.beginSetup();Object.assign(t.wizard(),{balance:'1000',meals:true,name:'Transport quotidien',habitCategoryId:'transport',days:[0,450,0,0,0,0,0]});t.completeSetup();assert.equal(t.getData().rules[0].categoryId,'transport');assert.equal(t.getData().rules[0].name,'Transport quotidien');assert.equal(t.getData().transactions.length,0);
  console.log('PASS four currencies: tutorial skip/back/replay, no prefilled days, no automatic expense or goal, untouched balance');
  const d=E.empty();d.initialized=d.setupDone=true;d.openingCents=100000;d.transactions=[{id:'expense',type:'expense',amountCents:2000,date:E.today(),name:'Repas',categoryId:'alimentation'}];t.setData(d);
  const ledger=JSON.stringify(t.getData().transactions),balance=E.balance(t.getData());node('#profile-form').values={profileName:'<img src=x onerror=alert(1)>',dailyGoalEnabled:'on',dailyGoalAmount:'25,50'};await events.submit({target:{id:'profile-form',closest:()=>true,values:node('#profile-form').values},preventDefault(){}});
