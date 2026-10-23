@@ -1,7 +1,7 @@
 name: Clair code checks
 on:
   push:
-    branches: [main, clair-dashboard-savings-20261019, clair-ruban-history-20261019, clair-welcome-ruban-20261019, clair-subscriptions-reminders-20261021, clair-ruban-splash-20261021, clair-navigation-back-20261022, clair-currency-20261022, clair-convert-20261023]
+    branches: [main, clair-dashboard-savings-20261019, clair-ruban-history-20261019, clair-welcome-ruban-20261019, clair-subscriptions-reminders-20261021, clair-ruban-splash-20261021, clair-navigation-back-20261022, clair-currency-20261022, clair-convert-20261023, clair-profile-tutorial-20261023]
     paths:
       - 'clair/**'
       - 'masterboard/**'
@@ -40,6 +40,7 @@ jobs:
           CLAIR_CHROME_PATH: /usr/bin/google-chrome
           CLAIR_PREVIEW: '1'
         run: |
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-profile.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-masterboard.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-exchange.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-currency.cjs
