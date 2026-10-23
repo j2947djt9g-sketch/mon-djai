@@ -2,7 +2,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=r
 const source=fs.readFileSync(__dirname+'/cloud.js','utf8'),html=fs.readFileSync(__dirname+'/../index.html','utf8');
 const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);scripts.forEach(s=>new vm.Script(s));
 const ectx={window:{},Date,Intl};vm.createContext(ectx);vm.runInContext(scripts[0],ectx);const E=ectx.window.ClairEngine;
-assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'a872d4a66edebdb05cfc0b3cc58c9f11e14162d92c05b933bc5b257715b69dbb');
+assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'6bd13f21295f287c94de31e39e4a8c1ebc5fcfc1d05f363f4044fc7ed768198b');
 let rows=new Map(),saveDelay=null,readDelay=null,loseResponse=false;
 function device(uid,storage=new Map()){
  let currentUser={id:uid,email:uid+'@example.test',user_metadata:{display_name:uid}};
@@ -119,6 +119,7 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  let releaseConversion;saveDelay=new Promise(resolve=>releaseConversion=resolve);const converting=simultaneous.cloud.convertCurrency('USD',1,E.today());otherTab.edit(budget(110000));releaseConversion();await assert.rejects(converting,/onglet/);saveDelay=null;
  assert.equal(simultaneous.cloud.record.payload.openingCents,110000);assert.equal(simultaneous.cloud.record.payload.currency,'EUR');assert.equal(simultaneous.cloud.conflict.remote.payload.currency,'USD');assert.equal(rows.get('simultaneous-conversion').payload.openingCents,112087);
  console.log('PASS explicit conversion: clean sync, generation, exact rates, second-device adoption and both copies preserved when another tab edits in flight');
+ const prefsA=device('profile-preferences');await prefsA.init();const prefs=budget(100000);prefs.preferences.guideVersion=1;prefs.preferences.profileName='Mon pseudo';prefs.preferences.dailyGoal={currency:'EUR',amountCents:2500};prefsA.edit(prefs);await prefsA.cloud.sync();const prefsB=device('profile-preferences');await prefsB.init();assert.equal(prefsB.cloud.record.payload.preferences.guideVersion,1);assert.equal(prefsB.cloud.record.payload.preferences.profileName,'Mon pseudo');assert.equal(prefsB.cloud.record.payload.preferences.dailyGoal.amountCents,2500);assert.equal(E.balance(prefsB.cloud.record.payload),100000);const prefsOther=device('other-profile');await prefsOther.init();assert.equal(prefsOther.cloud.record,null);console.log('PASS profile preferences: tutorial completion, nickname and daily objective reach a second device and remain isolated by account');
  console.log('PASS: all scripts parse; reviewed engine with savings metadata parses');
 })().catch(e=>{console.error(e);process.exitCode=1});
 
