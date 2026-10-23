@@ -27,11 +27,11 @@
     recovery:user=>{accountRecovery=true;accountRecoveryUserId=user?.id||null;accountResetStep='password';close();},
     opened:()=>{if(!accountResetStep){catchUp();queuePushSync();}},
     enter:(user,record)=>{
-      close();wizard=null;undo=null;recovery=null;page='home';
+      close();guide=null;wizard=null;undo=null;recovery=null;page='home';
       KEY=cloud.key(user.id);BACKUP=KEY+'-backup';REMINDED=KEY+'-reminded';PUSH_KEY=KEY+'-push';
       data=record?record.payload:E.empty();snapshot=localStorage.getItem(KEY);loadError=null;rawRecovery='';
     },
-    leave:()=>{close();wizard=null;undo=null;data=E.empty();snapshot=null;page='home';loadError=null;rawRecovery='';},
+    leave:()=>{close();guide=null;wizard=null;undo=null;data=E.empty();snapshot=null;page='home';loadError=null;rawRecovery='';},
     badCache:(error,raw)=>{loadError=error.message;rawRecovery=raw||'';render();},
     apply:(next,raw)=>{
       const changed=JSON.stringify(next)!==JSON.stringify(data);
