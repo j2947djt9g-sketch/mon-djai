@@ -16,7 +16,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
   });
   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('[data-action="account-mode"]').click();await page.locator('#account-form[data-mode="signup"]').waitFor();
-  await page.locator('[name="displayName"]').fill('Test');await page.locator('[name="email"]').fill(user.email);await page.locator('[name="password"]').fill('Fictional-password-42!');await page.locator('#account-form button[type="submit"]').click();await page.locator('#wizard-form').waitFor();assert.equal(signups,1);
+  await page.locator('[name="displayName"]').fill('Test');await page.locator('[name="email"]').fill(user.email);await page.locator('[name="password"]').fill('Fictional-password-42!');await page.locator('#account-form button[type="submit"]').click();await page.locator('[data-action="tutorial-skip"]').click();await page.locator('#wizard-form').waitFor();assert.equal(signups,1);
   assert.equal(await page.locator('#setup-currency option').count(),4);await page.locator('[name="balance"]').fill('99');await page.locator('#setup-currency').selectOption(code);
   if(code!=='EUR')assert.equal(await page.locator('[name="balance"]').inputValue(),'');
   if(code.startsWith('X')){await page.locator('[name="balance"]').fill('100,50');await page.locator('#wizard-form button[type="submit"]').click();assert(await page.locator('#setup-currency').isVisible());assert.match(await page.locator('#form-error').innerText(),/entier/);}
