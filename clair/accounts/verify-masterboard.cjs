@@ -30,7 +30,10 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
   await page.addInitScript(({user,jwt,exp})=>sessionStorage.setItem('clair-masterboard-session-v1',JSON.stringify({access_token:jwt,refresh_token:'FIXTURE',expires_in:3600,expires_at:exp,token_type:'bearer',user})),{user,jwt,exp});
   await page.goto('http://127.0.0.1:'+server.address().port+'/masterboard/');await page.locator('#board').waitFor({state:'visible'});
   assert.equal(await page.locator('.user-card').count(),2);assert.equal(await page.locator('.user-card img').count(),0);assert.equal(await page.locator('[data-action="delete"]').count(),1);
-  const noOverflow=async()=>assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await noOverflow();
+  const noOverflow=async()=>{
+   const result=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,outliers:[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>({tag:e.tagName,cls:e.className,right:Math.round(e.getBoundingClientRect().right)})).slice(0,15)}));
+   assert(result.scroll<=result.width+1,JSON.stringify(result));
+  };await noOverflow();
   await page.locator('[data-tab="settings"]').click();await page.locator('#phone').fill('+33 6 00 00 00 00');await page.locator('#settings-form button').click();await page.getByRole('status').filter({hasText:'Coordonnées de test'}).waitFor();assert.equal(board.settings.mode,'free');
   await page.locator('[data-tab="accounts"]').click();await page.locator('#search').fill('member@');assert.equal(await page.locator('.user-card').count(),1);
   await page.locator('[data-action="date"]').click();await page.locator('[data-offset="-3"]').click();await page.locator('#date-form button[type="submit"]').click();await page.locator('#modal').waitFor({state:'hidden'});assert.equal(board.users[1].test_until,'2026-10-20');assert.match(await page.locator('.user-card').innerText(),/Accès gratuit/);

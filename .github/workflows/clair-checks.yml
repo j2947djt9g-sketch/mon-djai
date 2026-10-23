@@ -40,6 +40,7 @@ jobs:
           CLAIR_CHROME_PATH: /usr/bin/google-chrome
           CLAIR_PREVIEW: '1'
         run: |
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-masterboard.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-exchange.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-currency.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-sounds.cjs
@@ -49,7 +50,6 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-journal.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-welcome.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-subscriptions.cjs
-          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-masterboard.cjs
 
   masterboard-sql:
     runs-on: ubuntu-latest
