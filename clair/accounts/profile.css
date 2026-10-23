@@ -6,3 +6,6 @@
 @media(max-width:720px){.topbar-actions{gap:8px}.topbar-actions #status-label{max-width:105px}.profile-button{width:44px;height:44px}.profile-identity{gap:12px;flex-wrap:wrap}.profile-avatar{width:48px;height:48px;border-radius:16px}.profile-identity>.button{margin-left:60px}.profile-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.profile-summary .stat{padding:16px;margin-bottom:10px}.profile-summary .profile-next{grid-column:1/-1}.profile-summary strong{font-size:22px}.profile-summary .profile-next strong{font-size:24px}.tutorial .mascot-guide{margin:12px 0}.tutorial .mascot-copy{font-size:15px}.tutorial .muted{font-size:14px}.tutorial-actions{gap:12px}.tutorial-note{font-size:11px}.setup-choice{padding:14px}}
 
 @media(max-width:720px){.overview-heading{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0}.topbar-actions #status-label{max-width:72px}}@media(max-width:360px){.topbar-actions #status-label{max-width:54px}}
+
+#dialog:has(.tutorial) #dialog-title:focus{outline:none}
+@media(max-width:720px){body:has(.balance-section) .topbar{margin-bottom:4px}.profile-identity{display:grid;grid-template-columns:48px minmax(0,1fr)}.profile-identity>.button{grid-column:2;margin-left:0;justify-self:start}}
