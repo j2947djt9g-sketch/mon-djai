@@ -37,8 +37,12 @@ export function createHandler({db,auth,now=()=>new Date()}){
       if(!input||typeof input!=='object')fail(400,'Requête invalide.');
       const action=input.action;
       if(action==='snapshot'){
-        const [users,settings,subscriptions,messages,audit,admins,profiles]=await Promise.all([auth.users(),db.settings(),db.subscriptions(),db.messages(),db.audit(),db.admins(),db.profiles()]);
-        return answer({actor:{id:actor.id,email:actor.email},settings:{...settings,mode:'free'},today:parisDate(now()),users:users.map(u=>({id:u.id,email:u.email||'',name:profiles.find(p=>p.user_id===u.id)?.display_name||'',confirmed:!!u.email_confirmed_at,created_at:u.created_at,last_sign_in_at:u.last_sign_in_at,banned:Date.parse(u.banned_until||'')>+now(),is_admin:admins.includes(u.id),test_until:subscriptions.find(s=>s.user_id===u.id)?.test_until||null})),messages,audit});
+        const [users,settings,subscriptions,messages,audit,admins,profiles,requests]=await Promise.all([auth.users(),db.settings(),db.subscriptions(),db.messages(),db.audit(),db.admins(),db.profiles(),db.helpRequests?.()||[]]);
+        return answer({actor:{id:actor.id,email:actor.email},settings:{...settings,mode:'free'},today:parisDate(now()),users:users.map(u=>({id:u.id,email:u.email||'',name:profiles.find(p=>p.user_id===u.id)?.display_name||'',confirmed:!!u.email_confirmed_at,created_at:u.created_at,last_sign_in_at:u.last_sign_in_at,banned:Date.parse(u.banned_until||'')>+now(),is_admin:admins.includes(u.id),test_until:subscriptions.find(s=>s.user_id===u.id)?.test_until||null})),messages,audit,requests});
+      }
+      if(action==='close-help'){
+        if(!uuid(input.id))fail(400,'Demande invalide.');
+        await db.closeHelp(input.id);await db.log(actor.id,null,'help_request_closed');return answer({ok:true});
       }
       if(action==='settings'){
         const phone=String(input.payment_phone||'').trim();
@@ -55,6 +59,18 @@ export function createHandler({db,auth,now=()=>new Date()}){
       }
       if(!uuid(input.user_id))fail(400,'Compte invalide.');
       const target=await auth.target(input.user_id);if(!target)fail(404,'Compte introuvable.');
+      if(action==='authorize-reset'){
+        if(input.identity_checked!==true||String(input.confirm_email||'').trim().toLowerCase()!==target.email.toLowerCase())fail(400,'Vérifie l’identité de la personne et recopie son adresse.');
+        const signedIn=Date.parse(actor.last_sign_in_at||'');
+        if(!Number.isFinite(signedIn)||+now()-signedIn>900000)fail(409,'Reconnecte-toi au masterboard avant cette action sensible.');
+        if(!target.email_confirmed_at)fail(409,'L’adresse doit être confirmée avant une réinitialisation administrateur.');
+        if(Date.parse(target.banned_until||'')>+now())fail(409,'Ce compte est suspendu. Rétablis son accès séparément si nécessaire.');
+        if(!await db.claimReset(actor.id,target.id))fail(429,'Une autorisation vient d’être créée. Attends une minute avant de recommencer.');
+        const recovery=await auth.recovery(target.email);
+        if(!recovery?.hashed_token||!/^[A-Za-z0-9_-]{32,128}$/.test(recovery.hashed_token)||!/^\d{6,10}$/.test(recovery.email_otp||''))throw Error('Invalid recovery response');
+        await db.log(actor.id,target.id,'reset_authorized');await db.authorizeHelp(target.email);
+        return answer({recovery:{email:target.email,url:APP_URL+'reset.html#token_hash='+encodeURIComponent(recovery.hashed_token),code:recovery.email_otp}});
+      }
       if(action==='prepare-mail'){
         if(!uuid(input.id)||!['reminder','recovery'].includes(input.kind))fail(400,'Message invalide.');
         const existing=await db.message(input.id);

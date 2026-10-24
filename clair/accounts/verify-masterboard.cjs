@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
   const uid='11111111-1111-4111-8111-111111111111',member='22222222-2222-4222-8222-222222222222',exp=Math.floor(Date.now()/1000)+3600;
   const user={id:uid,email:'owner@example.invalid',aud:'authenticated',role:'authenticated',email_confirmed_at:'2026-01-01',last_sign_in_at:new Date().toISOString(),user_metadata:{},app_metadata:{provider:'email'},identities:[]};
   const jwt=[{alg:'HS256',typ:'JWT'},{sub:uid,aud:'authenticated',role:'authenticated',exp},'TEST'].map(x=>Buffer.from(typeof x==='string'?x:JSON.stringify(x)).toString('base64url')).join('.');
-  let board={actor:{id:uid,email:user.email},settings:{mode:'free',monthly_cents:199,payment_phone:''},today:'2026-10-23',users:[{id:uid,email:user.email,name:'Owner',confirmed:true,is_admin:true,created_at:'2026-01-01'}, {id:member,email:'member@example.invalid',name:'<img src=x onerror=alert(1)>',confirmed:true,is_admin:false,created_at:'2026-01-02',test_until:'2026-10-25'}],messages:[],audit:[]},mail=null,calls=[];
+  let board={actor:{id:uid,email:user.email},settings:{mode:'free',monthly_cents:199,payment_phone:''},today:'2026-10-23',users:[{id:uid,email:user.email,name:'Owner',confirmed:true,is_admin:true,created_at:'2026-01-01'}, {id:member,email:'member@example.invalid',name:'<img src=x onerror=alert(1)>',confirmed:true,is_admin:false,created_at:'2026-01-02',test_until:'2026-10-25'}],messages:[],audit:[],requests:[{id:'33333333-3333-4333-8333-333333333333',email:'member@example.invalid',reason:'email_missing',status:'pending',created_at:'2026-10-24T12:00:00Z'}]},mail=null,calls=[];
   const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await context.route('https://mail.google.com/**',r=>r.fulfill({status:200,contentType:'text/html',body:'<p>Gmail compose fixture</p>'}));
   await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',async route=>{
@@ -23,12 +23,26 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
     else if(input.action==='get-mail')result={message:mail};
     else if(input.action==='set-test-date'){board.users[1].test_until=input.date;result={ok:true};}
     else if(input.action==='renew-test'){board.users[1].test_until='2026-11-23';result={ok:true,test_until:'2026-11-23'};}
+    else if(input.action==='authorize-reset'){
+     assert.equal(input.user_id,member);assert.equal(input.confirm_email,'member@example.invalid');assert.equal(input.identity_checked,true);
+     board.requests[0].status='authorized';result={recovery:{email:'member@example.invalid',url:'https://j2947djt9g-sketch.github.io/mon-djai/clair/reset.html#token_hash='+'a'.repeat(64),code:'123456'}};
+    }
     else if(input.action==='settings'){board.settings.payment_phone=input.payment_phone;result={ok:true};}
    }
    await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(result)});
   });
   await page.addInitScript(({user,jwt,exp})=>sessionStorage.setItem('clair-masterboard-session-v1',JSON.stringify({access_token:jwt,refresh_token:'FIXTURE',expires_in:3600,expires_at:exp,token_type:'bearer',user})),{user,jwt,exp});
-  await page.goto('http://127.0.0.1:'+server.address().port+'/masterboard/');await page.locator('#board').waitFor({state:'visible'});
+  await page.goto('http://127.0.0.1:'+server.address().port+'/masterboard/');await page.locator('#board').waitFor({state:'visible'});await page.locator('#intro').waitFor({state:'detached'});
+  assert.equal(await page.locator('.profile-details:visible').count(),0);
+  assert.equal(await page.locator('[data-action="delete"]').isVisible(),false);
+  const snapshotsBefore=calls.length;
+  await page.locator('[data-profile="'+member+'"]').click();
+  assert.equal(await page.locator('[data-profile="'+member+'"]').getAttribute('aria-expanded'),'true');
+  await page.locator('[data-profile="'+uid+'"]').click();
+  assert.equal(await page.locator('[data-profile][aria-expanded=true]').count(),1);
+  await page.locator('[data-profile="'+uid+'"]').press('Escape');
+  assert.equal(await page.locator('[data-profile][aria-expanded=true]').count(),0);
+  assert.equal(calls.length,snapshotsBefore);
   assert.equal(await page.locator('.user-card').count(),2);assert.equal(await page.locator('.user-card img').count(),0);assert.equal(await page.locator('[data-action="delete"]').count(),1);
   const noOverflow=async()=>{
    const result=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,outliers:[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>({tag:e.tagName,cls:e.className,right:Math.round(e.getBoundingClientRect().right)})).slice(0,15)}));
@@ -36,14 +50,26 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
   };await noOverflow();
   await page.locator('[data-tab="settings"]').click();await page.locator('#phone').fill('+33 6 00 00 00 00');await page.locator('#settings-form button').click();await page.getByRole('status').filter({hasText:'Coordonnées de test'}).waitFor();assert.equal(board.settings.mode,'free');
   await page.locator('[data-tab="accounts"]').click();await page.locator('#search').fill('member@');assert.equal(await page.locator('.user-card').count(),1);
+  await page.locator('[data-profile="'+member+'"]').click();
+  await page.locator('.test-tools summary').click();
   await page.locator('[data-action="date"]').click();await page.locator('[data-offset="-3"]').click();await page.locator('#date-form button[type="submit"]').click();await page.locator('#modal').waitFor({state:'hidden'});assert.equal(board.users[1].test_until,'2026-10-20');assert.match(await page.locator('.user-card').innerText(),/Accès gratuit/);
   await page.locator('[data-action="reminder"]').click();await page.locator('#modal').waitFor({state:'visible'});assert(await page.locator('#confirm-mail').isDisabled());
   const href=await page.getByRole('link',{name:'Ouvrir Gmail et envoyer'}).getAttribute('href'),url=new URL(href);assert.equal(url.hostname,'mail.google.com');assert.equal(url.searchParams.get('to'),'member@example.invalid');assert.match(url.searchParams.get('body'),/Aucun paiement/);assert.equal(calls.filter(c=>/send/.test(c.action)).length,0);
   const popupPromise=page.waitForEvent('popup');await page.getByRole('link',{name:'Ouvrir Gmail et envoyer'}).click();const popup=await popupPromise;await popup.close();await page.locator('#confirm-mail:enabled').waitFor();await page.locator('#confirm-mail').click();await page.locator('#confirm-mail').filter({hasText:'Envoi confirmé'}).waitFor();assert.equal(mail.state,'confirmed_sent');await noOverflow();await page.locator('#close-modal').click();
+  if(!await page.locator('.test-tools').getAttribute('open')){if(!await page.locator('[data-action="renew"]').isVisible())await page.locator('.test-tools summary').click();}
   await page.locator('[data-action="renew"]').click();await page.locator('#renew-confirm').click();await page.locator('#modal').waitFor({state:'hidden'});assert.equal(board.users[1].test_until,'2026-11-23');
+  await page.locator('[data-action="reset"]').click();
+  const beforeAuth=calls.filter(c=>c.action==='authorize-reset').length;
+  await page.locator('#authorize-reset-form button').click();
+  assert.equal(calls.filter(c=>c.action==='authorize-reset').length,beforeAuth);
+  await page.locator('#reset-confirm-email').fill('member@example.invalid');await page.locator('#identity-checked').check();
+  await page.locator('#authorize-reset-form button').click();await page.locator('.recovery-code').waitFor();
+  assert.match(await page.locator('.recovery-code').innerText(),/123456/);
+  assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('123456')),false);
+  await page.locator('#close-modal').click();await page.waitForFunction(()=>document.querySelector('#modal-content').innerHTML==='');
   await page.locator('[data-action="delete"]').click();assert.match(await page.locator('#modal').innerText(),/irréversible/);assert.match(await page.locator('#modal').innerText(),/Cette action est réelle/);assert.equal(await page.locator('#confirm-email').inputValue(),'');await page.locator('#close-modal').click();assert.equal(calls.filter(c=>c.action==='delete').length,0);
   await page.locator('[data-tab="messages"]').click();assert.match(await page.locator('#messages').innerText(),/Envoi confirmé par toi/);await page.locator('[data-action="reopen"]').click();assert(await page.locator('#confirm-mail').isDisabled());await page.locator('#close-modal').click();
-  if(process.env.CLAIR_PREVIEW==='1'){await page.locator('[data-tab="accounts"]').click();await page.locator('#search').fill('');await page.screenshot({path:'/tmp/clair-masterboard-'+width+'.png',fullPage:true});}
+  if(process.env.CLAIR_PREVIEW==='1'){await page.locator('[data-tab="accounts"]').click();await page.locator('#search').fill('');if(width===390||width===1440){const shot=await page.screenshot({fullPage:true,animations:'disabled'});console.log('MASTERBOARD_SCREENSHOT_'+width+'='+shot.toString('base64'));}}
   await page.locator('#logout').click();await page.locator('#login').waitFor({state:'visible'});assert.equal(await page.locator('#users').innerHTML(),'');assert.deepEqual(errors,[]);await context.close();console.log('PASS masterboard '+width+'px: safe account cards, no overflow, date scenarios, Gmail recipient/body and real compose opening, manual send confirmation, renewal, deletion confirmation without executing it, history and logout');
  }}finally{await browser.close();}
 })().then(()=>server.close()).catch(e=>{console.error(e);server.close();process.exitCode=1});

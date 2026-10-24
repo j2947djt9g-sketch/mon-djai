@@ -42,6 +42,7 @@ jobs:
         run: |
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-profile.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-masterboard.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-assisted-recovery.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-exchange.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-currency.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-sounds.cjs
@@ -86,6 +87,8 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f clair/accounts/schema.sql
           psql -v ON_ERROR_STOP=1 -f supabase/masterboard.sql
           psql -v ON_ERROR_STOP=1 -f supabase/verify-masterboard.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/account-help.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/verify-account-help.sql
 
   reminders-sql:
     runs-on: ubuntu-latest

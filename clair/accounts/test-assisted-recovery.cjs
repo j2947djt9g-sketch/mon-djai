@@ -1,0 +1,36 @@
+const assert=require('node:assert/strict');
+(async()=>{
+ const {createHelpHandler}=await import('../../supabase/functions/clair-account-help/handler.mjs');
+ const {createHandler}=await import('../../supabase/functions/clair-masterboard/core.mjs');
+ let submitted=[],allow=true;
+ const help=createHelpHandler({fingerprint:async()=>'f'.repeat(64),submit:async(...a)=>{submitted.push(a);return allow;}});
+ const callHelp=(body,headers={origin:'https://j2947djt9g-sketch.github.io'})=>help(new Request('https://example.invalid/help',{method:'POST',headers,body:JSON.stringify(body)}));
+ for(const email of ['known@example.invalid','new@example.invalid']){const r=await callHelp({email,reason:'email_missing'});assert.equal(r.status,202);assert(!JSON.stringify(await r.json()).includes(email));}
+ assert.equal(submitted.length,2);assert.equal((await callHelp({email:'USER@Example.invalid',reason:'link_expired'})).status,202);assert.equal(submitted[2][0],'user@example.invalid');
+ assert.equal((await callHelp({email:'x',reason:'email_missing'})).status,400);
+ assert.equal((await callHelp({email:'x@example.invalid',reason:'<script>'})).status,400);
+ assert.equal((await callHelp({email:'x@example.invalid',reason:'email_missing'},{origin:'https://evil.invalid'})).status,403);
+ assert.equal((await callHelp({website:'bot'})).status,202);assert.equal(submitted.length,3);
+ allow=false;assert.equal((await callHelp({email:'x@example.invalid',reason:'email_missing'})).status,429);
+ const admin='11111111-1111-4111-8111-111111111111',member='22222222-2222-4222-8222-222222222222',now=new Date('2026-10-24T15:00:00Z');
+ let actor={id:admin,email:'owner@example.invalid',email_confirmed_at:'yes',last_sign_in_at:now.toISOString()};
+ let target={id:member,email:'member@example.invalid',email_confirmed_at:'yes'},generated=0,recent=0,logs=[],updates=[];
+ const db={isAdmin:async id=>id===admin,log:async(a,t,s)=>logs.push(s),claimReset:async()=>{if(recent)return false;logs.push('reset_authorization_requested');return true;},authorizeHelp:async email=>updates.push(email),closeHelp:async id=>updates.push(id)};
+ const auth={user:async h=>h==='Bearer admin'?actor:null,target:async id=>id===member?target:null,recovery:async email=>{assert.equal(email,target.email);generated++;return {hashed_token:'a'.repeat(64),email_otp:'123456'};}};
+ const handler=createHandler({db,auth,now:()=>now});
+ const call=(body,h={authorization:'Bearer admin'})=>handler(new Request('https://example.invalid/admin',{method:'POST',headers:h,body:JSON.stringify(body)}));
+ const input={action:'authorize-reset',user_id:member,confirm_email:target.email,identity_checked:true};
+ assert.equal((await call(input,{})).status,401);
+ actor={...actor,id:member,user_metadata:{admin:true}};assert.equal((await call(input)).status,403);actor={...actor,id:admin};
+ assert.equal((await call({...input,identity_checked:false})).status,400);
+ assert.equal((await call({...input,confirm_email:'wrong@example.invalid'})).status,400);assert.equal(generated,0);
+ actor.last_sign_in_at='2026-10-23T00:00:00Z';assert.equal((await call(input)).status,409);actor.last_sign_in_at=now.toISOString();
+ target.email_confirmed_at=null;assert.equal((await call(input)).status,409);target.email_confirmed_at='yes';
+ target.banned_until='2027-01-01';assert.equal((await call(input)).status,409);delete target.banned_until;
+ recent=1;assert.equal((await call(input)).status,429);recent=0;
+ const r=await call({...input,email:'attacker@example.invalid',redirectTo:'https://evil.invalid'});assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'no-store');
+ const result=await r.json();assert.equal(result.recovery.email,target.email);assert.match(result.recovery.url,/^https:\/\/j2947djt9g-sketch.github.io\/mon-djai\/clair\/reset.html#token_hash=/);assert.equal(result.recovery.code,'123456');assert.equal(generated,1);
+ assert(!JSON.stringify(logs).includes('123456'));assert(!JSON.stringify(updates).includes('a'.repeat(64)));assert.equal(logs.at(-1),'reset_authorized');
+ auth.recovery=async()=>{throw Error('provider offline')};assert.equal((await call(input)).status,500);assert.equal(logs.at(-1),'reset_authorization_requested');
+ console.log('PASS assisted recovery: neutral support requests, normalization, validation, honeypot, rate limit, origin rejection, live admin authorization, verified identity, exact target, recent login, confirmed email, suspension separation, provider failure and no credential persistence');
+})().catch(e=>{console.error(e);process.exitCode=1});
