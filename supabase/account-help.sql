@@ -37,7 +37,7 @@ grant execute on function public.clair_request_account_help(text,text,text) to s
 
 -- Reserve reset generation atomically across administrator devices.
 create function public.clair_claim_reset_authorization(p_actor uuid,p_target uuid)
-returns boolean language plpgsql security invoker set search_path='' as $
+returns boolean language plpgsql security invoker set search_path='' as $$
 begin
  if not exists(select 1 from public.clair_masterboard_admins where user_id=p_actor) then
   raise exception 'Admin required' using errcode='42501';
@@ -48,7 +48,7 @@ begin
  insert into public.clair_masterboard_audit(actor_id,target_id,action) values(p_actor,p_target,'reset_authorization_requested');
  return true;
 end;
-$;
+$$;
 revoke all on function public.clair_claim_reset_authorization(uuid,uuid) from public,anon,authenticated;
 grant execute on function public.clair_claim_reset_authorization(uuid,uuid) to service_role;
 
