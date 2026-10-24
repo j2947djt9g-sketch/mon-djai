@@ -175,7 +175,7 @@ function clearBoard(){
   $('#password-toggle').onclick=()=>{const visible=$('#password').type==='password';$('#password').type=visible?'text':'password';$('#password-toggle').setAttribute('aria-pressed',String(visible));$('#password-toggle').setAttribute('aria-label',visible?'Masquer le mot de passe':'Afficher le mot de passe');};
   $('#users').addEventListener('toggle',e=>{if(e.target.matches('.test-tools')){if(e.target.open)openTestTools.add(e.target.dataset.user);else openTestTools.delete(e.target.dataset.user);}},true);
   $('#users').addEventListener('keydown',e=>{if(e.key==='Escape'&&openProfileId){e.preventDefault();const id=openProfileId;toggleProfile(id);document.getElementById('profile-'+id)?.focus();}});
-  $('#modal').addEventListener('close',()=>$('#modal-content').replaceChildren());
+  $('#modal').addEventListener('close',()=>{if(!$('#modal').open)$('#modal-content').replaceChildren();});
   Object.assign(auditNames,{reset_authorization_requested:'Réinitialisation demandée',reset_authorized:'Nouveau mot de passe autorisé',help_request_closed:'Demande d’aide traitée'});
 
   $('#settings-form').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{await api('settings',{payment_phone:$('#phone').value});await refresh();toast('Coordonnées de test enregistrées.');}catch(error){toast(error.message,true);}finally{e.submitter.disabled=false;}};

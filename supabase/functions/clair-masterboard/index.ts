@@ -22,7 +22,7 @@ const db={
   helpRequests:()=>rest('clair_account_help?select=id,email,reason,status,created_at&order=created_at.desc&limit=100'),
   closeHelp:(id:string)=>rest('clair_account_help?id=eq.'+id,'PATCH',{status:'closed',updated_at:new Date().toISOString()}),
   authorizeHelp:(email:string)=>rest('clair_account_help?email=eq.'+encodeURIComponent(email)+'&status=eq.pending','PATCH',{status:'authorized',updated_at:new Date().toISOString()}),
-  recentResetCount:async(id:string,since:string)=>(await rows('audit','select=id&target_id=eq.'+id+'&action=eq.reset_authorized&created_at=gte.'+encodeURIComponent(since))).length,
+  claimReset:(actor:string,target:string)=>rest('rpc/clair_claim_reset_authorization','POST',{p_actor:actor,p_target:target}),
   messages:()=>rows('mail','select=id,user_id,email,subject,kind,state,created_at,opened_at,confirmed_at&order=created_at.desc&limit=100'),
   message:(id:string)=>one('mail','id=eq.'+id),
   recentMailCount:async(id:string,now:Date)=>(await rows('mail','select=id&user_id=eq.'+id+'&created_at=gte.'+encodeURIComponent(new Date(+now-86400000).toISOString()))).length,

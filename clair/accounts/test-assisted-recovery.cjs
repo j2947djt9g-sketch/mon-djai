@@ -15,7 +15,7 @@ const assert=require('node:assert/strict');
  const admin='11111111-1111-4111-8111-111111111111',member='22222222-2222-4222-8222-222222222222',now=new Date('2026-10-24T15:00:00Z');
  let actor={id:admin,email:'owner@example.invalid',email_confirmed_at:'yes',last_sign_in_at:now.toISOString()};
  let target={id:member,email:'member@example.invalid',email_confirmed_at:'yes'},generated=0,recent=0,logs=[],updates=[];
- const db={isAdmin:async id=>id===admin,log:async(a,t,s)=>logs.push(s),recentResetCount:async()=>recent,authorizeHelp:async email=>updates.push(email),closeHelp:async id=>updates.push(id)};
+ const db={isAdmin:async id=>id===admin,log:async(a,t,s)=>logs.push(s),claimReset:async()=>{if(recent)return false;logs.push('reset_authorization_requested');return true;},authorizeHelp:async email=>updates.push(email),closeHelp:async id=>updates.push(id)};
  const auth={user:async h=>h==='Bearer admin'?actor:null,target:async id=>id===member?target:null,recovery:async email=>{assert.equal(email,target.email);generated++;return {hashed_token:'a'.repeat(64),email_otp:'123456'};}};
  const handler=createHandler({db,auth,now:()=>now});
  const call=(body,h={authorization:'Bearer admin'})=>handler(new Request('https://example.invalid/admin',{method:'POST',headers:h,body:JSON.stringify(body)}));

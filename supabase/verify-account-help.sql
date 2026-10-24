@@ -1,6 +1,10 @@
 begin;
+insert into auth.users(id,email) values('f0000000-0000-4000-8000-000000000003','reset-admin-fixture@example.invalid'),('f0000000-0000-4000-8000-000000000004','reset-member-fixture@example.invalid');
+insert into public.clair_masterboard_admins(user_id) values('f0000000-0000-4000-8000-000000000003');
 set local role service_role;
 do $$ declare n integer;ok boolean;begin
+ if not public.clair_claim_reset_authorization('f0000000-0000-4000-8000-000000000003','f0000000-0000-4000-8000-000000000004') then raise exception 'Reset claim rejected';end if;
+ if public.clair_claim_reset_authorization('f0000000-0000-4000-8000-000000000003','f0000000-0000-4000-8000-000000000004') then raise exception 'Repeated reset claim accepted';end if;
  ok:=public.clair_request_account_help('fixture@example.invalid','email_missing',repeat('a',64));if not ok then raise exception 'Submission rejected';end if;
  ok:=public.clair_request_account_help('fixture@example.invalid','email_missing',repeat('a',64));if not ok then raise exception 'Deduplication rejected';end if;
  select count(*) into n from public.clair_account_help where email='fixture@example.invalid';if n<>1 then raise exception 'Duplicate requests';end if;

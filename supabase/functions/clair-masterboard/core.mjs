@@ -65,8 +65,7 @@ export function createHandler({db,auth,now=()=>new Date()}){
         if(!Number.isFinite(signedIn)||+now()-signedIn>900000)fail(409,'Reconnecte-toi au masterboard avant cette action sensible.');
         if(!target.email_confirmed_at)fail(409,'L’adresse doit être confirmée avant une réinitialisation administrateur.');
         if(Date.parse(target.banned_until||'')>+now())fail(409,'Ce compte est suspendu. Rétablis son accès séparément si nécessaire.');
-        if(await db.recentResetCount(target.id,new Date(+now()-60000).toISOString())>0)fail(429,'Une autorisation vient d’être créée. Attends une minute avant de recommencer.');
-        await db.log(actor.id,target.id,'reset_authorization_requested');
+        if(!await db.claimReset(actor.id,target.id))fail(429,'Une autorisation vient d’être créée. Attends une minute avant de recommencer.');
         const recovery=await auth.recovery(target.email);
         if(!recovery?.hashed_token||!/^[A-Za-z0-9_-]{32,128}$/.test(recovery.hashed_token)||!/^\d{6,10}$/.test(recovery.email_otp||''))throw Error('Invalid recovery response');
         await db.log(actor.id,target.id,'reset_authorized');await db.authorizeHelp(target.email);
