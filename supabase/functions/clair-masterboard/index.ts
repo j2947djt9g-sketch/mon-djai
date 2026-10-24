@@ -19,6 +19,10 @@ const db={
   subscription:(id:string)=>one('subscriptions','user_id=eq.'+id),
   setTestDate:(id:string,date:string)=>request('/rest/v1/'+prefix+'subscriptions?on_conflict=user_id','POST',{user_id:id,test_until:date,updated_at:new Date().toISOString()},{prefer:'resolution=merge-duplicates,return=representation'}),
   profiles:()=>all('clair_budgets?select=user_id,display_name&order=user_id'),
+  helpRequests:()=>rest('clair_account_help?select=id,email,reason,status,created_at&order=created_at.desc&limit=100'),
+  closeHelp:(id:string)=>rest('clair_account_help?id=eq.'+id,'PATCH',{status:'closed',updated_at:new Date().toISOString()}),
+  authorizeHelp:(email:string)=>rest('clair_account_help?email=eq.'+encodeURIComponent(email)+'&status=eq.pending','PATCH',{status:'authorized',updated_at:new Date().toISOString()}),
+  recentResetCount:async(id:string,since:string)=>(await rows('audit','select=id&target_id=eq.'+id+'&action=eq.reset_authorized&created_at=gte.'+encodeURIComponent(since))).length,
   messages:()=>rows('mail','select=id,user_id,email,subject,kind,state,created_at,opened_at,confirmed_at&order=created_at.desc&limit=100'),
   message:(id:string)=>one('mail','id=eq.'+id),
   recentMailCount:async(id:string,now:Date)=>(await rows('mail','select=id&user_id=eq.'+id+'&created_at=gte.'+encodeURIComponent(new Date(+now-86400000).toISOString()))).length,
@@ -38,6 +42,7 @@ const auth={
   users:async()=>{const users=[];for(let page=1;page<=1000;page++){const data=await request('/auth/v1/admin/users?page='+page+'&per_page=200');users.push(...data.users);if(data.users.length<200)return users;}throw Error('Too many pages');},
   target:async(id:string)=>{try{return await request('/auth/v1/admin/users/'+id);}catch{return null;}},
   ban:(id:string,banned:boolean)=>request('/auth/v1/admin/users/'+id,'PUT',{ban_duration:banned?'876000h':'none'}),
-  remove:(id:string)=>request('/auth/v1/admin/users/'+id,'DELETE')
+  remove:(id:string)=>request('/auth/v1/admin/users/'+id,'DELETE'),
+  recovery:(email:string)=>request('/auth/v1/admin/generate_link','POST',{type:'recovery',email})
 };
 Deno.serve(createHandler({db,auth}));

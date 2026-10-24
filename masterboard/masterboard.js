@@ -1,9 +1,26 @@
 (function(){
   'use strict';
+  const motion=window.matchMedia('(prefers-reduced-motion: reduce)');
+  const intro=document.querySelector('#intro'),introStarted=performance.now();let introLeaving=false;
+  document.querySelector('main').inert=true;
+  function finishIntro(skip=false){
+    if(!intro?.isConnected)return;
+    const remove=()=>{intro.remove();document.querySelector('main').inert=false;};
+    if(skip||motion.matches){remove();return;}
+    if(introLeaving)return;introLeaving=true;
+    setTimeout(()=>{if(!intro.isConnected)return;intro.classList.add('leaving');intro.addEventListener('animationend',e=>{if(e.target===intro)remove();});setTimeout(remove,1100);},Math.max(0,650-(performance.now()-introStarted)));
+  }
+  setTimeout(()=>finishIntro(),2500);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&intro?.isConnected)finishIntro(true);});
+  if(!window.supabase){document.body.dataset.session='ready';finishIntro(true);document.querySelector('#global-status').textContent='Connexion indisponible. Actualise la page.';return;}
   const URL='https://hkssnbvktfscizojhftl.supabase.co',KEY='sb_publishable_qJeSyD7E0cbi8V--qyJJkw_8M4oOKr8';
   const client=supabase.createClient(URL,KEY,{auth:{storageKey:'clair-masterboard-session-v1',storage:sessionStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
   const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let snapshot=null,busy=false,toastTimer,loginEpoch=0;
+  let snapshot=null,busy=false,toastTimer,loginEpoch=0,openProfileId=null;
+  const openTestTools=new Set();
+  const icons={"people":"<circle cx=\"9\" cy=\"8\" r=\"3\"/><path d=\"M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5v1\"/>","mail":"<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"4\"/><path d=\"m4 7 8 6 8-6\"/>","clock":"<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 7v5l3 2\"/>","key":"<circle cx=\"8\" cy=\"9\" r=\"5\"/><path d=\"m12 13 8 8m-5-5 3-3m-1 5 3-3\"/>","pause":"<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M9.5 8v8M14.5 8v8\"/>","play":"<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"m10 8 6 4-6 4Z\"/>","trash":"<path d=\"M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7\"/>","shield":"<path d=\"m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z\"/><path d=\"m8.5 12 2.5 2.5 4.5-5\"/>","chevron":"<path d=\"m6 9 6 6 6-6\"/>","eye":"<path d=\"M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>","refresh":"<path d=\"M20 7v5h-5M4 17v-5h5\"/><path d=\"M6.1 6.1a8 8 0 0 1 13.3 3.4M17.9 17.9a8 8 0 0 1-13.3-3.4\"/>","settings":"<path d=\"M4 7h16M4 17h16\"/><circle cx=\"9\" cy=\"7\" r=\"3\" fill=\"currentColor\"/><circle cx=\"15\" cy=\"17\" r=\"3\" fill=\"currentColor\"/>","search":"<circle cx=\"10.5\" cy=\"10.5\" r=\"6.5\"/><path d=\"m16 16 4.5 4.5\"/>","help":"<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01\"/>"};
+  function icon(name,cls=''){return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||''}</svg>`;}
+  document.querySelectorAll('[data-icon]').forEach(node=>node.innerHTML=icon(node.dataset.icon));
   const day=v=>v?new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',day:'numeric',month:'short',year:'numeric'}).format(new Date(v.length===10?v+'T12:00:00Z':v)):'—';
   const delta=until=>until?Math.round((Date.parse(until+'T12:00:00Z')-Date.parse(snapshot.today+'T12:00:00Z'))/86400000):null;
   const due=u=>u.test_until&&delta(u.test_until)<=2;
@@ -19,23 +36,66 @@
   }
   async function refresh(){
     const epoch=loginEpoch;$('#refresh').disabled=true;
-    try{const data=await api('snapshot');if(epoch!==loginEpoch)return;snapshot=data;$('#login').hidden=true;$('#board').hidden=false;$('#logout').hidden=false;$('#identity').textContent=data.actor.email;$('#phone').value=data.settings.payment_phone;render();}
+    try{const data=await api('snapshot');if(epoch!==loginEpoch)return;const first=!snapshot;snapshot=data;$('#login').hidden=true;$('#board').hidden=false;$('#logout').hidden=false;$('#identity').textContent=data.actor.email;$('#phone').value=data.settings.payment_phone;setHero(true);render();if(first&&!motion.matches)$('#board').animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'none'}],{duration:600,easing:'cubic-bezier(.22,1,.36,1)'});}
     finally{$('#refresh').disabled=false;}
   }
+function setHero(signedIn){
+  document.body.dataset.auth=signedIn?'on':'off';
+  $('#hero-eyebrow').textContent=signedIn?'CLAIR, CÔTÉ COULISSES.':'L’ESSENTIEL, SIMPLEMENT.';
+  $('#hero-title').innerHTML=signedIn?'Tout est là.':'Tout Clair,<br>en un regard.';
+  $('#hero-description').innerHTML=signedIn?'Moins de bruit. Plus de clarté.<br>Tes comptes et leurs actions, au même endroit.':'Les comptes, les accès, les relances.<br>Un espace pour tout retrouver.';
+}
   function render(){
     const s=snapshot;
-    $('#stats').innerHTML=[['Comptes inscrits',s.users.length],['Adresses confirmées',s.users.filter(u=>u.confirmed).length],['Tests à relancer',s.users.filter(due).length],['Envois confirmés · 100 derniers',s.messages.filter(m=>m.state==='confirmed_sent').length]].map(([title,n],i)=>`<div class="stat"><strong class="${i===0?'accent':''}">${n}</strong><span>${title}</span></div>`).join('');
-    renderUsers();
+    $('#stats').innerHTML=[['Comptes Clair',s.users.length,s.users.filter(u=>u.confirmed).length+' adresses confirmées','people'],['À relancer',s.users.filter(due).length,'Échéances de test','clock'],['Mails confirmés',s.messages.filter(m=>m.state==='confirmed_sent').length,'Sur les 100 derniers messages','mail']].map(([title,n,detail,glyph],i)=>`<div class="stat ${i===0?'stat-main':''}"><div class="stat-heading"><span>${title}</span>${icon(glyph)}</div><strong>${String(n).padStart(2,'0')}</strong><small>${detail}</small></div>`).join('');
+    renderUsers();renderHelp();
     $('#messages').innerHTML=s.messages.length?s.messages.map(m=>`<article class="mail-card"><div><span class="tag ${m.state==='confirmed_sent'?'':'neutral'}">${esc(states[m.state])}</span><h3>${esc(m.subject)}</h3><p>${esc(m.email)} · ${esc(day(m.created_at))}</p></div><button data-action="reopen" data-id="${esc(m.id)}">Reprendre le message ↗</button></article>`).join(''):'<p class="empty">Aucun message préparé. Choisis un compte puis « Préparer une relance ».</p>';
     $('#audit').innerHTML=s.audit.length?s.audit.map(a=>`<div class="audit-row"><span>${esc(auditNames[a.action]||a.action)}</span><time>${esc(day(a.created_at))}</time></div>`).join(''):'<p class="muted small">Les actions d’administration apparaîtront ici.</p>';
   }
-  function renderUsers(){
-    if(!snapshot)return;const search=$('#search').value.trim().toLowerCase(),filter=$('#filter').value;
-    const users=snapshot.users.filter(u=>(u.name+' '+u.email).toLowerCase().includes(search)&&(filter==='all'||(filter==='due'&&due(u))||(filter==='banned'&&u.banned)));
-    $('#users').innerHTML=users.length?users.map(u=>`<article class="user-card"><div class="user-top"><div class="user-id"><span class="avatar" aria-hidden="true">${esc((u.name||u.email).slice(0,1).toUpperCase())}</span><div><div class="user-name">${esc(u.name||'Compte Clair')}</div><div class="user-email">${esc(u.email)}</div></div></div>${u.is_admin?'<span class="tag">Admin</span>':''}</div><div class="user-tags"><span class="tag ${u.banned?'red':''}">${u.banned?'Suspendu':'Accès gratuit'}</span><span class="tag ${due(u)?'amber':'neutral'}">${esc(label(u))}</span><span class="tag neutral">${u.confirmed?'E-mail confirmé':'À confirmer'}</span></div><div class="user-meta"><div>Inscription<strong>${esc(day(u.created_at))}</strong></div><div>Échéance simulée<strong>${esc(day(u.test_until))}</strong></div></div><div class="user-actions"><button class="primary wide" data-action="reminder" data-user="${esc(u.id)}">Préparer une relance ↗</button><button data-action="renew" data-user="${esc(u.id)}">Simuler 1 mois payé</button><button data-action="date" data-user="${esc(u.id)}">Tester l’échéance</button><button data-action="recovery" data-user="${esc(u.id)}">Aider à récupérer</button>${!u.is_admin?`<button class="quiet" data-action="${u.banned?'restore':'suspend'}" data-user="${esc(u.id)}">${u.banned?'Rétablir':'Suspendre'}</button><button class="quiet danger" data-action="delete" data-user="${esc(u.id)}">Supprimer</button>`:''}</div></article>`).join(''):'<p class="empty">Aucun compte ne correspond à cette recherche.</p>';
-  }
+function pendingHelp(email){return (snapshot.requests||[]).filter(r=>r.status==='pending'&&r.email.toLowerCase()===email.toLowerCase());}
+function renderHelp(){
+ const requests=snapshot.requests||[],pending=requests.filter(r=>r.status==='pending');
+ $('#help-count').textContent=String(pending.length);
+ const reasons={email_missing:'Lien non reçu par e-mail',link_expired:'Lien expiré ou inutilisable',access_problem:'Problème de connexion'};
+ $('#help-requests').innerHTML=requests.length?requests.map(r=>{
+  const user=snapshot.users.find(u=>u.email.toLowerCase()===r.email.toLowerCase());
+  return `<article class="help-card"><span class="tag ${r.status==='pending'?'amber':''}">${r.status==='pending'?'À vérifier':r.status==='authorized'?'Réinitialisation autorisée':'Demande traitée'}</span><p>${esc(r.email)}</p><small>${esc(reasons[r.reason]||'Demande d’aide')} · ${esc(day(r.created_at))}</small><div>${user?`<button data-action="request-profile" data-user="${esc(user.id)}">Ouvrir le profil ↗</button>`:'<p class="field-hint">Vérifie cette adresse avec la personne avant toute action.</p>'}${r.status!=='closed'?`<button data-action="close-help" data-id="${esc(r.id)}">Marquer comme traitée</button>`:''}</div></article>`;
+ }).join(''):'<p class="empty">Aucune demande pour le moment.</p>';
+}
+function renderUsers(){
+ if(!snapshot)return;
+ const search=$('#search').value.trim().toLowerCase(),filter=$('#filter').value;
+ const users=snapshot.users.filter(u=>(u.name+' '+u.email).toLowerCase().includes(search)&&(filter==='all'||filter==='due'&&due(u)||filter==='banned'&&u.banned||filter==='help'&&pendingHelp(u.email).length));
+ if(!users.some(u=>u.id===openProfileId))openProfileId=null;
+ $('#accounts-count').textContent=String(users.length).padStart(2,'0');
+ $('#users').innerHTML=users.length?users.map(u=>{
+  const id=esc(u.id),open=u.id===openProfileId;
+  const initials=(u.name||u.email).split(/\s+/).filter(Boolean).slice(0,2).map(n=>n[0]).join('').toUpperCase();
+  return `<article class="user-card" data-expanded="${open}">
+  <button class="profile-toggle" id="profile-${id}" data-profile="${id}" aria-expanded="${open}" aria-controls="details-${id}"><span class="avatar" aria-hidden="true">${esc(initials)}</span><span class="profile-identity"><span class="user-name"><span>${esc(u.name||'Compte Clair')}</span>${u.is_admin?'<span class="admin-label">ADMIN</span>':''}${pendingHelp(u.email).length?'<span class="admin-label">DEMANDE D’AIDE</span>':''}</span><span class="user-email">${esc(u.email)}</span></span><span class="profile-status ${u.banned?'suspended':''}"><i class="status-dot"></i>${u.banned?'Suspendu':'Accès gratuit'}</span>${icon('chevron','profile-chevron')}</button>
+  <section class="profile-details" id="details-${id}" role="region" aria-labelledby="profile-${id}" ${open?'':'hidden inert'}><div class="profile-details-inner">
+  <div class="profile-summary"><span class="tag ${u.banned?'red':'success'}">${u.banned?'Compte suspendu':'Accès gratuit'}</span><span class="tag ${due(u)?'amber':''}">${esc(label(u))}</span><span class="tag">${u.confirmed?'E-mail confirmé':'E-mail à confirmer'}</span></div>
+  <dl class="profile-facts"><div><dt>Inscrit le</dt><dd>${esc(day(u.created_at))}</dd></div><div><dt>Dernière connexion</dt><dd>${esc(day(u.last_sign_in_at))}</dd></div><div><dt>Échéance de test</dt><dd>${esc(day(u.test_until))}</dd></div></dl>
+  <div class="profile-actions-title">LES ACTIONS DU COMPTE</div><div class="profile-main-actions"><button class="action-tile primary" data-action="reminder" data-user="${id}">${icon('mail')}<span><strong>Relancer</strong><small>Préparer un message de test</small></span></button><button class="action-tile" data-action="reset" data-user="${id}">${icon('key')}<span><strong>Autoriser un nouveau mot de passe</strong><small>Après vérification de l’identité</small></span></button></div>
+  <details class="test-tools" data-user="${id}" ${openTestTools.has(u.id)?'open':''}><summary>${icon('clock')}Outils de simulation et d’aide</summary><div class="test-actions"><button data-action="renew" data-user="${id}">Simuler 1 mois payé</button><button data-action="date" data-user="${id}">Tester l’échéance</button><button data-action="recovery" data-user="${id}">Envoyer le guide de connexion</button></div></details>
+  ${u.is_admin?`<p class="protected-account">${icon('shield')}Ton compte administrateur est protégé.</p>`:`<div class="account-management"><button data-action="${u.banned?'restore':'suspend'}" data-user="${id}">${icon(u.banned?'play':'pause')}${u.banned?'Rétablir le compte':'Suspendre le compte'}</button><button class="danger" data-action="delete" data-user="${id}">${icon('trash')}Supprimer</button></div>`}
+  </div></section></article>`;
+ }).join(''):'<p class="empty">Aucun compte ne correspond à cette recherche.</p>';
+}
+function toggleProfile(id){
+ openProfileId=openProfileId===id?null:id;
+ document.querySelectorAll('[data-profile]').forEach(button=>{
+  const panel=document.getElementById(button.getAttribute('aria-controls')),opening=button.dataset.profile===openProfileId;
+  if(button.getAttribute('aria-expanded')===String(opening))return;
+  panel.getAnimations().forEach(a=>a.cancel());button.setAttribute('aria-expanded',String(opening));button.closest('.user-card').dataset.expanded=String(opening);panel.inert=!opening;
+  if(motion.matches){panel.hidden=!opening;return;}
+  const from=opening?0:panel.getBoundingClientRect().height;panel.hidden=false;
+  const animation=panel.animate([{height:from+'px',opacity:opening?0:1},{height:(opening?panel.scrollHeight:0)+'px',opacity:opening?1:0}],{duration:350,easing:'cubic-bezier(.22,1,.36,1)'});
+  animation.finished.then(()=>{if(button.getAttribute('aria-expanded')==='false')panel.hidden=true;}).catch(()=>{});
+ });
+}
   function modal(html){$('#modal-content').innerHTML=html+'<p class="dialog-error" role="alert"></p>';if(!$('#modal').open)$('#modal').showModal();}
-  const dialogError=e=>{$('.dialog-error').textContent=e.message||String(e);};
+  const dialogError=e=>{const node=$('.dialog-error');if(node)node.textContent=e.message||String(e);else toast(e.message||String(e),true);};
   function showMail(mail){
     const query=new URLSearchParams({authuser:snapshot.actor.email,view:'cm',fs:'1',to:mail.email,su:mail.subject,body:mail.body});
     const gmail='https://mail.google.com/mail/?'+query;
@@ -59,24 +119,69 @@
     modal(`<h2 id="modal-title">${names[action]}</h2><p>${action==='delete'?'Le compte, son budget en ligne et ses appareils de notification seront supprimés. Il pourra ensuite se réinscrire avec cette adresse. Cette action est irréversible.':action==='suspend'?'Le compte perdra son accès en ligne et ses notifications seront désactivées. Son budget restera conservé.':'Le compte pourra de nouveau se connecter. Il devra réactiver ses notifications depuis Clair.'}</p><p>Cette action est réelle. Elle ne sert pas à simuler un impayé.</p><form id="danger-form"><label for="confirm-email">Recopie ${esc(user.email)}</label><input id="confirm-email" type="email" autocomplete="off" required><div class="dialog-actions"><button class="danger" type="submit">${names[action]}</button></div><p class="field-hint">Une connexion datant de moins de 15 minutes est requise.</p></form>`);
     $('#danger-form').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{await api(action,{user_id:user.id,confirm_email:$('#confirm-email').value});$('#modal').close();await refresh();toast('Action effectuée.');}catch(error){e.submitter.disabled=false;dialogError(error);}};
   }
+function showRecoveryCredentials(recovery){
+ const subject='Clair — choisir ton nouveau mot de passe';
+ const body='Bonjour,\n\nL’administrateur a autorisé la réinitialisation de ton mot de passe Clair. Ouvre ce lien pour choisir ton nouveau mot de passe :\n'+recovery.url+'\n\nTu peux aussi ouvrir https://j2947djt9g-sketch.github.io/mon-djai/clair/reset.html et utiliser ton adresse e-mail avec ce code à usage unique : '+recovery.code+'\n\nSi le lien ou le code a expiré, demande-en un nouveau.\n\nEl-Hadj — Clair';
+ const gmail='https://mail.google.com/mail/?'+new URLSearchParams({authuser:snapshot.actor.email,view:'cm',fs:'1',to:recovery.email,su:subject,body});
+ modal(`<span class="section-kicker">RÉINITIALISATION AUTORISÉE</span><h2 id="modal-title">Un nouveau départ.</h2><p>Pour ${esc(recovery.email)}. Transmets le lien ou le code uniquement au titulaire du compte.</p><label for="recovery-link">Lien à usage unique</label><input id="recovery-link" class="recovery-credential" readonly value="${esc(recovery.url)}"><p class="recovery-code">${esc(recovery.code)}</p><p class="field-hint">Le code permet de retrouver le même formulaire avec l’adresse e-mail du compte.</p><div class="dialog-actions"><a class="button-link" href="${esc(gmail)}" target="_blank" rel="noopener noreferrer">Ouvrir Gmail et envoyer ↗</a><button id="copy-recovery-link" class="secondary">Copier le lien</button><button id="copy-recovery-code" class="quiet">Copier le code</button></div><p class="field-hint">Ces informations sont affichées une seule fois ici. Elles ne sont pas enregistrées dans le journal des messages. Un lien expiré ou déjà utilisé devra être renouvelé.</p>`);
+ $('#copy-recovery-link').onclick=()=>navigator.clipboard.writeText(recovery.url).then(()=>toast('Lien copié.')).catch(()=>toast('Sélectionne le lien pour le copier.',true));
+ $('#copy-recovery-code').onclick=()=>navigator.clipboard.writeText(recovery.code).then(()=>toast('Code copié.')).catch(()=>toast('Sélectionne le code pour le copier.',true));
+}
+function resetDialog(user){
+ modal(`<span class="section-kicker">RÉCUPÉRATION DE COMPTE</span><h2 id="modal-title">Autoriser un nouveau mot de passe</h2><p>Vérifie que la demande vient bien du titulaire. Cette action prépare un lien et un code à usage unique ; la personne choisira elle-même son nouveau mot de passe.</p><form id="authorize-reset-form"><label for="reset-confirm-email">Recopie ${esc(user.email)}</label><input id="reset-confirm-email" type="email" autocomplete="off" required><label class="check-label"><input id="identity-checked" type="checkbox" required><span>J’ai vérifié l’identité de la personne qui demande la réinitialisation.</span></label><div class="dialog-actions"><button type="submit" class="primary">Autoriser la réinitialisation</button></div><p class="field-hint">Une connexion au masterboard datant de moins de 15 minutes est requise. Un compte suspendu doit être rétabli séparément.</p></form>`);
+ $('#authorize-reset-form').onsubmit=async e=>{
+  e.preventDefault();const button=e.submitter,epoch=loginEpoch;button.disabled=true;
+  try{
+   const r=await api('authorize-reset',{user_id:user.id,confirm_email:$('#reset-confirm-email').value,identity_checked:$('#identity-checked').checked});
+   if(epoch!==loginEpoch||!snapshot)return;
+   showRecoveryCredentials(r.recovery);await refresh();
+  }catch(error){dialogError(error);}finally{button.disabled=false;}
+ };
+}
+function showView(name,scroll=true){
+ if(!['accounts','messages','settings'].includes(name))return;
+ document.querySelectorAll('[data-tab]').forEach(t=>{const selected=t.dataset.tab===name;t.setAttribute('aria-selected',String(selected));t.tabIndex=selected?0:-1;});
+ document.querySelectorAll('.view').forEach(v=>v.hidden=v.id!==name+'-view');
+ if(scroll)document.getElementById(name+'-view').scrollIntoView({behavior:motion.matches?'auto':'smooth',block:'start'});
+}
+function clearBoard(){
+ snapshot=null;openProfileId=null;openTestTools.clear();$('#board').hidden=true;$('#login').hidden=false;$('#logout').hidden=true;
+ for(const id of ['users','messages','audit','help-requests','modal-content'])$('#'+id).replaceChildren();
+ $('#identity').textContent='';$('#phone').value='';$('#password').value='';$('#modal').close();setHero(false);
+}
   $('#board').addEventListener('click',async e=>{
+    const profile=e.target.closest('[data-profile]');if(profile){toggleProfile(profile.dataset.profile);return;}
     const button=e.target.closest('[data-action]');if(!button||busy)return;
     const action=button.dataset.action,user=snapshot.users.find(u=>u.id===button.dataset.user);
+    if(action==='request-profile'){$('#search').value=user.email;$('#filter').value='all';renderUsers();toggleProfile(user.id);document.getElementById('profile-'+user.id).scrollIntoView({block:'center',behavior:motion.matches?'auto':'smooth'});return;}
+    if(action==='reset')return resetDialog(user);
+    if(action==='close-help'){button.disabled=true;try{await api('close-help',{id:button.dataset.id});await refresh();toast('Demande marquée comme traitée.');}catch(error){toast(error.message,true);}finally{button.disabled=false;}return;}
     if(action==='date')return dateDialog(user);if(action==='renew')return renewDialog(user);if(['delete','suspend','restore'].includes(action))return dangerDialog(user,action);
     busy=true;button.disabled=true;try{if(action==='reopen'){const r=await api('get-mail',{id:button.dataset.id});showMail(r.message);}else if(action==='reminder'||action==='recovery'){const r=await api('prepare-mail',{user_id:user.id,id:crypto.randomUUID(),kind:action==='reminder'?'reminder':'recovery'});showMail(r.message);await refresh();}}catch(error){toast(error.message,true);}finally{busy=false;button.disabled=false;}
   });
   $('#login-form').onsubmit=async e=>{
-    e.preventDefault();const b=e.submitter;b.disabled=true;
+    e.preventDefault();const b=e.submitter;b.disabled=true;$('#login').dataset.busy='true';
     try{const {error}=await client.auth.signInWithPassword({email:$('#email').value.trim(),password:$('#password').value});$('#password').value='';if(error)throw Error('Connexion refusée. Vérifie ton adresse et ton mot de passe Clair.');await refresh();}
     catch(error){toast(error.message,true);await client.auth.signOut({scope:'local'});}
-    finally{b.disabled=false;}
+    finally{b.disabled=false;$('#login').dataset.busy='false';}
   };
-  async function leave(){++loginEpoch;await client.auth.signOut({scope:'local'});snapshot=null;$('#board').hidden=true;$('#login').hidden=false;$('#logout').hidden=true;$('#users').replaceChildren();$('#messages').replaceChildren();$('#audit').replaceChildren();$('#identity').textContent='';$('#modal-content').replaceChildren();$('#phone').value='';$('#modal').close();}
+  async function leave(){++loginEpoch;await client.auth.signOut({scope:'local'});clearBoard();}
   $('#logout').onclick=()=>leave().catch(e=>toast(e.message,true));
   $('#refresh').onclick=()=>refresh().catch(e=>toast(e.message,true));
   $('#close-modal').onclick=()=>$('#modal').close();$('#search').oninput=renderUsers;$('#filter').onchange=renderUsers;
-  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(t=>t.setAttribute('aria-selected',String(t===b)));document.querySelectorAll('.view').forEach(v=>v.hidden=v.id!==b.dataset.tab+'-view');});
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>showView(b.dataset.tab));
+  $('.tabs').addEventListener('keydown',e=>{const keys=['ArrowLeft','ArrowRight','Home','End'];if(!keys.includes(e.key))return;e.preventDefault();const tabs=[...document.querySelectorAll('[data-tab]')],i=tabs.indexOf(document.activeElement);const next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;showView(tabs[next].dataset.tab,false);tabs[next].focus();});
+  $('#trial-details').onclick=()=>showView('settings');
+  $('#password-toggle').onclick=()=>{const visible=$('#password').type==='password';$('#password').type=visible?'text':'password';$('#password-toggle').setAttribute('aria-pressed',String(visible));$('#password-toggle').setAttribute('aria-label',visible?'Masquer le mot de passe':'Afficher le mot de passe');};
+  $('#users').addEventListener('toggle',e=>{if(e.target.matches('.test-tools')){if(e.target.open)openTestTools.add(e.target.dataset.user);else openTestTools.delete(e.target.dataset.user);}},true);
+  $('#users').addEventListener('keydown',e=>{if(e.key==='Escape'&&openProfileId){e.preventDefault();const id=openProfileId;toggleProfile(id);document.getElementById('profile-'+id)?.focus();}});
+  $('#modal').addEventListener('close',()=>$('#modal-content').replaceChildren());
+  Object.assign(auditNames,{reset_authorization_requested:'Réinitialisation demandée',reset_authorized:'Nouveau mot de passe autorisé',help_request_closed:'Demande d’aide traitée'});
+
   $('#settings-form').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{await api('settings',{payment_phone:$('#phone').value});await refresh();toast('Coordonnées de test enregistrées.');}catch(error){toast(error.message,true);}finally{e.submitter.disabled=false;}};
-  client.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'&&snapshot){++loginEpoch;snapshot=null;$('#board').hidden=true;$('#login').hidden=false;$('#logout').hidden=true;$('#modal').close();$('#users').replaceChildren();$('#messages').replaceChildren();}});
-  (async()=>{try{const {data}=await client.auth.getSession();if(data.session)await refresh();}catch(error){toast(error.message,true);await leave();}})();
+  client.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'&&snapshot){++loginEpoch;clearBoard();}});
+  (async()=>{try{const {data}=await client.auth.getSession();if(data.session)await refresh();}
+   catch(error){toast(error.message,true);await leave();}
+   finally{document.body.dataset.session='ready';finishIntro();}
+  })();
 })();

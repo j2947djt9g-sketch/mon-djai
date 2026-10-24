@@ -6,3 +6,7 @@ verify_jwt = false
 # Validates the user token against Auth and the live private admin allowlist.
 [functions.clair-masterboard]
 verify_jwt = false
+
+# Rate-limited public support inbox; returns no account information.
+[functions.clair-account-help]
+verify_jwt = false

@@ -19,3 +19,13 @@ Recovery prepares a support email directing the recipient to the existing passwo
 Apply `supabase/masterboard.sql` once, grant the confirmed owner membership using a private, separately executed SQL insert (never a public auto-claim endpoint), and deploy `supabase/functions/clair-masterboard/{index.ts,core.mjs}`. The handler validates the JWT with Auth and then checks live allowlist membership. The service key only comes from the function environment. The function performs its own authentication; its gateway has `verify_jwt = false` for compatibility with current publishable keys. No user-data cache or service worker is used for the masterboard. Its assets are outside Clair's service-worker scope.
 
 Run `node clair/accounts/test-masterboard.cjs`, `node clair/accounts/verify-masterboard.cjs` and `supabase/verify-masterboard.sql` (transaction rolled back) alongside the existing regression checks. Browser tests use mocked Auth and administrative endpoints and never send mail or modify real accounts. Real email reception must be checked after the owner sends the prepared test message.
+
+## Profile interface and assisted recovery
+
+The masterboard has a black-and-white curved introduction, a mobile navigation pill and one expanded profile at a time. Profile controls are hidden and inert until the profile is opened; Escape closes it and returns keyboard focus. Refresh preserves the current profile and simulation tools. Reduced-motion preferences skip the introduction and expansion animations.
+
+Public support requests originate from Clair's login/recovery pages and are submitted through `clair-account-help`. The endpoint performs no account lookup, returns a neutral confirmation, and uses a service-only SQL function for atomic duplicate and rate checks. The inbox is private. Apply `supabase/account-help.sql` before deploying both functions.
+
+The administrator can authorize a reset only after a recent sign-in, target-email confirmation and an explicit identity-verification checkbox. Confirmed email is required; suspension is handled separately. Supabase generates a recovery link and a one-time code. Neither credential is stored in the database, audit or mail journal; the admin dialog is cleared when closed. Credentials are delivered manually to the verified account holder. `clair/reset.html` verifies the link or code with Supabase before allowing a new password; the URL fragment is removed immediately. Successful password changes sign out the recovery session and leave the budget untouched.
+
+Tests never generate links for real accounts or send real mail. Run `test-assisted-recovery.cjs`, `verify-assisted-recovery.cjs` and `supabase/verify-account-help.sql` alongside the masterboard checks.
