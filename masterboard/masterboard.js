@@ -153,7 +153,7 @@ function clearBoard(){
     const profile=e.target.closest('[data-profile]');if(profile){toggleProfile(profile.dataset.profile);return;}
     const button=e.target.closest('[data-action]');if(!button||busy)return;
     const action=button.dataset.action,user=snapshot.users.find(u=>u.id===button.dataset.user);
-    if(action==='request-profile'){$('#search').value=user.email;$('#filter').value='all';renderUsers();toggleProfile(user.id);document.getElementById('profile-'+user.id).scrollIntoView({block:'center',behavior:motion.matches?'auto':'smooth'});return;}
+    if(action==='request-profile'){$('#search').value=user.email;$('#filter').value='all';renderUsers();if(openProfileId!==user.id)toggleProfile(user.id);document.getElementById('profile-'+user.id).scrollIntoView({block:'center',behavior:motion.matches?'auto':'smooth'});return;}
     if(action==='reset')return resetDialog(user);
     if(action==='close-help'){button.disabled=true;try{await api('close-help',{id:button.dataset.id});await refresh();toast('Demande marquée comme traitée.');}catch(error){toast(error.message,true);}finally{button.disabled=false;}return;}
     if(action==='date')return dateDialog(user);if(action==='renew')return renewDialog(user);if(['delete','suspend','restore'].includes(action))return dangerDialog(user,action);
