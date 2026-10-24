@@ -1831,7 +1831,7 @@ function paymentDetails(key){
     {title:'Les bons gestes au quotidien',label:'Ton quotidien',text:'Une dépense, un geste.',detail:'Avec Ajouter, note un achat ou de l’argent reçu. Clair actualise ton solde. Les dépenses automatiques déjà comptées ne sont pas à ressaisir.',done:'La dépense est ajoutée et le solde est actualisé.'},
     {title:'Un peu d’avance sur demain',label:'Un temps d’avance',text:'Anticipe sereinement.',detail:'Consulte les paiements à venir. Les rappels dans Clair s’activent dans Réglages, dès J−2. Les notifications app fermée demandent une autorisation sur ton appareil.',done:'Le rappel présente un paiement prévu dans deux jours.'}
   ];
-  function stopTutorialDemo(){tutorialTimers.forEach(clearTimeout);tutorialTimers=[];}
+  function stopTutorialDemo(){tutorialTimers.forEach(clearTimeout);tutorialTimers=[];const play=$('[data-action="tutorial-play"]');if(play){play.disabled=false;play.innerHTML=profileSymbol('play')+'<span>Revoir le geste</span>';}}
   function openTutorial(resumeSetup=false){stopTutorialDemo();guide={step:0,phase:0,played:[],resumeSetup,owner:cloud.user?.id||'local'};tutorialView();}
   function tutorialScene(){
     if(!guide)return '';const phase=guide.phase,code=data.currency,cfa=code==='XOF'||code==='XAF';
