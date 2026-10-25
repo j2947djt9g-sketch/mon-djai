@@ -8,9 +8,9 @@
     const remove=()=>{intro.remove();document.querySelector('main').inert=false;};
     if(skip||motion.matches){remove();return;}
     if(introLeaving)return;introLeaving=true;
-    setTimeout(()=>{if(!intro.isConnected)return;intro.classList.add('leaving');intro.addEventListener('animationend',e=>{if(e.target===intro)remove();});setTimeout(remove,1100);},Math.max(0,650-(performance.now()-introStarted)));
+    setTimeout(()=>{if(!intro.isConnected)return;intro.classList.add('leaving');intro.addEventListener('animationend',e=>{if(e.target===intro)remove();});setTimeout(remove,1300);},Math.max(0,4200-(performance.now()-introStarted)));
   }
-  setTimeout(()=>finishIntro(),2500);
+  setTimeout(()=>finishIntro(),6000);
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&intro?.isConnected)finishIntro(true);});
   if(!window.supabase){document.body.dataset.session='ready';finishIntro(true);document.querySelector('#global-status').textContent='Connexion indisponible. Actualise la page.';return;}
   const URL='https://hkssnbvktfscizojhftl.supabase.co',KEY='sb_publishable_qJeSyD7E0cbi8V--qyJJkw_8M4oOKr8';
@@ -62,38 +62,48 @@ function renderHelp(){
   return `<article class="help-card"><span class="tag ${r.status==='pending'?'amber':''}">${r.status==='pending'?'À vérifier':r.status==='authorized'?'Réinitialisation autorisée':'Demande traitée'}</span><p>${esc(r.email)}</p><small>${esc(reasons[r.reason]||'Demande d’aide')} · ${esc(day(r.created_at))}</small><div>${user?`<button data-action="request-profile" data-user="${esc(user.id)}">Ouvrir le profil ↗</button>`:'<p class="field-hint">Vérifie cette adresse avec la personne avant toute action.</p>'}${r.status!=='closed'?`<button data-action="close-help" data-id="${esc(r.id)}">Marquer comme traitée</button>`:''}</div></article>`;
  }).join(''):'<p class="empty">Aucune demande pour le moment.</p>';
 }
+const mobileProfile=window.matchMedia('(max-width: 760px)');
+let profileAnimation=null,profileReturnId=null;
+function initialsFor(user){return (user.name||user.email).split(/\s+/).filter(Boolean).slice(0,2).map(n=>n[0]).join('').toUpperCase();}
 function renderUsers(){
  if(!snapshot)return;
  const search=$('#search').value.trim().toLowerCase(),filter=$('#filter').value;
  const users=snapshot.users.filter(u=>(u.name+' '+u.email).toLowerCase().includes(search)&&(filter==='all'||filter==='due'&&due(u)||filter==='banned'&&u.banned||filter==='help'&&pendingHelp(u.email).length));
- if(!users.some(u=>u.id===openProfileId))openProfileId=null;
+ if(openProfileId&&!users.some(u=>u.id===openProfileId))closeProfile(false,false);
  $('#accounts-count').textContent=String(users.length).padStart(2,'0');
  $('#users').innerHTML=users.length?users.map(u=>{
   const id=esc(u.id),open=u.id===openProfileId;
-  const initials=(u.name||u.email).split(/\s+/).filter(Boolean).slice(0,2).map(n=>n[0]).join('').toUpperCase();
-  return `<article class="user-card" data-expanded="${open}">
-  <button class="profile-toggle" id="profile-${id}" data-profile="${id}" aria-expanded="${open}" aria-controls="details-${id}"><span class="avatar" aria-hidden="true">${esc(initials)}</span><span class="profile-identity"><span class="user-name"><span>${esc(u.name||'Compte Clair')}</span>${u.is_admin?'<span class="admin-label">ADMIN</span>':''}${pendingHelp(u.email).length?'<span class="admin-label">DEMANDE D’AIDE</span>':''}</span><span class="user-email">${esc(u.email)}</span></span><span class="profile-status ${u.banned?'suspended':''}"><i class="status-dot"></i>${u.banned?'Suspendu':'Accès gratuit'}</span>${icon('chevron','profile-chevron')}</button>
-  <section class="profile-details" id="details-${id}" role="region" aria-labelledby="profile-${id}" ${open?'':'hidden inert'}><div class="profile-details-inner">
-  <div class="profile-summary"><span class="tag ${u.banned?'red':'success'}">${u.banned?'Compte suspendu':'Accès gratuit'}</span><span class="tag ${due(u)?'amber':''}">${esc(label(u))}</span><span class="tag">${u.confirmed?'E-mail confirmé':'E-mail à confirmer'}</span></div>
-  <dl class="profile-facts"><div><dt>Inscrit le</dt><dd>${esc(day(u.created_at))}</dd></div><div><dt>Dernière connexion</dt><dd>${esc(day(u.last_sign_in_at))}</dd></div><div><dt>Échéance de test</dt><dd>${esc(day(u.test_until))}</dd></div></dl>
-  <div class="profile-actions-title">LES ACTIONS DU COMPTE</div><div class="profile-main-actions"><button class="action-tile primary" data-action="reminder" data-user="${id}">${icon('mail')}<span><strong>Relancer</strong><small>Préparer un message de test</small></span></button><button class="action-tile" data-action="reset" data-user="${id}">${icon('key')}<span><strong>Autoriser un nouveau mot de passe</strong><small>Après vérification de l’identité</small></span></button></div>
-  <details class="test-tools" data-user="${id}" ${openTestTools.has(u.id)?'open':''}><summary>${icon('clock')}Outils de simulation et d’aide</summary><div class="test-actions"><button data-action="renew" data-user="${id}">Simuler 1 mois payé</button><button data-action="date" data-user="${id}">Tester l’échéance</button><button data-action="recovery" data-user="${id}">Envoyer le guide de connexion</button></div></details>
-  ${u.is_admin?`<p class="protected-account">${icon('shield')}Ton compte administrateur est protégé.</p>`:`<div class="account-management"><button data-action="${u.banned?'restore':'suspend'}" data-user="${id}">${icon(u.banned?'play':'pause')}${u.banned?'Rétablir le compte':'Suspendre le compte'}</button><button class="danger" data-action="delete" data-user="${id}">${icon('trash')}Supprimer</button></div>`}
-  </div></section></article>`;
+  return '<article class="user-card" data-expanded="'+open+'"><button class="profile-toggle" id="profile-'+id+'" data-profile="'+id+'" aria-expanded="'+open+'" aria-controls="profile-drawer" aria-haspopup="dialog"><span class="card-person"><span class="avatar" aria-hidden="true">'+esc(initialsFor(u))+'</span><span class="profile-identity"><span class="user-name">'+esc(u.name||'Compte Clair')+'</span><span class="user-email">'+esc(u.email)+'</span></span></span><span class="card-badges"><span class="profile-status '+(u.banned?'suspended':'')+'"><i class="status-dot"></i>'+(u.banned?'Suspendu':'Accès gratuit')+'</span>'+(u.is_admin?'<span class="admin-label">ADMIN</span>':'')+(pendingHelp(u.email).length?'<span class="tag amber">Demande d’aide</span>':'')+'</span><span class="card-foot"><span>'+esc(u.test_until?label(u):'Espace personnel')+'</span><span class="card-open">Voir le profil '+icon('chevron','profile-chevron')+'</span></span></button></article>';
  }).join(''):'<p class="empty">Aucun compte ne correspond à cette recherche.</p>';
+ if(openProfileId)renderProfile();
+}
+function renderProfile(){
+ const u=snapshot?.users.find(u=>u.id===openProfileId);if(!u)return;const id=esc(u.id);
+ $('#profile-content').innerHTML='<section class="drawer-identity"><span class="avatar" aria-hidden="true">'+esc(initialsFor(u))+'</span><h2 id="profile-title">'+esc(u.name||'Compte Clair')+'</h2><p class="drawer-email">'+esc(u.email)+'</p><div class="profile-summary"><span class="tag '+(u.banned?'red':'success')+'">'+(u.banned?'Compte suspendu':'Accès gratuit')+'</span><span class="tag">'+(u.confirmed?'E-mail confirmé':'E-mail à confirmer')+'</span>'+(u.is_admin?'<span class="tag">Administrateur</span>':'')+'</div></section><div class="profile-details-inner"><h3 class="profile-section-heading"><span>'+icon('people')+'</span>Les informations du compte</h3><dl class="profile-facts"><div><dt>Inscrit le</dt><dd>'+esc(day(u.created_at))+'</dd></div><div><dt>Dernière connexion</dt><dd>'+esc(day(u.last_sign_in_at))+'</dd></div><div><dt>Échéance de test</dt><dd>'+esc(day(u.test_until))+' <span class="tag '+(due(u)?'amber':'')+'">'+esc(label(u))+'</span></dd></div></dl><h3 class="profile-section-heading"><span>'+icon('mail')+'</span>Relances et connexion</h3><div class="profile-main-actions"><button class="action-tile primary" data-action="reminder" data-user="'+id+'">'+icon('mail')+'<span><strong>Préparer une relance</strong><small>Un message prêt à envoyer dans Gmail</small></span></button><button class="action-tile" data-action="reset" data-user="'+id+'">'+icon('key')+'<span><strong>Autoriser un nouveau mot de passe</strong><small>Après vérification de l’identité</small></span></button></div><details class="test-tools" data-user="'+id+'" '+(openTestTools.has(u.id)?'open':'')+'><summary>'+icon('clock')+'Outils de simulation et d’aide</summary><div class="test-actions"><button data-action="renew" data-user="'+id+'">Simuler 1 mois payé</button><button data-action="date" data-user="'+id+'">Tester l’échéance</button><button data-action="recovery" data-user="'+id+'">Envoyer le guide de connexion</button></div></details>'+(u.is_admin?'<p class="protected-account">'+icon('shield')+'Ton compte administrateur est protégé.</p>':'<section class="account-management"><h3>Gérer l’accès à Clair</h3><div><button data-action="'+(u.banned?'restore':'suspend')+'" data-user="'+id+'">'+icon(u.banned?'play':'pause')+(u.banned?'Rétablir le compte':'Suspendre le compte')+'</button><button class="danger" data-action="delete" data-user="'+id+'">'+icon('trash')+'Supprimer</button></div></section>')+'</div>';
+}
+function syncProfileDialog(){
+ const drawer=$('#profile-drawer'),wasOpen=drawer.open;profileAnimation?.cancel();profileAnimation=null;drawer.inert=false;
+ if(!wasOpen){if(mobileProfile.matches)drawer.showModal();else drawer.show();}
+ drawer.setAttribute('aria-modal',String(mobileProfile.matches));document.body.dataset.profileOpen='true';
+ if(!wasOpen)$('#close-profile').focus({preventScroll:true});
 }
 function toggleProfile(id){
- openProfileId=openProfileId===id?null:id;
- document.querySelectorAll('[data-profile]').forEach(button=>{
-  const panel=document.getElementById(button.getAttribute('aria-controls')),opening=button.dataset.profile===openProfileId;
-  if(button.getAttribute('aria-expanded')===String(opening))return;
-  panel.getAnimations().forEach(a=>a.cancel());button.setAttribute('aria-expanded',String(opening));button.closest('.user-card').dataset.expanded=String(opening);panel.inert=!opening;
-  if(motion.matches){panel.hidden=!opening;return;}
-  const from=opening?0:panel.getBoundingClientRect().height;panel.hidden=false;
-  const animation=panel.animate([{height:from+'px',opacity:opening?0:1},{height:(opening?panel.scrollHeight:0)+'px',opacity:opening?1:0}],{duration:350,easing:'cubic-bezier(.22,1,.36,1)'});
-  animation.finished.then(()=>{if(button.getAttribute('aria-expanded')==='false')panel.hidden=true;}).catch(()=>{});
- });
+ if(openProfileId===id){closeProfile();return;}
+ profileAnimation?.cancel();profileAnimation=null;openProfileId=id;profileReturnId=id;renderUsers();syncProfileDialog();$('#profile-content').scrollTop=0;
 }
+function closeProfile(restoreFocus=true,animate=true){
+ const drawer=$('#profile-drawer'),returnId=profileReturnId;openProfileId=null;document.body.dataset.profileOpen='false';
+ document.querySelectorAll('[data-profile]').forEach(b=>{b.setAttribute('aria-expanded','false');b.closest('.user-card').dataset.expanded='false';});
+ profileAnimation?.cancel();profileAnimation=null;
+ const finish=()=>{if(openProfileId)return;drawer.close();drawer.inert=false;$('#profile-content').replaceChildren();if(restoreFocus)document.getElementById('profile-'+returnId)?.focus({preventScroll:true});};
+ if(drawer.open&&animate&&!motion.matches){drawer.inert=true;profileAnimation=drawer.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateX(70px)'}],{duration:240,easing:'ease-in',fill:'forwards'});profileAnimation.finished.then(finish).catch(()=>{});}else finish();
+}
+function resizeProfile(){
+ $('.tabs').setAttribute('aria-orientation',mobileProfile.matches?'horizontal':'vertical');
+ const drawer=$('#profile-drawer');if(!drawer.open||!openProfileId)return;
+ drawer.close();if(mobileProfile.matches)drawer.showModal();else drawer.show();drawer.setAttribute('aria-modal',String(mobileProfile.matches));
+}
+mobileProfile.addEventListener('change',resizeProfile);
   function modal(html){$('#modal-content').innerHTML=html+'<p class="dialog-error" role="alert"></p>';if(!$('#modal').open)$('#modal').showModal();}
   const dialogError=e=>{const node=$('.dialog-error');if(node)node.textContent=e.message||String(e);else toast(e.message||String(e),true);};
   function showMail(mail){
@@ -140,25 +150,29 @@ function resetDialog(user){
 }
 function showView(name,scroll=true){
  if(!['accounts','messages','settings'].includes(name))return;
+ closeProfile(false,false);
  document.querySelectorAll('[data-tab]').forEach(t=>{const selected=t.dataset.tab===name;t.setAttribute('aria-selected',String(selected));t.tabIndex=selected?0:-1;});
  document.querySelectorAll('.view').forEach(v=>v.hidden=v.id!==name+'-view');
  if(scroll)document.getElementById(name+'-view').scrollIntoView({behavior:motion.matches?'auto':'smooth',block:'start'});
 }
 function clearBoard(){
+ closeProfile(false,false);
  snapshot=null;openProfileId=null;openTestTools.clear();$('#board').hidden=true;$('#login').hidden=false;$('#logout').hidden=true;
  for(const id of ['users','messages','audit','help-requests','modal-content'])$('#'+id).replaceChildren();
  $('#identity').textContent='';$('#phone').value='';$('#password').value='';$('#modal').close();setHero(false);
 }
-  $('#board').addEventListener('click',async e=>{
+  async function handleBoardClick(e){
     const profile=e.target.closest('[data-profile]');if(profile){toggleProfile(profile.dataset.profile);return;}
     const button=e.target.closest('[data-action]');if(!button||busy)return;
     const action=button.dataset.action,user=snapshot.users.find(u=>u.id===button.dataset.user);
-    if(action==='request-profile'){$('#search').value=user.email;$('#filter').value='all';renderUsers();if(openProfileId!==user.id)toggleProfile(user.id);document.getElementById('profile-'+user.id).scrollIntoView({block:'center',behavior:motion.matches?'auto':'smooth'});return;}
+    if(action==='request-profile'){$('#search').value=user.email;$('#filter').value='all';renderUsers();if(openProfileId!==user.id)toggleProfile(user.id);return;}
     if(action==='reset')return resetDialog(user);
     if(action==='close-help'){button.disabled=true;try{await api('close-help',{id:button.dataset.id});await refresh();toast('Demande marquée comme traitée.');}catch(error){toast(error.message,true);}finally{button.disabled=false;}return;}
     if(action==='date')return dateDialog(user);if(action==='renew')return renewDialog(user);if(['delete','suspend','restore'].includes(action))return dangerDialog(user,action);
     busy=true;button.disabled=true;try{if(action==='reopen'){const r=await api('get-mail',{id:button.dataset.id});showMail(r.message);}else if(action==='reminder'||action==='recovery'){const r=await api('prepare-mail',{user_id:user.id,id:crypto.randomUUID(),kind:action==='reminder'?'reminder':'recovery'});showMail(r.message);await refresh();}}catch(error){toast(error.message,true);}finally{busy=false;button.disabled=false;}
-  });
+  }
+  $('#board').addEventListener('click',handleBoardClick);
+  $('#profile-drawer').addEventListener('click',handleBoardClick);
   $('#login-form').onsubmit=async e=>{
     e.preventDefault();const b=e.submitter;b.disabled=true;$('#login').dataset.busy='true';
     try{const {error}=await client.auth.signInWithPassword({email:$('#email').value.trim(),password:$('#password').value});$('#password').value='';if(error)throw Error('Connexion refusée. Vérifie ton adresse et ton mot de passe Clair.');await refresh();}
@@ -170,11 +184,16 @@ function clearBoard(){
   $('#refresh').onclick=()=>refresh().catch(e=>toast(e.message,true));
   $('#close-modal').onclick=()=>$('#modal').close();$('#search').oninput=renderUsers;$('#filter').onchange=renderUsers;
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>showView(b.dataset.tab));
-  $('.tabs').addEventListener('keydown',e=>{const keys=['ArrowLeft','ArrowRight','Home','End'];if(!keys.includes(e.key))return;e.preventDefault();const tabs=[...document.querySelectorAll('[data-tab]')],i=tabs.indexOf(document.activeElement);const next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;showView(tabs[next].dataset.tab,false);tabs[next].focus();});
+  $('.tabs').addEventListener('keydown',e=>{const keys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'];if(!keys.includes(e.key))return;e.preventDefault();const tabs=[...document.querySelectorAll('[data-tab]')],i=tabs.indexOf(document.activeElement);const next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(['ArrowRight','ArrowDown'].includes(e.key)?1:-1)+tabs.length)%tabs.length;showView(tabs[next].dataset.tab,false);tabs[next].focus();});
   $('#trial-details').onclick=()=>showView('settings');
   $('#password-toggle').onclick=()=>{const visible=$('#password').type==='password';$('#password').type=visible?'text':'password';$('#password-toggle').setAttribute('aria-pressed',String(visible));$('#password-toggle').setAttribute('aria-label',visible?'Masquer le mot de passe':'Afficher le mot de passe');};
-  $('#users').addEventListener('toggle',e=>{if(e.target.matches('.test-tools')){if(e.target.open)openTestTools.add(e.target.dataset.user);else openTestTools.delete(e.target.dataset.user);}},true);
-  $('#users').addEventListener('keydown',e=>{if(e.key==='Escape'&&openProfileId){e.preventDefault();const id=openProfileId;toggleProfile(id);document.getElementById('profile-'+id)?.focus();}});
+  $('#profile-drawer').addEventListener('toggle',e=>{if(e.target.matches('.test-tools')){if(e.target.open)openTestTools.add(e.target.dataset.user);else openTestTools.delete(e.target.dataset.user);}},true);
+  $('#close-profile').onclick=()=>closeProfile();
+  $('#profile-drawer').addEventListener('cancel',e=>{e.preventDefault();closeProfile();});
+  $('#profile-drawer').addEventListener('click',e=>{if(e.target!==$('#profile-drawer'))return;const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeProfile();});
+  $('#profile-drawer').addEventListener('close',()=>{if(!$('#profile-drawer').open){openProfileId=null;document.body.dataset.profileOpen='false';$('#profile-content').replaceChildren();document.querySelectorAll('[data-profile]').forEach(b=>{b.setAttribute('aria-expanded','false');b.closest('.user-card').dataset.expanded='false';});}});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#modal').open&&openProfileId){e.preventDefault();closeProfile();}});
+  resizeProfile();
   $('#modal').addEventListener('close',()=>{if(!$('#modal').open)$('#modal-content').replaceChildren();});
   Object.assign(auditNames,{reset_authorization_requested:'Réinitialisation demandée',reset_authorized:'Nouveau mot de passe autorisé',help_request_closed:'Demande d’aide traitée'});
 

@@ -32,18 +32,38 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
    await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(result)});
   });
   await page.addInitScript(({user,jwt,exp})=>sessionStorage.setItem('clair-masterboard-session-v1',JSON.stringify({access_token:jwt,refresh_token:'FIXTURE',expires_in:3600,expires_at:exp,token_type:'bearer',user})),{user,jwt,exp});
-  await page.goto('http://127.0.0.1:'+server.address().port+'/masterboard/');await page.locator('#board').waitFor({state:'visible'});await page.locator('#intro').waitFor({state:'detached'});
-  assert.equal(await page.locator('.profile-details:visible').count(),0);
-  assert.equal(await page.locator('[data-action="delete"]').isVisible(),false);
+  await page.goto('http://127.0.0.1:'+server.address().port+'/masterboard/');await page.locator('#board').waitFor({state:'visible'});
+  if(width===320){
+   const letter=page.locator('.intro-letters>span').first(),startY=await letter.evaluate(e=>e.getBoundingClientRect().y);
+   await page.waitForTimeout(1900);const landedY=await letter.evaluate(e=>e.getBoundingClientRect().y);
+   assert(landedY>startY+30,'The first letter must fall from above');
+   assert(await page.locator('#intro').isVisible(),'Keep the settled logo visible before lifting the sheet');
+   assert.equal(await page.locator('#intro').evaluate(e=>e.classList.contains('leaving')),false);
+  }
+  await page.locator('#intro').waitFor({state:'detached'});
+  const drawer=page.locator('#profile-drawer');
+  assert.equal(await drawer.isVisible(),false);assert.equal(await page.locator('[data-action="delete"]').count(),0);
+  const nav=await page.locator('.app-sidebar').boundingBox();
+  if(width<=760){assert(nav.y>700);assert(nav.width>width*.75);assert.equal(await page.locator('.tabs').getAttribute('aria-orientation'),'horizontal');}
+  else{assert(nav.x<2);assert(nav.height>=899);assert.equal(await page.locator('.tabs').getAttribute('aria-orientation'),'vertical');}
   const snapshotsBefore=calls.length;
-  await page.locator('[data-profile="'+member+'"]').click();
+  await page.locator('[data-profile="'+member+'"]').click();await drawer.waitFor({state:'visible'});
+  await page.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished.catch(()=>{}))));
+  const panel=await drawer.boundingBox();assert(panel.x>=0&&panel.x+panel.width<=width+1);
+  if(width>=768)assert(panel.x>=width*.35,'The profile must open at the right edge');
   assert.equal(await page.locator('[data-profile="'+member+'"]').getAttribute('aria-expanded'),'true');
+  assert.match(await page.locator('#profile-content').innerText(),/member@example.invalid/);
+  assert.equal(await page.locator('.user-card [data-action]').count(),0,'Actions belong in the lateral profile');
+  await page.locator('#profile-content').evaluate(e=>e.scrollTop=e.scrollHeight);
+  if(width<=760){await page.locator('#close-profile').click();await drawer.waitFor({state:'hidden'});}
   await page.locator('[data-profile="'+uid+'"]').click();
-  assert.equal(await page.locator('[data-profile][aria-expanded=true]').count(),1);
-  await page.locator('[data-profile="'+uid+'"]').press('Escape');
+  assert.equal(await page.locator('#profile-content').evaluate(e=>e.scrollTop),0,'A newly opened profile starts with its identity visible');
+  assert.equal(await page.locator('[data-profile][aria-expanded=true]').count(),1);assert.match(await page.locator('#profile-content').innerText(),/owner@example.invalid/);
+  await page.locator('#close-profile').press('Escape');await drawer.waitFor({state:'hidden'});
   assert.equal(await page.locator('[data-profile][aria-expanded=true]').count(),0);
+  assert.equal(await page.locator('[data-profile="'+uid+'"]').evaluate(e=>e===document.activeElement),true);
   assert.equal(calls.length,snapshotsBefore);
-  assert.equal(await page.locator('.user-card').count(),2);assert.equal(await page.locator('.user-card img').count(),0);assert.equal(await page.locator('[data-action="delete"]').count(),1);
+  assert.equal(await page.locator('.user-card').count(),2);assert.equal(await page.locator('.user-card img').count(),0);
   const noOverflow=async()=>{
    const result=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,outliers:[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>({tag:e.tagName,cls:e.className,right:Math.round(e.getBoundingClientRect().right)})).slice(0,15)}));
    assert(result.scroll<=result.width+1,JSON.stringify(result));
@@ -52,7 +72,7 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
   await page.locator('[data-tab="accounts"]').click();await page.locator('#search').fill('member@');assert.equal(await page.locator('.user-card').count(),1);
   await page.locator('[data-profile="'+member+'"]').click();
   await page.locator('.test-tools summary').click();
-  await page.locator('[data-action="date"]').click();await page.locator('[data-offset="-3"]').click();await page.locator('#date-form button[type="submit"]').click();await page.locator('#modal').waitFor({state:'hidden'});assert.equal(board.users[1].test_until,'2026-10-20');assert.match(await page.locator('.user-card').innerText(),/Accès gratuit/);
+  await page.locator('[data-action="date"]').click();await page.locator('[data-offset="-3"]').click();await page.locator('#date-form button[type="submit"]').click();await page.locator('#modal').waitFor({state:'hidden'});assert.equal(board.users[1].test_until,'2026-10-20');assert.match(await page.locator('#profile-content').innerText(),/Accès gratuit/);
   await page.locator('[data-action="reminder"]').click();await page.locator('#modal').waitFor({state:'visible'});assert(await page.locator('#confirm-mail').isDisabled());
   const href=await page.getByRole('link',{name:'Ouvrir Gmail et envoyer'}).getAttribute('href'),url=new URL(href);assert.equal(url.hostname,'mail.google.com');assert.equal(url.searchParams.get('to'),'member@example.invalid');assert.match(url.searchParams.get('body'),/Aucun paiement/);assert.equal(calls.filter(c=>/send/.test(c.action)).length,0);
   const popupPromise=page.waitForEvent('popup');await page.getByRole('link',{name:'Ouvrir Gmail et envoyer'}).click();const popup=await popupPromise;await popup.close();await page.locator('#confirm-mail:enabled').waitFor();await page.locator('#confirm-mail').click();await page.locator('#confirm-mail').filter({hasText:'Envoi confirmé'}).waitFor();assert.equal(mail.state,'confirmed_sent');await noOverflow();await page.locator('#close-modal').click();
@@ -68,8 +88,19 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
   assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('123456')),false);
   await page.locator('#close-modal').click();await page.waitForFunction(()=>document.querySelector('#modal-content').innerHTML==='');
   await page.locator('[data-action="delete"]').click();assert.match(await page.locator('#modal').innerText(),/irréversible/);assert.match(await page.locator('#modal').innerText(),/Cette action est réelle/);assert.equal(await page.locator('#confirm-email').inputValue(),'');await page.locator('#close-modal').click();assert.equal(calls.filter(c=>c.action==='delete').length,0);
+  await page.locator('#close-profile').click();await drawer.waitFor({state:'hidden'});
   await page.locator('[data-tab="messages"]').click();assert.match(await page.locator('#messages').innerText(),/Envoi confirmé par toi/);await page.locator('[data-action="reopen"]').click();assert(await page.locator('#confirm-mail').isDisabled());await page.locator('#close-modal').click();
-  if(process.env.CLAIR_PREVIEW==='1'){await page.locator('[data-tab="accounts"]').click();await page.locator('#search').fill('');if(width===390||width===1440){const shot=await page.screenshot({fullPage:true,animations:'disabled'});console.log('MASTERBOARD_SCREENSHOT_'+width+'='+shot.toString('base64'));}}
-  await page.locator('#logout').click();await page.locator('#login').waitFor({state:'visible'});assert.equal(await page.locator('#users').innerHTML(),'');assert.deepEqual(errors,[]);await context.close();console.log('PASS masterboard '+width+'px: safe account cards, no overflow, date scenarios, Gmail recipient/body and real compose opening, manual send confirmation, renewal, deletion confirmation without executing it, history and logout');
+  if(process.env.CLAIR_PREVIEW==='1'){
+   await page.locator('[data-tab="accounts"]').click();await page.locator('#search').fill('');
+   if(width===390||width===1440){
+    await page.locator('#search').blur();await page.evaluate(()=>document.querySelector('#global-status').textContent='');
+    let shot=await page.screenshot({fullPage:true,animations:'disabled'});console.log('MASTERBOARD_SCREENSHOT_'+width+'='+shot.toString('base64'));
+    await page.locator('[data-profile="'+member+'"]').click();await drawer.waitFor({state:'visible'});
+    assert.equal(await page.locator('#profile-content').evaluate(e=>e.scrollTop),0);
+    shot=await page.screenshot({fullPage:true,animations:'disabled'});console.log('PROFILE_SCREENSHOT_'+width+'='+shot.toString('base64'));
+    await page.locator('#close-profile').click();await drawer.waitFor({state:'hidden'});
+   }
+  }
+  await page.locator('#logout').click();await page.locator('#login').waitFor({state:'visible'});assert.equal(await page.locator('#users').innerHTML(),'');assert.equal(await page.locator('#profile-content').innerHTML(),'');assert.equal(await drawer.isVisible(),false);assert.deepEqual(errors,[]);await context.close();console.log('PASS masterboard '+width+'px: right-side profiles, left desktop / bottom mobile navigation, safe account cards, no overflow, date scenarios, Gmail recipient/body and real compose opening, manual send confirmation, renewal, deletion confirmation without executing it, history and logout');
  }}finally{await browser.close();}
 })().then(()=>server.close()).catch(e=>{console.error(e);server.close();process.exitCode=1});
