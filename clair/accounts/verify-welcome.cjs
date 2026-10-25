@@ -55,7 +55,7 @@
     await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',async route=>{
       const request=route.request(),pathname=new URL(request.url()).pathname;
       if(pathname.endsWith('/token')){calls.login++;await route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({code:'invalid_credentials',message:'Invalid login credentials'})});}
-      else if(pathname.endsWith('/recover')){calls.recovery++;await route.fulfill({status:200,contentType:'application/json',body:'{}'});}
+      else if((pathname.endsWith('/recover')||pathname.endsWith('/clair-account-recovery'))){calls.recovery++;await route.fulfill({status:202,contentType:'application/json',body:JSON.stringify({ok:true,retry_after:60})});}
       else await route.fulfill({status:200,contentType:'application/json',body:'{}'});
     });
     await page.goto(url);await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form[data-mode="login"]').waitFor();
@@ -79,7 +79,7 @@
     await page.locator('[data-action="account-forgot"]').click();await page.locator('#account-forgot-form').waitFor();
     assert.equal(await page.locator('#account-forgot-form input[name="email"]').inputValue(),'demo@example.test');
     await page.locator('#account-forgot-form button[type="submit"]').click();await page.locator('#account-reset-resend').waitFor();assert.equal(calls.recovery,1);
-    await page.locator('#account-reset-resend').click();await page.waitForFunction(()=>!document.querySelector('#account-reset-resend').disabled);assert.equal(calls.recovery,2);
+    assert(await page.locator('#recovery-admin-contact').isVisible());assert(await page.locator('#account-reset-resend').isDisabled());await page.clock.runFor(61000);await page.locator('#account-reset-resend').click();await page.waitForFunction(()=>document.querySelector('#account-reset-resend').disabled);assert.equal(calls.recovery,2);
     await page.locator('[data-action="account-reset-edit"]').click();await page.locator('#account-forgot-form').waitFor();
     await page.locator('[data-action="account-reset-back"]').click();await page.locator('#account-form[data-mode="login"]').waitFor();
     await page.locator('[data-action="account-mode"]').click();await page.locator('#account-form[data-mode="signup"]').waitFor();assert.equal(await page.locator('input[name="displayName"]').count(),1);

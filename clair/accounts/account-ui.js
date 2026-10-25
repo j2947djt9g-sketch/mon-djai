@@ -150,10 +150,29 @@
     $('#status-label').textContent=accountStatus();
     target.innerHTML=cloud.conflict?'<div class="notice"><p>Deux appareils ont modifié ton budget. Les deux copies sont conservées.</p><button class="button" data-action="account-conflict">Choisir une copie</button></div>':cloud.error?`<div class="notice">${esc(cloud.error)} <button class="link" data-action="account-sync">Réessayer</button></div>`:'';
   }
+  const RECOVERY_WAIT_KEY='clair-recovery-wait-v1';
+  let recoveryWaitUntil=0;
+  function recoveryWaitSeconds(){
+    try{const saved=Number(localStorage.getItem(RECOVERY_WAIT_KEY));if(Number.isFinite(saved)&&saved>Date.now()&&saved<=Date.now()+1800000)recoveryWaitUntil=Math.max(recoveryWaitUntil,saved);}catch{}
+    return Math.max(0,Math.ceil((recoveryWaitUntil-Date.now())/1000));
+  }
+  function holdRecovery(seconds){
+    recoveryWaitUntil=Date.now()+Math.max(0,Math.min(1800,Number(seconds)||0))*1000;
+    try{localStorage.setItem(RECOVERY_WAIT_KEY,String(recoveryWaitUntil));}catch{}
+    updateRecoveryButtons();
+  }
+  function recoverySupport(){
+    const contact=String(window.CLAIR_SUPPORT_EMAIL||'').trim();
+    const valid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)&&contact.length<=254;
+    const subject=encodeURIComponent('Clair — aide pour récupérer mon compte');
+    const message=encodeURIComponent('Bonjour, je ne reçois pas le lien de récupération de Clair. Mon adresse de compte : '+accountResetEmail+'. Peux-tu vérifier mon identité et m’aider à définir un nouveau mot de passe ?');
+    const href=valid?'mailto:'+encodeURIComponent(contact)+'?subject='+subject+'&body='+message:'help.html';
+    return '<div class="recovery-admin-contact"><p class="help">Pas de lien reçu ? L’administrateur peut vérifier ton identité et te fournir un code de déblocage.</p><a id="recovery-admin-contact" class="button" href="'+esc(href)+'">Contacter l’administrateur ↗</a><p><a class="link" href="reset.html">J’ai un code de déblocage ↗</a></p></div>';
+  }
   function recoveryView(){
     let body='';
-    const error='<p id="account-error" class="help negative" role="alert"></p>';
-    const back='<button class="link" data-action="account-reset-back">Retour à la connexion</button><details class="settings-more account-support-options"><summary>Besoin d’aide pour te connecter ?</summary><p><a class="link" href="help.html">Demander de l’aide à l’administrateur ↗</a></p><p><a class="link" href="reset.html">J’ai un code de déblocage ↗</a></p></details>';
+    const error='<p id="account-error" class="help negative" role="alert"></p><p id="recovery-wait" class="help"></p>';
+    const back='<button class="link" data-action="account-reset-back">Retour à la connexion</button>';
     if(accountResetStep==='checking'||(accountResetStep==='password'&&(!cloud.ready||!cloud.user))){
       body='<h1>Vérification du lien…</h1><p class="muted" role="status">Un instant, nous ouvrons la récupération de ton compte.</p>';
     }else if(accountResetStep==='email'){
@@ -178,13 +197,17 @@
       body='<h1>Ce lien ne fonctionne plus</h1><p class="muted">Il a expiré, a déjà été utilisé ou est incomplet. Demande un nouveau lien pour récupérer ton compte.</p>'+
         '<button class="button primary" data-action="account-reset-edit">Demander un nouveau lien</button>'+back;
     }
+    if(!['checking','password','done'].includes(accountResetStep))body+=recoverySupport();
     return '<section class="card account-card account-recovery" aria-labelledby="recovery-title"><div class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><defs><linearGradient id="brand-auth-3-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b4dff"/><stop offset="1" stop-color="#6528d7"/></linearGradient><linearGradient id="brand-auth-3-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f0ff"/><stop offset="1" stop-color="#d7c3ff"/></linearGradient><linearGradient id="brand-auth-3-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e9ddff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#brand-auth-3-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="#fff"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#brand-auth-3-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#brand-auth-3-edge)"/></svg></div>'+
       body.replace('<h1>','<h1 id="recovery-title" tabindex="-1">')+'</section>';
   }
   function focusRecovery(){setTimeout(()=>$('#recovery-title')?.focus({preventScroll:true}),0);}
   function updateRecoveryButtons(){
+    const wait=recoveryWaitSeconds(),label=wait>=60?'Réessayer dans '+Math.ceil(wait/60)+' min':'Renvoyer dans '+wait+' s';
     const button=$('#account-reset-resend')||$('#account-reset-send');
-    if(button){button.disabled=accountBusy;button.textContent=accountBusy?'Envoi en cours…':accountResetStep==='sent'?'Renvoyer le lien':'Envoyer le lien';}
+    if(button){button.disabled=accountBusy||wait>0;button.textContent=accountBusy?'Envoi en cours…':wait?label:accountResetStep==='sent'?'Renvoyer le lien':'Envoyer le lien';}
+    const hint=$('#recovery-wait');
+    if(hint)hint.textContent=wait>60?'Une pause est en cours. Après cinq demandes, attends trente minutes. Le déblocage administrateur reste accessible.':wait?'Attends une minute entre deux demandes de lien.':'Cinq demandes maximum, puis une pause de trente minutes.';
   }
   function clearRecoveryAddress(){
     if(!accountRecovery&&!recoveryError)return;
@@ -203,19 +226,25 @@
   }
   async function sendRecovery(email){
     email=String(email||'').trim().toLowerCase();
-    if(!email)throw Error('Indique l’adresse e-mail de ton compte.');
+    if(!email||email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Indique une adresse e-mail valide.');
     if(navigator.onLine===false)throw Error('Vérifie ta connexion Internet, puis réessaie.');
+    const wait=recoveryWaitSeconds();
+    if(wait)throw Error('Patiente encore '+Math.ceil(wait/60)+' minute'+(wait>60?'s':'')+' avant de demander un nouveau lien.');
     accountResetEmail=email;
-    const {error}=await cloud.client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-    if(error){
-      if(error.status===429||['over_email_send_rate_limit','over_request_rate_limit'].includes(error.code)){
-        throw Error('L’envoi est temporairement limité. Réessaie plus tard.');
-      }
-      if(navigator.onLine===false||error.name==='AuthRetryableFetchError')
-        throw Error('Vérifie ta connexion Internet, puis réessaie.');
-      throw Error('Le lien ne peut pas être envoyé pour le moment. Réessaie plus tard.');
-    }
-    accountResetStep='sent';render();focusRecovery();
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+    try{
+      const response=await fetch(window.CLAIR_ACCOUNT_CONFIG.url+'/functions/v1/clair-account-recovery',{
+        method:'POST',headers:{'content-type':'application/json',apikey:window.CLAIR_ACCOUNT_CONFIG.key},
+        body:JSON.stringify({email}),signal:controller.signal
+      });
+      const result=await response.json();
+      if(result.retry_after)holdRecovery(result.retry_after);
+      if(!response.ok)throw Error(result.error||'Le service e-mail est indisponible. Contacte l’administrateur.');
+      accountResetStep='sent';render();updateRecoveryButtons();focusRecovery();
+    }catch(error){
+      if(error.name==='TypeError'||error.name==='AbortError')throw Error('Vérifie ta connexion Internet, puis réessaie.');
+      throw error;
+    }finally{clearTimeout(timer);}
   }
   async function accountSubmit(form){
     if(accountBusy)return;accountBusy=true;const button=form.querySelector('button[type=submit]');if(button)button.disabled=true;
@@ -334,3 +363,5 @@
       });
     }
   }
+
+  setInterval(updateRecoveryButtons,1000);
