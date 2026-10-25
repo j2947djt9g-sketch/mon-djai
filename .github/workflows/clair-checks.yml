@@ -89,6 +89,8 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/verify-masterboard.sql
           psql -v ON_ERROR_STOP=1 -f supabase/account-help.sql
           psql -v ON_ERROR_STOP=1 -f supabase/verify-account-help.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/recovery-request-limits.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/verify-recovery-request-limits.sql
 
   reminders-sql:
     runs-on: ubuntu-latest
