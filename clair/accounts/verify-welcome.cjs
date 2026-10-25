@@ -52,6 +52,7 @@
    for(const [width,height,colorScheme]of [[1440,1000,'light'],[390,844,'light'],[320,568,'light'],[768,844,'dark']]){
     const context=await browser.newContext({viewport:{width,height},reducedMotion:'reduce',colorScheme});
     const page=await context.newPage(),errors=[],calls={login:0,recovery:0};page.on('pageerror',e=>errors.push(e.message));
+    await page.clock.install({time:new Date('2026-10-21T12:00:00Z')});
     await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',async route=>{
       const request=route.request(),pathname=new URL(request.url()).pathname;
       if(pathname.endsWith('/token')){calls.login++;await route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({code:'invalid_credentials',message:'Invalid login credentials'})});}

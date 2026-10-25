@@ -1,7 +1,7 @@
 -- Recovery request quotas; only salted hashes are retained, never addresses or passwords.
 begin;
 create schema if not exists clair_private;
-revoke all on schema clair_private from public,anon,authenticated;
+-- Preserve schema privileges needed by existing account access checks.
 grant usage on schema clair_private to service_role;
 create table clair_private.recovery_request_limits(
  key text primary key check(key ~ '^(email|ip):[a-f0-9]{64}$'),

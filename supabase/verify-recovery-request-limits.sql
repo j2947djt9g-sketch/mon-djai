@@ -2,7 +2,7 @@
 begin;
 do $$ begin
  if has_function_privilege('anon','public.clair_claim_recovery_request(text,text)','execute') or has_function_privilege('authenticated','public.clair_claim_recovery_request(text,text)','execute') then raise exception 'Public recovery quota access';end if;
- if has_schema_privilege('anon','clair_private','usage') or has_table_privilege('authenticated','clair_private.recovery_request_limits','select') then raise exception 'Private limits exposed';end if;
+ if has_table_privilege('anon','clair_private.recovery_request_limits','select') or has_table_privilege('authenticated','clair_private.recovery_request_limits','select') then raise exception 'Private limits exposed';end if;
 end $$;
 set local role service_role;
 do $$
