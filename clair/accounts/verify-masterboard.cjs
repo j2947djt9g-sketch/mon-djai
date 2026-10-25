@@ -33,12 +33,13 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
   });
   await page.addInitScript(({user,jwt,exp})=>sessionStorage.setItem('clair-masterboard-session-v1',JSON.stringify({access_token:jwt,refresh_token:'FIXTURE',expires_in:3600,expires_at:exp,token_type:'bearer',user})),{user,jwt,exp});
   await page.goto('http://127.0.0.1:'+server.address().port+'/masterboard/');await page.locator('#board').waitFor({state:'visible'});
-  if(width===320){
+  if(width===320||width===1440&&process.env.CLAIR_PREVIEW==='1'){
    const letter=page.locator('.intro-letters>span').first(),startY=await letter.evaluate(e=>e.getBoundingClientRect().y);
    await page.waitForTimeout(1900);const landedY=await letter.evaluate(e=>e.getBoundingClientRect().y);
    assert(landedY>startY+30,'The first letter must fall from above');
    assert(await page.locator('#intro').isVisible(),'Keep the settled logo visible before lifting the sheet');
    assert.equal(await page.locator('#intro').evaluate(e=>e.classList.contains('leaving')),false);
+   if(process.env.CLAIR_PREVIEW==='1'){const shot=await page.screenshot({animations:'allow'});console.log('INTRO_SCREENSHOT_'+width+'='+shot.toString('base64'));}
   }
   await page.locator('#intro').waitFor({state:'detached'});
   const drawer=page.locator('#profile-drawer');
