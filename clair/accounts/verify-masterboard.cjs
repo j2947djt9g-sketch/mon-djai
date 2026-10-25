@@ -54,8 +54,10 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
   assert.equal(await page.locator('[data-profile="'+member+'"]').getAttribute('aria-expanded'),'true');
   assert.match(await page.locator('#profile-content').innerText(),/member@example.invalid/);
   assert.equal(await page.locator('.user-card [data-action]').count(),0,'Actions belong in the lateral profile');
+  await page.locator('#profile-content').evaluate(e=>e.scrollTop=e.scrollHeight);
   if(width<=760){await page.locator('#close-profile').click();await drawer.waitFor({state:'hidden'});}
   await page.locator('[data-profile="'+uid+'"]').click();
+  assert.equal(await page.locator('#profile-content').evaluate(e=>e.scrollTop),0,'A newly opened profile starts with its identity visible');
   assert.equal(await page.locator('[data-profile][aria-expanded=true]').count(),1);assert.match(await page.locator('#profile-content').innerText(),/owner@example.invalid/);
   await page.locator('#close-profile').press('Escape');await drawer.waitFor({state:'hidden'});
   assert.equal(await page.locator('[data-profile][aria-expanded=true]').count(),0);
@@ -94,6 +96,7 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
     await page.locator('#search').blur();await page.evaluate(()=>document.querySelector('#global-status').textContent='');
     let shot=await page.screenshot({fullPage:true,animations:'disabled'});console.log('MASTERBOARD_SCREENSHOT_'+width+'='+shot.toString('base64'));
     await page.locator('[data-profile="'+member+'"]').click();await drawer.waitFor({state:'visible'});
+    assert.equal(await page.locator('#profile-content').evaluate(e=>e.scrollTop),0);
     shot=await page.screenshot({fullPage:true,animations:'disabled'});console.log('PROFILE_SCREENSHOT_'+width+'='+shot.toString('base64'));
     await page.locator('#close-profile').click();await drawer.waitFor({state:'hidden'});
    }

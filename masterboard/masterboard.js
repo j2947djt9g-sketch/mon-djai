@@ -89,7 +89,7 @@ function syncProfileDialog(){
 }
 function toggleProfile(id){
  if(openProfileId===id){closeProfile();return;}
- profileAnimation?.cancel();profileAnimation=null;openProfileId=id;profileReturnId=id;renderUsers();syncProfileDialog();
+ profileAnimation?.cancel();profileAnimation=null;openProfileId=id;profileReturnId=id;renderUsers();syncProfileDialog();$('#profile-content').scrollTop=0;
 }
 function closeProfile(restoreFocus=true,animate=true){
  const drawer=$('#profile-drawer'),returnId=profileReturnId;openProfileId=null;document.body.dataset.profileOpen='false';
