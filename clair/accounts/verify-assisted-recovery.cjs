@@ -44,9 +44,6 @@ const server=http.createServer((req,res)=>{const p=path.resolve(root,'.'+new URL
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(errors,[]);await context.close();
    console.log('PASS assisted recovery browser '+mode+': verified identity, invalid/expired rejection, matching password, single update, credential URL cleanup and preserved budget');
   }
-  const context=await browser.newContext({viewport:{width:320,height:844}}),page=await context.newPage();let payload=null;
-  await context.route('https://hkssnbvktfscizojhftl.supabase.co/functions/v1/clair-account-help',async route=>{payload=route.request().postDataJSON();await route.fulfill({status:202,contentType:'application/json',body:'{"ok":true}',headers:{'access-control-allow-origin':'*'}});});
-  await page.goto(origin+'/clair/help.html');await page.locator('#help-email').fill('member@example.invalid');await page.locator('#help-reason').selectOption('email_missing');await page.locator('#help-form button').click();await page.locator('#help-success').waitFor({state:'visible'});assert.equal(payload.email,'member@example.invalid');assert.equal(payload.reason,'email_missing');assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await context.close();
-  console.log('PASS support browser: 320px, reason selection, private inbox submission, neutral confirmation and no overflow');
+  console.log('PASS legacy recovery token/code pages; device-bound support request is covered by verify-device-unlock.cjs');
  }finally{await browser.close();}
 })().then(()=>server.close()).catch(e=>{console.error(e);server.close();process.exitCode=1});

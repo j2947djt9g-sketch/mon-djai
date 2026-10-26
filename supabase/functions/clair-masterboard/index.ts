@@ -1,4 +1,5 @@
 import {createHandler} from './core.mjs';
+import {createPasswordResetAdmin} from './password-reset.mjs';
 const base=Deno.env.get('SUPABASE_URL')!;
 const key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 async function request(path:string,method='GET',body?:unknown,extra:Record<string,string>={}){
@@ -19,8 +20,21 @@ const db={
   subscription:(id:string)=>one('subscriptions','user_id=eq.'+id),
   setTestDate:(id:string,date:string)=>request('/rest/v1/'+prefix+'subscriptions?on_conflict=user_id','POST',{user_id:id,test_until:date,updated_at:new Date().toISOString()},{prefer:'resolution=merge-duplicates,return=representation'}),
   profiles:()=>all('clair_budgets?select=user_id,display_name&order=user_id'),
-  helpRequests:()=>rest('clair_account_help?select=id,email,reason,status,created_at&order=created_at.desc&limit=100'),
-  closeHelp:(id:string)=>rest('clair_account_help?id=eq.'+id,'PATCH',{status:'closed',updated_at:new Date().toISOString()}),
+  helpRequests:async()=>{
+    const [requests,devices]=await Promise.all([rest('clair_account_help?select=id,email,reason,status,created_at&order=created_at.desc&limit=100'),rest('clair_device_unlocks?select=id,device_label,status,expires_at&status=in.(pending,approving)&expires_at=gt.'+encodeURIComponent(new Date().toISOString()))]);
+    return requests.map((request:{id:string})=>{const device=devices.find((d:{id:string})=>d.id===request.id);return {...request,...(device?{device_label:device.device_label,device_unlock_pending:true}:{})};});
+  },
+  unlockRequest:(id:string)=>rest('clair_device_unlocks?id=eq.'+id+'&select=id,email,status,device_label,expires_at').then((rows:unknown[])=>rows[0]||null),
+  beginUnlock:(id:string,actor:string,target:string,email:string)=>rest('rpc/clair_begin_device_unlock','POST',{p_id:id,p_actor:actor,p_target:target,p_email:email}),
+  approveUnlock:async(id:string,expires:string)=>{
+    const changed=await rest('clair_device_unlocks?id=eq.'+id+'&status=eq.approving','PATCH',{status:'approved',updated_at:new Date().toISOString(),expires_at:expires});
+    if(!Array.isArray(changed)||changed.length!==1)throw Error('Unlock request changed');
+    await rest('clair_account_help?id=eq.'+id,'PATCH',{status:'authorized',updated_at:new Date().toISOString()});
+  },
+  closeHelp:async(id:string)=>{
+    await rest('clair_device_unlocks?id=eq.'+id+'&status=eq.pending','PATCH',{status:'completed',secret_hash:'0'.repeat(64),updated_at:new Date().toISOString()});
+    await rest('clair_account_help?id=eq.'+id,'PATCH',{status:'closed',updated_at:new Date().toISOString()});
+  },
   authorizeHelp:(email:string)=>rest('clair_account_help?email=eq.'+encodeURIComponent(email)+'&status=eq.pending','PATCH',{status:'authorized',updated_at:new Date().toISOString()}),
   claimReset:(actor:string,target:string)=>rest('rpc/clair_claim_reset_authorization','POST',{p_actor:actor,p_target:target}),
   messages:()=>rows('mail','select=id,user_id,email,subject,kind,state,created_at,opened_at,confirmed_at&order=created_at.desc&limit=100'),
@@ -43,6 +57,6 @@ const auth={
   target:async(id:string)=>{try{return await request('/auth/v1/admin/users/'+id);}catch{return null;}},
   ban:(id:string,banned:boolean)=>request('/auth/v1/admin/users/'+id,'PUT',{ban_duration:banned?'876000h':'none'}),
   remove:(id:string)=>request('/auth/v1/admin/users/'+id,'DELETE'),
-  recovery:(email:string)=>request('/auth/v1/admin/generate_link','POST',{type:'recovery',email})
+  ...createPasswordResetAdmin({request})
 };
 Deno.serve(createHandler({db,auth}));

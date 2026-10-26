@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="auto" data-app-version="2026-10-25.1">
+<html lang="fr" data-theme="auto" data-app-version="2026-10-26.2">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#783bf1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://hkssnbvktfscizojhftl.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
@@ -1200,8 +1200,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function accountGate(){
     if(!cloud.ready||cloud.status==='loading')return '<section class="card" id="account-loading"><h1>Ouverture de ton compte…</h1><p class="help">Ta copie locale est conservée.</p></section>';
     const signup=accountMode==='signup';
-    if(signup&&accountSignupResult)return `<section class="card account-card"><div class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><defs><linearGradient id="brand-auth-1-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b4dff"/><stop offset="1" stop-color="#6528d7"/></linearGradient><linearGradient id="brand-auth-1-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f0ff"/><stop offset="1" stop-color="#d7c3ff"/></linearGradient><linearGradient id="brand-auth-1-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e9ddff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#brand-auth-1-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="#fff"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#brand-auth-1-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#brand-auth-1-edge)"/></svg></div>${mascot(1,'Retrouvons ton espace.')}<h1>${accountSignupResult==='exists'?'Tu as déjà un compte.':'Vérifie tes e-mails.'}</h1><p class="muted">${accountSignupResult==='exists'?'Cette adresse e-mail est déjà associée à un compte. Connecte-toi ou récupère ton mot de passe.':'Si cette adresse peut créer un compte, tu recevras un e-mail pour le confirmer. Si tu as déjà un compte, connecte-toi ou récupère ton mot de passe.'}</p><p class="recovery-email">${esc(accountResetEmail)}</p><p id="account-error" class="help negative" role="alert"></p><div class="recovery-actions"><button class="button primary" data-action="account-login">Me connecter</button><button class="button" data-action="account-forgot">Mot de passe oublié ?</button><details class="settings-more account-support-options"><summary>Besoin d’aide pour te connecter ?</summary><p><a class="link" href="help.html">Demander de l’aide à l’administrateur ↗</a></p><p><a class="link" href="reset.html">J’ai un code de déblocage ↗</a></p></details><button class="link" data-action="account-signup-edit">Corriger mon adresse</button></div></section>`;
-    return `<section class="card account-card"><div class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><defs><linearGradient id="brand-auth-2-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b4dff"/><stop offset="1" stop-color="#6528d7"/></linearGradient><linearGradient id="brand-auth-2-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f0ff"/><stop offset="1" stop-color="#d7c3ff"/></linearGradient><linearGradient id="brand-auth-2-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e9ddff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#brand-auth-2-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="#fff"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#brand-auth-2-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#brand-auth-2-edge)"/></svg></div>${mascot(signup?1:0,signup?"Préparons ton espace, à ton rythme.":"Heureuse de te retrouver.")}<h1>${signup?"Créons ton espace.":"Ton budget, partout."}</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}<button class="link account-password-visibility" type="button" data-action="account-entry-toggle" aria-pressed="false">Afficher le mot de passe</button>${signup?'<p class="help">12 caractères minimum. Ton adresse e-mail devra être confirmée.</p>':''}<p id="account-error" class="help negative" role="alert"></p><button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié ?</button><details class="settings-more account-support-options"><summary>Besoin d’aide pour te connecter ?</summary><p><a class="link" href="help.html">Demander de l’aide à l’administrateur ↗</a></p><p><a class="link" href="reset.html">J’ai un code de déblocage ↗</a></p></details>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
+    if(signup&&accountSignupResult)return `<section class="card account-card"><div class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><defs><linearGradient id="brand-auth-1-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b4dff"/><stop offset="1" stop-color="#6528d7"/></linearGradient><linearGradient id="brand-auth-1-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f0ff"/><stop offset="1" stop-color="#d7c3ff"/></linearGradient><linearGradient id="brand-auth-1-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e9ddff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#brand-auth-1-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="#fff"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#brand-auth-1-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#brand-auth-1-edge)"/></svg></div>${mascot(1,'Retrouvons ton espace.')}<h1>${accountSignupResult==='exists'?'Tu as déjà un compte.':'Vérifie tes e-mails.'}</h1><p class="muted">${accountSignupResult==='exists'?'Cette adresse e-mail est déjà associée à un compte. Connecte-toi ou récupère ton mot de passe.':'Si cette adresse peut créer un compte, tu recevras un e-mail pour le confirmer. Si tu as déjà un compte, connecte-toi ou récupère ton mot de passe.'}</p><p class="recovery-email">${esc(accountResetEmail)}</p><p id="account-error" class="help negative" role="alert"></p><div class="recovery-actions"><button class="button primary" data-action="account-login">Me connecter</button><button class="button" data-action="account-forgot">Mot de passe oublié ?</button><details class="settings-more account-support-options"><summary>Besoin d’aide pour te connecter ?</summary><p><a class="link" href="help.html">Demander de l’aide à l’administrateur ↗</a></p></details><button class="link" data-action="account-signup-edit">Corriger mon adresse</button></div></section>`;
+    return `<section class="card account-card"><div class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><defs><linearGradient id="brand-auth-2-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b4dff"/><stop offset="1" stop-color="#6528d7"/></linearGradient><linearGradient id="brand-auth-2-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f0ff"/><stop offset="1" stop-color="#d7c3ff"/></linearGradient><linearGradient id="brand-auth-2-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e9ddff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#brand-auth-2-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="#fff"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#brand-auth-2-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#brand-auth-2-edge)"/></svg></div>${mascot(signup?1:0,signup?"Préparons ton espace, à ton rythme.":"Heureuse de te retrouver.")}<h1>${signup?"Créons ton espace.":"Ton budget, partout."}</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}<button class="link account-password-visibility" type="button" data-action="account-entry-toggle" aria-pressed="false">Afficher le mot de passe</button>${signup?'<p class="help">12 caractères minimum. Ton adresse e-mail devra être confirmée.</p>':''}<p id="account-error" class="help negative" role="alert"></p><button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié ?</button><details class="settings-more account-support-options"><summary>Besoin d’aide pour te connecter ?</summary><p><a class="link" href="help.html">Demander de l’aide à l’administrateur ↗</a></p></details>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
   }
   function accountCard(){
     if(!cloud.enabled||!cloud.user)return '';
@@ -1296,7 +1296,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     const subject=encodeURIComponent('Clair — aide pour récupérer mon compte');
     const message=encodeURIComponent('Bonjour, je ne reçois pas le lien de récupération de Clair. Mon adresse de compte : '+accountResetEmail+'. Peux-tu vérifier mon identité et m’aider à définir un nouveau mot de passe ?');
     const href=valid?'mailto:'+encodeURIComponent(contact)+'?subject='+subject+'&body='+message:'help.html';
-    return '<div class="recovery-admin-contact"><p class="help">Pas de lien reçu ? L’administrateur peut vérifier ton identité et te fournir un code de déblocage.</p><a id="recovery-admin-contact" class="button" href="'+esc(href)+'">Contacter l’administrateur ↗</a><p><a class="link" href="reset.html">J’ai un code de déblocage ↗</a></p></div>';
+    return '<div class="recovery-admin-contact"><p class="help">Pas de lien reçu ? L’administrateur peut vérifier ton identité et te fournir un code de déblocage.</p><a id="recovery-admin-contact" class="button" href="'+esc(href)+'">Contacter l’administrateur ↗</a></div>';
   }
   function recoveryView(){
     let body='';
@@ -2188,6 +2188,118 @@ function submitCharge(f){
   }
   welcome();
   if(!loadError&&data.initialized)syncPush();
+})();
+
+</script>
+<style>
+#device-unlock-dialog,#device-unlock-root{box-sizing:border-box;color:#262238;background:#fff;font:15px/1.65 system-ui,sans-serif}#device-unlock-dialog{width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px);border:1px solid #d7c9e9;border-radius:23px;padding:30px;box-shadow:0 22px 85px #21133555;overflow:auto}#device-unlock-dialog::backdrop{background:#21152c99;backdrop-filter:blur(5px)}#device-unlock-root{border-radius:20px;padding:24px}#device-unlock-dialog h2,#device-unlock-root h2{font-size:25px;line-height:1.3;letter-spacing:-.6px;margin:13px 20px 18px 0}#device-unlock-dialog p,#device-unlock-root p{font-size:14px;color:#56536a;margin:14px 0}#device-unlock-dialog label,#device-unlock-root label{display:block;font-size:13px;font-weight:650;margin:20px 0 8px}#device-unlock-dialog input,#device-unlock-root input{box-sizing:border-box;width:100%;min-height:49px;padding:12px 14px;border:1px solid #bfb4d0;border-radius:11px;background:#fff;color:#292036;font:16px system-ui,sans-serif}#device-unlock-dialog button:not(.du-close),#device-unlock-root button,.du-button{box-sizing:border-box;display:block;width:100%;margin:20px 0 0;padding:13px 16px;border:1px solid #6840a3;border-radius:12px;background:#6840a3;color:#fff;font:600 14px/1.5 system-ui,sans-serif;cursor:pointer;text-align:center;text-decoration:none}#device-unlock-dialog button.du-secondary,#device-unlock-root button.du-secondary{background:#f2ebfa;color:#57347d;border-color:#d7c7e8}.du-kicker{font-size:10px;letter-spacing:1.2px;color:#654282;font-weight:700}.du-close{position:absolute;right:13px;top:13px;width:38px;height:38px;border:1px solid #d9cde7;border-radius:12px;background:#f2edf8;color:#60417a;font-size:17px;cursor:pointer}.du-error{color:#9b322a!important}.du-error:empty{display:none}.du-note{font-size:12px!important}#du-open{width:100%;margin-top:15px}#device-unlock-dialog button:disabled,#device-unlock-root button:disabled{opacity:.6;cursor:wait}#device-unlock-dialog :focus-visible,#device-unlock-root :focus-visible{outline:3px solid #b9a0dc;outline-offset:3px}@media(max-width:380px){#device-unlock-dialog{padding:25px 20px}#device-unlock-dialog h2,#device-unlock-root h2{font-size:23px}}
+
+</style><script>
+(function(){
+ 'use strict';
+ const BASE='https://hkssnbvktfscizojhftl.supabase.co',KEY='sb_publishable_qJeSyD7E0cbi8V--qyJJkw_8M4oOKr8',STORE='clair-device-unlock-v1',AUTH='clair-device-unlock-auth-v1';
+ if(!window.supabase||!window.crypto?.getRandomValues)return;
+ const client=supabase.createClient(BASE,KEY,{auth:{storageKey:AUTH,storage:sessionStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+ const root=document.querySelector('#device-unlock-root')||document.body.appendChild(Object.assign(document.createElement('dialog'),{id:'device-unlock-dialog'}));
+ const inline=root.id==='device-unlock-root';
+ const esc=value=>String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const $=selector=>root.querySelector(selector);
+ let record=null,busy=false,polling=false,timer,verified=null,finished=false,pollDeadline=Date.now()+900000;
+ try{record=JSON.parse(localStorage.getItem(STORE)||'null');if(!record?.id||!record?.secret||Date.now()-record.created>86400000)record=null;}catch{}
+ function remember(){localStorage.setItem(STORE,JSON.stringify(record));}
+ function forget(){localStorage.removeItem(STORE);record=null;clearTimeout(timer);}
+ function open(){if(!inline&&!root.open)root.showModal();}
+ function frame(content){
+  root.innerHTML=(inline?'':'<button class="du-close" type="button" aria-label="Fermer le déblocage">✕</button>')+'<span class="du-kicker">DÉBLOCAGE ADMINISTRATEUR</span>'+content+'<p id="du-error" class="du-error" role="alert"></p>';
+  $('.du-close')?.addEventListener('click',()=>root.close());
+ }
+ function fail(error){if($('#du-error'))$('#du-error').textContent=error.message||'Vérifie ta connexion puis réessaie.';}
+ async function api(action,extra={},token){
+  const response=await fetch(BASE+'/functions/v1/clair-device-unlock',{method:'POST',headers:{apikey:KEY,'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},body:JSON.stringify({action,id:record.id,secret:record.secret,...extra}),cache:'no-store',signal:AbortSignal.timeout(20000)});
+  let result;try{result=await response.json();}catch{throw Error('Le serveur ne répond pas. Réessaie.');}
+  if(!response.ok)throw Error(result.error||'Déblocage indisponible.');return result;
+ }
+ function deviceLabel(){
+  const ua=navigator.userAgent,device=/iPhone/.test(ua)?'iPhone':/iPad/.test(ua)?'iPad':/Android/.test(ua)?'Android':/Windows/.test(ua)?'Ordinateur Windows':/Macintosh/.test(ua)?'Mac':'Cet appareil';
+  const browser=/Edg/.test(ua)?'Edge':/Chrome|CriOS/.test(ua)?'Chrome':/Firefox|FxiOS/.test(ua)?'Firefox':/Safari/.test(ua)?'Safari':'Navigateur';
+  return device+' · '+browser;
+ }
+ function entry(){
+  clearTimeout(timer);verified=null;finished=false;
+  frame('<h2>Retrouver ton compte.</h2><p>Envoie une demande depuis cet appareil. Après l’autorisation de l’administrateur, tu choisiras ici ton nouveau mot de passe, sans e-mail ni code.</p><form id="du-request"><label for="du-email">Adresse de ton compte Clair</label><input id="du-email" type="email" autocomplete="email" maxlength="254" required><button type="submit">Demander le déblocage</button></form><p class="du-note">Tes dépenses et ton historique seront conservés. L’administrateur doit vérifier que la demande vient de toi.</p>');
+  const current=document.querySelector('#account-form input[name="email"]');if(current)$('#du-email').value=current.value;
+  $('#du-request').onsubmit=async event=>{
+   event.preventDefault();if(busy)return;busy=true;event.submitter.disabled=true;
+   try{
+    const email=$('#du-email').value.trim().toLowerCase();
+    record={id:crypto.randomUUID(),secret:Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join(''),email,created:Date.now()};
+    // Persist before transmission so a slow response or reload cannot orphan this device's request.
+    remember();await api('request',{email,device:deviceLabel()});waiting();pollDeadline=Date.now()+900000;poll();
+   }catch(error){fail(error);}finally{busy=false;if($('#du-request button'))$('#du-request button').disabled=false;}
+  };
+ }
+ function waiting(){
+  frame('<h2>En attente de l’administrateur.</h2><p>Ta demande concerne <strong>'+esc(record.email)+'</strong>.</p><p id="du-wait-status" role="status">Garde cette page ouverte ou reviens sur Clair avec ce même appareil. Le nouveau mot de passe te sera demandé dès que l’administrateur aura autorisé le déblocage.</p><button type="button" id="du-check">Vérifier maintenant</button><button type="button" id="du-new" class="du-secondary">Faire une nouvelle demande</button>');
+  $('#du-check').onclick=()=>{pollDeadline=Date.now()+900000;poll();};
+  $('#du-new').onclick=()=>{forget();entry();};
+ }
+ async function passwordStep(){
+  const result=await client.auth.getUser();if(result.error||!result.data?.user?.id||!result.data.user.email_confirmed_at)throw Error('La vérification a expiré. Reprends la demande.');
+  verified=result.data.user.id;clearTimeout(timer);record.phase='password';remember();open();
+  frame('<h2>L’administrateur a débloqué ton application.</h2><p>Choisis ton nouveau mot de passe pour <strong>'+esc(result.data.user.email)+'</strong>. Tu gardes le même compte et le même historique.</p><form id="du-password"><label for="du-new-password">Nouveau mot de passe</label><input id="du-new-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required><label for="du-confirm-password">Confirmer le mot de passe</label><input id="du-confirm-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required><button type="submit">Enregistrer et ouvrir Clair</button></form><p class="du-note">12 caractères minimum. Tu peux utiliser une phrase.</p>');
+  $('#du-password').onsubmit=async event=>{
+   event.preventDefault();if(busy||finished)return;busy=true;event.submitter.disabled=true;$('#du-error').textContent='';
+   const password=$('#du-new-password').value;
+   try{
+    if(password!==$('#du-confirm-password').value)throw Error('Les deux mots de passe sont différents.');
+    const identity=await client.auth.getUser();if(identity.error||identity.data.user?.id!==verified)throw Error('La vérification a expiré. Rouvre Clair.');
+    const result=await client.auth.updateUser({password});if(result.error)throw Error('Le nouveau mot de passe n’a pas pu être enregistré. Réessaie.');
+    finished=true;$('#du-new-password').value='';$('#du-confirm-password').value='';
+    const session=await client.auth.getSession();
+    try{await api('complete',{},session.data?.session?.access_token);}catch{}
+    forget();
+    // Sign in to Clair's ordinary session; the budget loader continues to use the same user ID.
+    const main=supabase.createClient(BASE,KEY,{auth:{storageKey:'clair-account-session-v1',persistSession:true,autoRefreshToken:false,detectSessionInUrl:false}});
+    const signed=await main.auth.signInWithPassword({email:identity.data.user.email,password});
+    try{await client.auth.signOut({scope:'local'});}catch{}sessionStorage.removeItem(AUTH);
+    frame('<h2>Ton nouveau mot de passe est enregistré.</h2><p>Ton compte et ton historique sont conservés.</p><a class="du-button" href="./">Ouvrir Clair</a>');
+    if(!signed.error){if(inline)location.assign('./');else location.reload();}
+   }catch(error){fail(error);}finally{busy=false;if($('#du-password button'))$('#du-password button').disabled=false;}
+  };
+ }
+ async function poll(){
+  clearTimeout(timer);if(polling||!record||verified||finished)return;polling=true;
+  try{
+   const result=await api('poll');
+   if(result.state==='ready'){
+    const check=await client.auth.verifyOtp({token_hash:result.token_hash,type:'recovery'});
+    if(check.error)throw Error('Le déblocage n’a pas pu être vérifié. Réessaie dans un instant.');
+    await passwordStep();return;
+   }
+   if(result.state==='expired'){forget();entry();throw Error('Cette demande a expiré. Envoie une nouvelle demande depuis cet appareil.');}
+   if($('#du-wait-status'))$('#du-wait-status').textContent='L’autorisation n’est pas encore disponible. Cette page se met à jour automatiquement.';
+  }catch(error){fail(error);}
+  finally{polling=false;if(record&&!verified&&!finished&&Date.now()<pollDeadline)timer=setTimeout(()=>{if(document.visibilityState==='visible')poll();else timer=setTimeout(poll,15000);},5000);}
+ }
+ function ensureEntry(){
+  const form=document.querySelector('#account-form,#account-forgot-form'),card=form?.closest('.account-card');
+  if(card&&!document.querySelector('#du-open')){
+   const button=Object.assign(document.createElement('button'),{id:'du-open',type:'button',className:'button',textContent:'Demander un déblocage administrateur'});
+   button.addEventListener('click',()=>{if(record){waiting();poll();}else entry();open();});form.after(button);
+  }
+ }
+ document.addEventListener('click',event=>{
+  const link=event.target.closest('a[href="help.html"]');if(!link||inline)return;event.preventDefault();if(record){waiting();poll();}else entry();open();
+ });
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&record&&!verified)poll();});
+ new MutationObserver(ensureEntry).observe(document.body,{childList:true,subtree:true});ensureEntry();
+ (async()=>{
+  if(record){
+   const session=await client.auth.getSession();
+   if(record.phase==='password'&&session.data?.session){try{await passwordStep();return;}catch{}}
+   waiting();open();poll();
+  }else if(inline)entry();
+ })().catch(fail);
 })();
 
 </script>
