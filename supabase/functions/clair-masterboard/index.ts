@@ -27,11 +27,12 @@ const db={
   unlockRequest:(id:string)=>rest('clair_device_unlocks?id=eq.'+id+'&select=id,email,status,device_label,expires_at').then((rows:unknown[])=>rows[0]||null),
   beginUnlock:(id:string,actor:string,target:string,email:string)=>rest('rpc/clair_begin_device_unlock','POST',{p_id:id,p_actor:actor,p_target:target,p_email:email}),
   approveUnlock:async(id:string,expires:string)=>{
-    await rest('clair_device_unlocks?id=eq.'+id+'&status=eq.approving','PATCH',{status:'approved',updated_at:new Date().toISOString(),expires_at:expires});
+    const changed=await rest('clair_device_unlocks?id=eq.'+id+'&status=eq.approving','PATCH',{status:'approved',updated_at:new Date().toISOString(),expires_at:expires});
+    if(!Array.isArray(changed)||changed.length!==1)throw Error('Unlock request changed');
     await rest('clair_account_help?id=eq.'+id,'PATCH',{status:'authorized',updated_at:new Date().toISOString()});
   },
   closeHelp:async(id:string)=>{
-    await rest('clair_device_unlocks?id=eq.'+id+'&status=in.(pending,approving)','PATCH',{status:'completed',secret_hash:'0'.repeat(64),updated_at:new Date().toISOString()});
+    await rest('clair_device_unlocks?id=eq.'+id+'&status=eq.pending','PATCH',{status:'completed',secret_hash:'0'.repeat(64),updated_at:new Date().toISOString()});
     await rest('clair_account_help?id=eq.'+id,'PATCH',{status:'closed',updated_at:new Date().toISOString()});
   },
   authorizeHelp:(email:string)=>rest('clair_account_help?email=eq.'+encodeURIComponent(email)+'&status=eq.pending','PATCH',{status:'authorized',updated_at:new Date().toISOString()}),
