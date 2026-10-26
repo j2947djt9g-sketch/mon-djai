@@ -1,0 +1,32 @@
+{
+  "id": "./",
+  "name": "Clair Masterboard",
+  "short_name": "Clair Admin",
+  "description": "Tes comptes Clair, leurs accès et tes relances dans un espace d’administration privé.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5fa",
+  "theme_color": "#191724",
+  "icons": [
+    {
+      "src": "../clair/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../clair/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../clair/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
