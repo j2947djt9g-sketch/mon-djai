@@ -21,7 +21,7 @@ const server=http.createServer((req,res)=>{let p=path.resolve(root,'.'+new URL(r
    isAdmin:async id=>id===admin,unlockRequest:async id=>rows.get(id),beginUnlock:async id=>{const r=rows.get(id);if(r.status!=='pending')return false;r.status='approving';return true;},
    approveUnlock:async id=>{rows.get(id).status='approved';approvedId=id;},log:async()=>{}
   },auth:{user:async()=>({id:admin,email_confirmed_at:'yes',last_sign_in_at:now.toISOString()}),target:async()=>user,invalidatePassword:async()=>{oldPassword='unknown random replacement';}}});
-  const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce',serviceWorkers:'block'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await context.route(origin+'/clair/',r=>r.fulfill({status:200,contentType:'text/html',body:'<h1>Clair ouvert</h1>'}));
   await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',async route=>{
    const req=route.request(),p=new URL(req.url()).pathname;let body={},status=200;
@@ -36,6 +36,7 @@ const server=http.createServer((req,res)=>{let p=path.resolve(root,'.'+new URL(r
    await route.fulfill({status,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(body)});
   });
   await page.addInitScript(()=>localStorage.setItem('budget-history-fixture','must remain unchanged'));
+  await page.goto(origin+'/clair/index.html');await page.locator('#du-open').click();await page.locator('#device-unlock-dialog').waitFor({state:'visible'});await page.getByRole('button',{name:'Fermer le déblocage'}).click();
   await page.goto(origin+'/clair/help.html');await page.locator('#du-email').fill(user.email);await page.locator('#du-request button').click();await page.locator('#du-check').waitFor();
   const record=await page.evaluate(()=>JSON.parse(localStorage.getItem('clair-device-unlock-v1')));assert(rows.has(record.id));assert.equal(generated,0);
   // Another device can request the same email but cannot use this device's approval.
