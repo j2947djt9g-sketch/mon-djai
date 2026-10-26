@@ -1,6 +1,6 @@
 // Browser installation lifecycle uses synthetic prompts; no application is actually installed.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),{chromium}=require('playwright');
-const root=path.resolve(__dirname,'../..');
+const root=path.resolve(__dirname,'../..');let browser;
 const types={'.html':'text/html; charset=utf-8','.js':'application/javascript','.css':'text/css','.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml'};
 const server=http.createServer((req,res)=>{
  const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname.replace(/\/$/,'/index.html'));
@@ -10,7 +10,7 @@ const server=http.createServer((req,res)=>{
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const origin='http://127.0.0.1:'+server.address().port,home=origin+'/masterboard/';
- const browser=await chromium.launch({headless:true,executablePath:process.env.CLAIR_CHROME_PATH});
+ browser=await chromium.launch({headless:true,executablePath:process.env.CLAIR_CHROME_PATH});
  const context=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'});
  try{
   // Prevent native eligibility timing from interfering with the deliberately controlled prompts.
@@ -64,4 +64,4 @@ const server=http.createServer((req,res)=>{
   await page.reload();await page.locator('#login').waitFor({state:'visible'});assert.equal(await page.locator('.header-install').isVisible(),false);
   console.log('PASS masterboard iPhone installation instructions and standalone mode without duplicate installation prompt');
  }finally{await ios.close();await browser.close();}
-})().then(()=>server.close()).catch(error=>{console.error(error);server.close();process.exitCode=1});
+})().then(()=>server.close()).catch(async error=>{console.error(error);await browser?.close().catch(()=>{});server.close();process.exitCode=1});
