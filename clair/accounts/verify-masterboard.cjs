@@ -47,6 +47,9 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
   const nav=await page.locator('.app-sidebar').boundingBox();
   if(width<=760){assert(nav.y>700);assert(nav.width>width*.75);assert.equal(await page.locator('.tabs').getAttribute('aria-orientation'),'horizontal');}
   else{assert(nav.x<2);assert(nav.height>=899);assert.equal(await page.locator('.tabs').getAttribute('aria-orientation'),'vertical');}
+  await page.locator('[data-destination="due"]').click();assert.equal(await page.locator('#filter').inputValue(),'due');assert.equal(await page.locator('.user-card').count(),1);
+  await page.locator('[data-destination="messages"]').click();assert.equal(await page.locator('#messages-view').isVisible(),true);
+  await page.locator('[data-destination="all"]').click();assert.equal(await page.locator('#filter').inputValue(),'all');assert.equal(await page.locator('.user-card').count(),2);
   const snapshotsBefore=calls.length;
   await page.locator('[data-profile="'+member+'"]').click();await drawer.waitFor({state:'visible'});
   await page.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished.catch(()=>{}))));

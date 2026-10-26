@@ -47,9 +47,9 @@ function setHero(signedIn){
 }
   function render(){
     const s=snapshot;
-    $('#stats').innerHTML=[['Comptes Clair',s.users.length,s.users.filter(u=>u.confirmed).length+' adresses confirmées','people'],['À relancer',s.users.filter(due).length,'Échéances de test','clock'],['Mails confirmés',s.messages.filter(m=>m.state==='confirmed_sent').length,'Sur les 100 derniers messages','mail']].map(([title,n,detail,glyph],i)=>`<div class="stat ${i===0?'stat-main':''}"><div class="stat-heading"><span>${title}</span>${icon(glyph)}</div><strong>${String(n).padStart(2,'0')}</strong><small>${detail}</small></div>`).join('');
+    $('#stats').innerHTML=[['Comptes Clair',s.users.length,s.users.filter(u=>u.confirmed).length+' adresses confirmées','people','all','Voir les comptes'],['À relancer',s.users.filter(due).length,'Échéances de test','clock','due','Voir les comptes à relancer'],['Mails confirmés',s.messages.filter(m=>m.state==='confirmed_sent').length,'Sur les 100 derniers messages','mail','messages','Voir l’historique']].map(([title,n,detail,glyph,target,link],i)=>`<button class="stat ${i===0?'stat-main':''}" data-destination="${target}" aria-label="${link} : ${n}"><span class="stat-heading"><span>${title}</span>${icon(glyph)}</span><strong>${String(n).padStart(2,'0')}</strong><small>${detail}</small><span class="stat-link"><span class="stat-link-full">${link}</span><span class="stat-link-short" aria-hidden="true">Voir</span><span aria-hidden="true"> →</span></span></button>`).join('');
     renderUsers();renderHelp();
-    $('#messages').innerHTML=s.messages.length?s.messages.map(m=>`<article class="mail-card"><div><span class="tag ${m.state==='confirmed_sent'?'':'neutral'}">${esc(states[m.state])}</span><h3>${esc(m.subject)}</h3><p>${esc(m.email)} · ${esc(day(m.created_at))}</p></div><button data-action="reopen" data-id="${esc(m.id)}">Reprendre le message ↗</button></article>`).join(''):'<p class="empty">Aucun message préparé. Choisis un compte puis « Préparer une relance ».</p>';
+    $('#messages').innerHTML=s.messages.length?s.messages.map(m=>`<article class="mail-card"><div><span class="tag ${m.state==='confirmed_sent'?'':'neutral'}">${esc(states[m.state])}</span><h3>${esc(m.subject)}</h3><p>${esc(m.email)} · ${esc(day(m.created_at))}</p></div><button data-action="reopen" data-id="${esc(m.id)}">Reprendre le message ↗</button></article>`).join(''):'<p class="empty">Aucun message préparé. Ouvre le profil d’un compte, puis choisis « Préparer une relance ».</p>';
     $('#audit').innerHTML=s.audit.length?s.audit.map(a=>`<div class="audit-row"><span>${esc(auditNames[a.action]||a.action)}</span><time>${esc(day(a.created_at))}</time></div>`).join(''):'<p class="muted small">Les actions d’administration apparaîtront ici.</p>';
   }
 function pendingHelp(email){return (snapshot.requests||[]).filter(r=>r.status==='pending'&&r.email.toLowerCase()===email.toLowerCase());}
@@ -162,6 +162,7 @@ function clearBoard(){
  $('#identity').textContent='';$('#phone').value='';$('#password').value='';$('#modal').close();setHero(false);
 }
   async function handleBoardClick(e){
+    const destination=e.target.closest('[data-destination]');if(destination){const target=destination.dataset.destination;if(target==='messages')showView('messages');else{$('#search').value='';$('#filter').value=target;renderUsers();showView('accounts');}return;}
     const profile=e.target.closest('[data-profile]');if(profile){toggleProfile(profile.dataset.profile);return;}
     const button=e.target.closest('[data-action]');if(!button||busy)return;
     const action=button.dataset.action,user=snapshot.users.find(u=>u.id===button.dataset.user);
