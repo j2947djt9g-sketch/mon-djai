@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
   const uid='11111111-1111-4111-8111-111111111111',member='22222222-2222-4222-8222-222222222222',exp=Math.floor(Date.now()/1000)+3600;
   const user={id:uid,email:'owner@example.invalid',aud:'authenticated',role:'authenticated',email_confirmed_at:'2026-01-01',last_sign_in_at:new Date().toISOString(),user_metadata:{},app_metadata:{provider:'email'},identities:[]};
   const jwt=[{alg:'HS256',typ:'JWT'},{sub:uid,aud:'authenticated',role:'authenticated',exp},'TEST'].map(x=>Buffer.from(typeof x==='string'?x:JSON.stringify(x)).toString('base64url')).join('.');
-  let board={actor:{id:uid,email:user.email},settings:{mode:'free',monthly_cents:199,payment_phone:''},today:'2026-10-23',users:[{id:uid,email:user.email,name:'Owner',confirmed:true,is_admin:true,created_at:'2026-01-01'}, {id:member,email:'member@example.invalid',name:'<img src=x onerror=alert(1)>',confirmed:true,is_admin:false,created_at:'2026-01-02',test_until:'2026-10-25'}],messages:[],audit:[],requests:[{id:'33333333-3333-4333-8333-333333333333',email:'member@example.invalid',reason:'email_missing',status:'pending',created_at:'2026-10-24T12:00:00Z'}]},mail=null,calls=[];
+  let board={actor:{id:uid,email:user.email},settings:{mode:'free',monthly_cents:199,payment_phone:''},today:'2026-10-23',users:[{id:uid,email:user.email,name:'Owner',confirmed:true,is_admin:true,created_at:'2026-01-01'}, {id:member,email:'member@example.invalid',name:'<img src=x onerror=alert(1)>',confirmed:true,is_admin:false,created_at:'2026-01-02',test_until:'2026-10-25'}],messages:[],audit:[],requests:[{id:'33333333-3333-4333-8333-333333333333',email:'member@example.invalid',reason:'email_missing',status:'pending',created_at:'2026-10-24T12:00:00Z',device_label:'iPhone · Safari',device_unlock_pending:true}]},mail=null,calls=[];
   const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await context.route('https://mail.google.com/**',r=>r.fulfill({status:200,contentType:'text/html',body:'<p>Gmail compose fixture</p>'}));
   await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',async route=>{
@@ -24,8 +24,8 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
     else if(input.action==='set-test-date'){board.users[1].test_until=input.date;result={ok:true};}
     else if(input.action==='renew-test'){board.users[1].test_until='2026-11-23';result={ok:true,test_until:'2026-11-23'};}
     else if(input.action==='authorize-reset'){
-     assert.equal(input.user_id,member);assert.equal(input.confirm_email,'member@example.invalid');assert.equal(input.identity_checked,true);
-     board.requests[0].status='authorized';result={recovery:{email:'member@example.invalid',url:'https://j2947djt9g-sketch.github.io/mon-djai/clair/reset.html#token_hash='+'a'.repeat(64),code:'123456'}};
+     assert.equal(input.user_id,member);assert.equal(input.confirm_email,'member@example.invalid');assert.equal(input.request_id,'33333333-3333-4333-8333-333333333333');
+     board.requests[0].status='authorized';result={ok:true,device_label:'iPhone · Safari'};
     }
     else if(input.action==='settings'){board.settings.payment_phone=input.payment_phone;result={ok:true};}
    }
@@ -86,9 +86,9 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
   const beforeAuth=calls.filter(c=>c.action==='authorize-reset').length;
   await page.locator('#authorize-reset-form button').click();
   assert.equal(calls.filter(c=>c.action==='authorize-reset').length,beforeAuth);
-  await page.locator('#reset-confirm-email').fill('member@example.invalid');await page.locator('#identity-checked').check();
-  await page.locator('#authorize-reset-form button').click();await page.locator('.recovery-code').waitFor();
-  assert.match(await page.locator('.recovery-code').innerText(),/123456/);
+  await page.locator('#reset-confirm-email').fill('member@example.invalid');
+  await page.locator('#authorize-reset-form button').click();await page.locator('#modal-title').filter({hasText:'ancien mot de passe est désactivé'}).waitFor();
+  assert.equal(await page.locator('#recovery-link,.recovery-code').count(),0);
   assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('123456')),false);
   await page.locator('#close-modal').click();await page.waitForFunction(()=>document.querySelector('#modal-content').innerHTML==='');
   await page.locator('[data-action="delete"]').click();assert.match(await page.locator('#modal').innerText(),/irréversible/);assert.match(await page.locator('#modal').innerText(),/Cette action est réelle/);assert.equal(await page.locator('#confirm-email').inputValue(),'');await page.locator('#close-modal').click();assert.equal(calls.filter(c=>c.action==='delete').length,0);

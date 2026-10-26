@@ -5,7 +5,7 @@ create table public.clair_device_unlocks(
  secret_hash text not null check(secret_hash ~ '^[a-f0-9]{64}$'),
  device_label text not null check(length(device_label) between 1 and 100),
  fingerprint text not null,
- status text not null default 'pending' check(status in ('pending','approving','approved','completed')),
+ status text not null default 'pending' check(status in ('pending','approving','approved','issued','completed')),
  user_id uuid references auth.users(id) on delete cascade,
  approved_by uuid references auth.users(id),
  created_at timestamptz not null default now(),
@@ -56,10 +56,11 @@ declare item public.clair_device_unlocks;
 begin
  select * into item from public.clair_device_unlocks where id=p_id and secret_hash=p_hash for update;
  if not found or item.expires_at<=now() or item.status='completed' then return jsonb_build_object('state','expired');end if;
+ if item.status='issued' then return jsonb_build_object('state','expired');end if;
  if item.status<>'approved' then return jsonb_build_object('state','pending');end if;
  if item.issue_count>=5 then return jsonb_build_object('state','expired');end if;
  if item.lease_until>now() then return jsonb_build_object('state','pending');end if;
- update public.clair_device_unlocks set lease_until=now()+interval '30 seconds',issue_count=issue_count+1 where id=p_id;
+ update public.clair_device_unlocks set status='issued',lease_until=now()+interval '30 seconds',issue_count=issue_count+1 where id=p_id;
  return jsonb_build_object('state','ready','email',item.email,'user_id',item.user_id);
 end;$$;
 
@@ -67,7 +68,7 @@ create function public.clair_complete_device_unlock(p_id uuid,p_hash text,p_user
 returns boolean language plpgsql security invoker set search_path='' as $$
 begin
  update public.clair_device_unlocks set status='completed',secret_hash=repeat('0',64),updated_at=now()
-  where id=p_id and secret_hash=p_hash and status='approved' and user_id=p_user and expires_at>now();
+  where id=p_id and secret_hash=p_hash and status='issued' and user_id=p_user and expires_at>now();
  if not found then return false;end if;
  update public.clair_account_help set status='closed',updated_at=now() where id=p_id;
  return true;
