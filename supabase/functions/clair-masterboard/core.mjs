@@ -60,16 +60,25 @@ export function createHandler({db,auth,now=()=>new Date()}){
       if(!uuid(input.user_id))fail(400,'Compte invalide.');
       const target=await auth.target(input.user_id);if(!target)fail(404,'Compte introuvable.');
       if(action==='authorize-reset'){
-        if(input.identity_checked!==true||String(input.confirm_email||'').trim().toLowerCase()!==target.email.toLowerCase())fail(400,'Vérifie l’identité de la personne et recopie son adresse.');
+        if(String(input.confirm_email||'').trim().toLowerCase()!==target.email.toLowerCase())fail(400,'L’adresse recopiée ne correspond pas au compte sélectionné.');
+        if(target.id===actor.id)fail(409,'Pour ton propre compte administrateur, utilise la récupération de compte.');
         const signedIn=Date.parse(actor.last_sign_in_at||'');
         if(!Number.isFinite(signedIn)||+now()-signedIn>900000)fail(409,'Reconnecte-toi au masterboard avant cette action sensible.');
-        if(!target.email_confirmed_at)fail(409,'L’adresse doit être confirmée avant une réinitialisation administrateur.');
         if(Date.parse(target.banned_until||'')>+now())fail(409,'Ce compte est suspendu. Rétablis son accès séparément si nécessaire.');
-        if(!await db.claimReset(actor.id,target.id))fail(429,'Une autorisation vient d’être créée. Attends une minute avant de recommencer.');
-        const recovery=await auth.recovery(target.email);
-        if(!recovery?.hashed_token||!/^[A-Za-z0-9_-]{32,128}$/.test(recovery.hashed_token)||!/^\d{6,10}$/.test(recovery.email_otp||''))throw Error('Invalid recovery response');
-        await db.log(actor.id,target.id,'reset_authorized');await db.authorizeHelp(target.email);
-        return answer({recovery:{email:target.email,url:APP_URL+'reset.html#token_hash='+encodeURIComponent(recovery.hashed_token),code:recovery.email_otp}});
+        if(!uuid(input.request_id))fail(400,'La personne doit d’abord demander le déblocage depuis son application Clair.');
+        const request=await db.unlockRequest(input.request_id);
+        if(!request||request.email.toLowerCase()!==target.email.toLowerCase()||Date.parse(request.expires_at)<=+now()||!['pending','approving'].includes(request.status))fail(409,'Cette demande est expirée ou déjà traitée. La personne doit en envoyer une nouvelle depuis son appareil.');
+        if(!await db.beginUnlock(input.request_id,actor.id,target.id,target.email))fail(429,'Cette demande est déjà en cours. Attends une minute avant de recommencer.');
+        let invalidated=false;
+        try{
+          await auth.invalidatePassword(target.id);invalidated=true;
+          await db.approveUnlock(input.request_id,new Date(+now()+900000).toISOString());
+        }catch{
+          if(invalidated)fail(503,'L’ancien mot de passe est désactivé, mais le déblocage n’a pas pu être terminé. Attends une minute puis réessaie.');
+          fail(503,'Le mot de passe n’a pas pu être désactivé. Attends une minute puis réessaie.');
+        }
+        await db.log(actor.id,target.id,'device_unlock_approved');
+        return answer({ok:true,device_label:request.device_label});
       }
       if(action==='prepare-mail'){
         if(!uuid(input.id)||!['reminder','recovery'].includes(input.kind))fail(400,'Message invalide.');
