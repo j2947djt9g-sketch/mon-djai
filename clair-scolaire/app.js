@@ -187,14 +187,14 @@
     document.getElementById("task-duration").value=30;
     document.getElementById("task-period").value=period;
     document.getElementById("dialog-title").textContent=mode==="edit"?"Modifier la séance":"Nouvelle séance";
-    const oldDelete=document.getElementById("dialog-delete");if(oldDelete)oldDelete.remove();
+    const oldDelete=document.getElementById("dialog-delete");if(oldDelete)oldDelete.remove();const oldPostpone=document.getElementById("dialog-postpone");if(oldPostpone)oldPostpone.remove();
     if(mode==="edit"){
       const item=tasksFor(date).find(t=>t.id===taskId);if(!item)return;
       document.getElementById("task-name").value=item.name;
       document.getElementById("task-subject").value=item.subject;
       document.getElementById("task-period").value=item.period;
       document.getElementById("task-duration").value=item.duration;
-      const del=document.createElement("button");del.type="button";del.id="dialog-delete";del.className="btn btn-light danger";del.dataset.action="delete-task";del.textContent="Supprimer";document.querySelector(".dialog-buttons").prepend(del);
+      const actions=document.querySelector(".dialog-buttons");const postpone=document.createElement("button");postpone.type="button";postpone.id="dialog-postpone";postpone.className="btn btn-light";postpone.dataset.action="postpone-task";postpone.textContent="Reporter à demain";actions.prepend(postpone);const del=document.createElement("button");del.type="button";del.id="dialog-delete";del.className="btn btn-light danger";del.dataset.action="delete-task";del.textContent="Supprimer";actions.prepend(del);
     }
     dialog.showModal();
     document.getElementById("task-name").focus();
@@ -260,7 +260,7 @@
       case "reset-date":selected=localDate(new Date());render();break;
       case "prev-week":selected=shiftDate(selected,-7);render();break;
       case "next-week":selected=shiftDate(selected,7);render();break;
-      case "select-date":selected=date;render();break;
+      case "select-date":selected=date;view="today";render();window.scrollTo({top:0,behavior:"smooth"});break;
       case "open-date":selected=date;view="today";render();window.scrollTo({top:0,behavior:"smooth"});break;
       case "check":
         if(state.done[itemKey(date,id)])delete state.done[itemKey(date,id)];
@@ -269,6 +269,18 @@
       case "add":openDialog("add",selected,button.dataset.period||"morning");break;
       case "edit":openDialog("edit",date,"morning",id);break;
       case "close-dialog":dialog.close();break;
+      case "postpone-task": {
+        const d=form.dataset.date,taskId=form.dataset.id,task=tasksFor(d).find(t=>t.id===taskId);
+        if(!task)break;
+        const next=shiftDate(d,1);
+        const newTask={...task,id:"extra-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,9),date:next};
+        state.extras.push(newTask);
+        const index=state.extras.findIndex(t=>t.date===d&&t.id===taskId);
+        if(index>=0)state.extras.splice(index,1);
+        else {state.hidden[itemKey(d,taskId)]=true;delete state.edits[itemKey(d,taskId)];}
+        delete state.done[itemKey(d,taskId)];
+        dialog.close();persist();render();toast("Séance reportée au "+formatDate(next,{day:"numeric",month:"long"})+".");break;
+      }
       case "delete-task":
         if(confirm("Supprimer cette séance pour ce jour ?")){const d=form.dataset.date,task=form.dataset.id;dialog.close();removeTask(d,task);}
         break;
