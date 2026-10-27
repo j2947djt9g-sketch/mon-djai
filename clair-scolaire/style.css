@@ -57,3 +57,34 @@ body{background:var(--paper)}.sidebar,.bottom-nav{backdrop-filter:none}.brand-ma
 @keyframes vegeta-read{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(2deg)}}
 @keyframes vegeta-glow{0%,100%{opacity:.5;transform:scale(.97)}50%{opacity:1;transform:scale(1.04)}}
 @media(prefers-reduced-motion:reduce){.school-intro.is-visible .vegeta-figure,.school-intro.is-visible .vegeta-book,.vegeta-aura{animation:none}}
+
+/* V3: full-screen storyboard intro, rather than generic loading dialog */
+.school-intro.intro-story{padding:0;background:#081530;color:#fff;overflow:hidden}
+.intro-story-frame{width:100%;height:100%;position:relative;max-width:none}
+.intro-scene{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity .65s ease,visibility .65s;background:linear-gradient(165deg,#06122c 0%,#163d7b 58%,#c5d8ef 100%);display:flex;align-items:center;justify-content:flex-end;flex-direction:column;padding:env(safe-area-inset-top) 18px 90px}
+.intro-scene.current{opacity:1;visibility:visible}
+.intro-scene .vegeta-stage{height:min(53vh,430px);width:min(370px,95vw);flex:none;margin:0 auto}
+.intro-scene-text{z-index:4;position:absolute;top:clamp(70px,14vh,155px);left:20px;right:20px;text-align:center;text-shadow:0 3px 16px #00132d}
+.intro-scene-text span{display:block;color:#8ec2ff;font-size:11px;letter-spacing:.16em;font-weight:800;margin-bottom:13px}
+.intro-scene-text strong{font-size:clamp(29px,7vw,46px);line-height:1.1;display:block;letter-spacing:-.04em}
+.intro-scene-text p{color:#e6f1ff;font-size:14px;margin-top:11px}
+.intro-story-bottom{position:absolute;z-index:15;bottom:calc(22px + env(safe-area-inset-bottom));left:25px;right:25px;display:flex;align-items:center;gap:20px}
+.intro-story-progress{height:4px;flex:1;border-radius:6px;background:#ffffff45;overflow:hidden}
+.intro-story-progress span{display:block;width:var(--intro-progress,16.66%);height:100%;background:#84bcff;transition:width .55s ease}
+.intro-story-skip{background:none;color:white;font-size:12px;font-weight:700;white-space:nowrap}
+.intro-logo{text-align:center;margin:auto;display:grid;justify-items:center;gap:3px}
+.intro-logo strong{font-size:clamp(65px,17vw,110px);letter-spacing:-.09em;line-height:.85;color:#fff}
+.intro-logo span{font-size:24px;font-weight:800;letter-spacing:.1em;color:#76b6ff}
+.intro-logo p{font-size:14px;line-height:1.7;color:#dceaff;margin-top:30px}
+.intro-enter{z-index:8;position:absolute;bottom:100px;left:50%;transform:translateX(-50%);border:0;background:#0867f7;color:white;font-size:15px;font-weight:800;padding:15px 42px;border-radius:11px;box-shadow:0 10px 28px #061e5a77}
+.intro-story.is-exiting{opacity:0;transition:opacity .35s}
+.scene-1{background:linear-gradient(180deg,#101d3c 0%,#325d99 68%,#9bacc9 100%)}
+.scene-2{background:linear-gradient(180deg,#07142d 0%,#0e3673 58%,#2f72b2 100%)}
+.scene-3{background:linear-gradient(180deg,#061126 0%,#1b2d56 50%,#a76b59 100%)}
+.scene-4{background:radial-gradient(ellipse at 50% 72%,#2485f9 0%,#143e96 35%,#050e30 82%)}
+.scene-4 .vegeta-aura{background:radial-gradient(ellipse,#58c5ffbb,#2977ff77 48%,transparent 75%);filter:blur(9px);animation:vegeta-glow .8s infinite}
+.scene-4 .vegeta-figure{filter:drop-shadow(0 0 20px #2eabff)}
+.scene-5{background:linear-gradient(180deg,#193f7b,#a5c6e7)}
+.intro-scene.current .vegeta-figure{animation:vegeta-enter 1s ease both}
+@media(min-width:800px){.intro-story-frame{max-width:500px;margin:auto;box-shadow:0 0 0 100vw #071329}}
+@media(prefers-reduced-motion:reduce){.intro-scene,.intro-story-progress span,.intro-scene.current .vegeta-figure{animation:none;transition:none}}
