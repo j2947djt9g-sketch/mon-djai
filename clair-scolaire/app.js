@@ -59,19 +59,22 @@
     const mascot=document.querySelector(".sidebar-mascot .school-mascot");
     return '<section class="page"><button type="button" class="subject-back" data-action="back-home">← Retour à l’accueil</button><div class="subject-hero"><div class="subject-hero-icon">'+SUBJECT_EMOJI[s]+'</div><div><div class="eyebrow">MON PARCOURS</div><h2>'+esc(SUBJECTS[s].name)+'</h2><p>'+progress.n+' chapitre(s) validé(s) sur '+progress.total+'</p></div></div><div class="subject-progress-line"><div class="subject-progress-track"><span style="width:'+progress.percent+'%"></span></div><strong>'+progress.percent+' %</strong></div><div class="subject-mascot-banner"><div><span class="subject-level">MASCOTTE · NIVEAU '+level()+'/5</span><strong style="display:block;margin-top:5px">Chaque chapitre te fait évoluer.</strong><p>Les transformations se débloquent avec tes acquis.</p></div>'+(mascot?mascot.outerHTML:"")+'</div><div class="panel"><h2>Mes chapitres</h2>'+lessons+'</div><div class="panel"><h2>Mes tâches du jour</h2>'+(today.length?today.map(t=>taskHtml(t,selected)).join(""):'<p class="note">Aucune séance de cette matière aujourd’hui.</p>')+'<div class="subject-actions"><button type="button" class="btn btn-primary" data-action="add-subject-task" data-subject="'+s+'">'+svg("plus")+' Ajouter une séance</button></div></div><p class="bottom-note">Valide uniquement les chapitres que tu maîtrises réellement.</p></section>';
   }
+
+  let introStep=0,introInterval;
   function endIntro(){
-    clearTimeout(introTimer);
+    clearInterval(introInterval);
     const el=document.getElementById("school-intro");
-    if(!el||!el.classList.contains("is-visible"))return;
+    if(!el)return;
     el.classList.add("is-exiting");
-    try{sessionStorage.setItem("clair-scolaire-intro-v2","1");}catch(e){}
-    setTimeout(()=>{el.classList.remove("is-visible","is-exiting");el.setAttribute("aria-hidden","true");},420);
+    try{sessionStorage.setItem("clair-scolaire-intro-v3","1");}catch(e){}
+    setTimeout(()=>{el.classList.remove("is-visible","is-exiting");el.setAttribute("aria-hidden","true");},380);
   }
   function startIntro(){
     const el=document.getElementById("school-intro");if(!el)return;
-    try{if(sessionStorage.getItem("clair-scolaire-intro-v2"))return;}catch(e){}
-    el.classList.add("is-visible");el.setAttribute("aria-hidden","false");
-    introTimer=setTimeout(endIntro,2900);
+    try{if(sessionStorage.getItem("clair-scolaire-intro-v3"))return;}catch(e){}
+    introStep=0;el.classList.add("is-visible");el.setAttribute("aria-hidden","false");
+    const show=()=>{el.querySelectorAll(".intro-scene").forEach(s=>s.classList.toggle("current",Number(s.dataset.scene)===introStep));el.style.setProperty("--intro-progress",((introStep+1)/6*100)+"%");};
+    show();introInterval=setInterval(()=>{if(introStep<5){introStep++;show();}else clearInterval(introInterval);},1800);
   }
 
   const main = document.getElementById("main-view");
@@ -172,7 +175,7 @@
     const current=selected===localDate(new Date());
     const t=tally(selected);
     const dateLabel=formatDate(selected,{weekday:"long",day:"numeric",month:"long"});
-    return '<section class="page">'+heading("MON ESPACE DE TRAVAIL",current?"Bonjour, à toi de jouer !":dateLabel,"Un planning souple. Des progrès bien réels.",'<button type="button" class="btn btn-primary" data-action="add">'+svg("plus")+' Nouvelle tâche</button>')+heroHtml(selected)+'<div class="subject-tabs">'+Object.keys(CHAPTERS).map(k=>'<button type="button" data-action="open-subject" data-subject="'+k+'">'+SUBJECT_EMOJI[k]+' '+esc(SUBJECTS[k].name)+'</button>').join('')+'<div class="under-hero"><div class="metric"><span class="metric-icon">✓</span><div><strong>'+t.done+' / '+t.total+'</strong><small>séances faites</small></div></div><div class="metric"><span class="metric-icon">◷</span><div><strong>'+t.minutes+' min</strong><small>temps prévu validé</small></div></div><div class="metric"><span class="metric-icon">✦</span><div><strong>4</strong><small>domaines à explorer</small></div></div></div><div class="section-line"><h2>Mon programme du '+formatDate(selected,{day:"numeric",month:"short"})+'</h2>'+dateNav()+'</div><div class="period-grid">'+PERIODS.map(p=>periodHtml(p,selected)).join("")+'</div><p class="bottom-note">Les heures sont des repères, pas des rendez-vous. Une séance ratée n’efface pas tes efforts. 🌿</p></section>';
+    return '<section class="page">'+heading("MON ESPACE DE TRAVAIL",current?"Bonjour, à toi de jouer !":dateLabel,"Un planning souple. Des progrès bien réels.",'<button type="button" class="btn btn-primary" data-action="add">'+svg("plus")+' Nouvelle tâche</button>')+heroHtml(selected)+'<div class="subject-tabs">'+Object.keys(CHAPTERS).map(k=>'<button type="button" data-action="open-subject" data-subject="'+k+'">'+SUBJECT_EMOJI[k]+' '+esc(SUBJECTS[k].name)+'</button>').join('')+'</div><div class="under-hero"><div class="metric"><span class="metric-icon">✓</span><div><strong>'+t.done+' / '+t.total+'</strong><small>séances faites</small></div></div><div class="metric"><span class="metric-icon">◷</span><div><strong>'+t.minutes+' min</strong><small>temps prévu validé</small></div></div><div class="metric"><span class="metric-icon">✦</span><div><strong>4</strong><small>domaines à explorer</small></div></div></div><div class="section-line"><h2>Mon programme du '+formatDate(selected,{day:"numeric",month:"short"})+'</h2>'+dateNav()+'</div><div class="period-grid">'+PERIODS.map(p=>periodHtml(p,selected)).join("")+'</div><p class="bottom-note">Les heures sont des repères, pas des rendez-vous. Une séance ratée n’efface pas tes efforts. 🌿</p></section>';
   }
   function weekView(){
     const monday=mondayOf(selected); const dates=Array.from({length:7},(_,i)=>shiftDate(monday,i));
