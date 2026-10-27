@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#e9f1ee">
+  <meta name="theme-color" content="#f7faff">
   <meta name="description" content="Clair Scolaire : organise tes études sans pression et suis ta progression quotidienne.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -12,8 +12,8 @@
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icon.svg">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./style.css?v=2.1">
-  <script src="./app.js?v=2.1" defer></script>
+  <link rel="stylesheet" href="./style.css?v=2.2">
+  <script src="./app.js?v=2.2" defer></script>
 </head>
 <body>
   <svg class="svg-sprites" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -33,10 +33,10 @@
     <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 17V5m-5 5 5-5 5 5M4 17v4h16v-4"/></symbol>
     <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M4 17l-1 4 4-1L19 8l-3-3Z"/></symbol>
   </svg>
-  <div class="app-shell">
+  <section id="school-intro" class="school-intro" role="dialog" aria-modal="true" aria-label="Bienvenue dans Clair Scolaire" aria-hidden="true"><div class="school-intro-content"><div class="school-intro-label">TON PARCOURS COMMENCE ICI</div><div class="school-intro-mascot"><div class="school-mascot"><img class="school-mascot-character" src="../clair/assets/mascotte/01-bienvenue.png" alt="Mascotte Clair étudiant" width="220" height="250"><div class="school-book-wrap"><svg class="school-book" viewBox="0 0 200 120" aria-label="Livre ouvert"><path d="M100 31Q56 9 13 25L13 97Q58 84 100 111Q144 84 187 97V25Q142 9 100 31Z" fill="#2667df" stroke="#1c3976" stroke-width="5"/><path d="M100 31Q58 11 22 28V90Q60 83 100 111Z" fill="#fff"/><path d="M100 31Q141 11 178 28V90Q140 83 100 111Z" fill="#edf5ff"/><path d="M100 31v80M35 43l46 8M35 58l46 8M118 51l45-8M118 66l45-8" stroke="#9fb4d7" stroke-width="3"/></svg></div></div></div><div class="school-intro-word"><strong>clair</strong><span>scolaire</span></div><p>Un chapitre à la fois.</p><div class="school-intro-progress"><span></span></div><button type="button" class="school-intro-skip" data-action="skip-intro">Passer l’animation ›</button></div></section><div class="app-shell">
     <aside class="sidebar" aria-label="Navigation">
       <a class="brand" href="#aujourdhui" aria-label="Clair Scolaire, accueil"><span class="brand-mark">C<span class="brand-dot"></span></span><span>clair<span class="brand-small">scolaire</span></span></a>
-      <div class="sidebar-caption">Un jour à la fois, à ton rythme.</div>
+      <div class="sidebar-caption">Ton temps. Ton rythme. Tes progrès.</div><div class="sidebar-mascot"><div class="school-mascot"><img class="school-mascot-character" src="../clair/assets/mascotte/01-bienvenue.png" alt="Mascotte Clair étudiant" width="220" height="250"><div class="school-book-wrap"><svg class="school-book" viewBox="0 0 200 120" aria-label="Livre ouvert"><path d="M100 31Q56 9 13 25L13 97Q58 84 100 111Q144 84 187 97V25Q142 9 100 31Z" fill="#2667df" stroke="#1c3976" stroke-width="5"/><path d="M100 31Q58 11 22 28V90Q60 83 100 111Z" fill="#fff"/><path d="M100 31Q141 11 178 28V90Q140 83 100 111Z" fill="#edf5ff"/><path d="M100 31v80M35 43l46 8M35 58l46 8M118 51l45-8M118 66l45-8" stroke="#9fb4d7" stroke-width="3"/></svg></div></div></div>
       <nav class="side-nav" id="side-nav">
         <button type="button" class="nav-item active" data-view="today"><svg><use href="#i-home"/></svg> Aujourd'hui</button>
         <button type="button" class="nav-item" data-view="week"><svg><use href="#i-calendar"/></svg> Ma semaine</button>
