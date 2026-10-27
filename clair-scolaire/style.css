@@ -37,3 +37,23 @@ body{background:var(--paper)}.sidebar,.bottom-nav{backdrop-filter:none}.brand-ma
 .school-intro-word{display:grid;justify-content:center;text-align:center}
 .school-intro-word strong{font-size:35px}
 .school-intro-word span{font-size:14px;color:#1266ef;letter-spacing:.13em;font-weight:800}
+
+/* Vegeta study intro: deliberate motion, blue and white only */
+.school-intro{background:linear-gradient(180deg,#071533 0%,#143a7c 56%,#e9f3ff 100%);color:white}
+.school-intro-glow{display:none}
+.school-intro-label{color:#bed7ff}
+.school-intro-word strong{color:white}
+.school-intro-word span{color:#8bbaff}
+.school-intro-content>p{color:#d6e5ff}
+.school-intro-progress{background:#375e9b}
+.school-intro-progress span{background:#9ac4ff}
+.school-intro-skip{color:#dceaff}
+.vegeta-stage{height:min(51vh,350px);width:min(340px,86vw);margin:0 auto;position:relative;display:flex;align-items:end;justify-content:center}
+.vegeta-figure{height:100%;width:100%;position:relative;z-index:2;overflow:visible;filter:drop-shadow(0 14px 12px rgba(0,10,40,.25))}
+.vegeta-aura{position:absolute;z-index:1;inset:10% 5% 0;border-radius:45%;background:radial-gradient(ellipse,rgba(79,161,255,.32),transparent 67%);animation:vegeta-glow 2.5s ease-in-out infinite}
+.school-intro.is-visible .vegeta-figure{animation:vegeta-enter 1.3s cubic-bezier(.2,.7,.2,1) both}
+.school-intro.is-visible .vegeta-book{transform-box:fill-box;transform-origin:center;animation:vegeta-read 2s ease-in-out .7s infinite}
+@keyframes vegeta-enter{0%{opacity:0;transform:translateY(55px) scale(.9)}65%{opacity:1}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes vegeta-read{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(2deg)}}
+@keyframes vegeta-glow{0%,100%{opacity:.5;transform:scale(.97)}50%{opacity:1;transform:scale(1.04)}}
+@media(prefers-reduced-motion:reduce){.school-intro.is-visible .vegeta-figure,.school-intro.is-visible .vegeta-book,.vegeta-aura{animation:none}}
