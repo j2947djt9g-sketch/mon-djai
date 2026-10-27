@@ -1,0 +1,18 @@
+{
+  "name": "Clair Scolaire",
+  "short_name": "Clair Études",
+  "description": "Ton planning d'études flexible et ton suivi de progression.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e9f1ee",
+  "theme_color": "#286b58",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
