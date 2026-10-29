@@ -60,6 +60,16 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
  const unavailable=context();unavailable.sandbox.localStorage.getItem=()=>{throw Error('storage unavailable')};unavailable.sandbox.localStorage.setItem=()=>{throw Error('storage unavailable')};await unavailable.wrong();await unavailable.wrong();await unavailable.wrong();await unavailable.wrong();assert.equal(unavailable.requests.length,3);
  console.log('PASS expired UI is restored; offline/malformed/unavailable storage do not create a one-error lock');
 
+
+ const originalTab=context();await originalTab.wrong();await originalTab.wrong();await originalTab.wrong();
+ const recoveryTab=context(originalTab.storage,originalTab.now()),recoveredUser={id:'account-a',email:'a@example.test'};
+ recoveryTab.t.cloud.user=recoveredUser;recoveryTab.t.cloud.hooks.recovery(recoveredUser);recoveryTab.t.render();
+ await recoveryTab.t.accountSubmit({id:'account-password-form',dataset:{},values:{password:'new long password phrase'},querySelector:()=>({disabled:false})});
+ assert(![...originalTab.storage.keys()].some(k=>k.startsWith('clair-login-attempts-v2-')),'Verified recovery clears the shared retry key');
+ await originalTab.wrong();assert.equal(originalTab.requests.length,4,'Verified recovery in another tab must clear this tab’s cached pause');assert.match(originalTab.error(),/2 essais/);
+ const readOnlyStorage=context();readOnlyStorage.sandbox.localStorage.setItem=()=>{throw Error('quota exceeded')};await readOnlyStorage.wrong();await readOnlyStorage.wrong();await readOnlyStorage.wrong();await readOnlyStorage.wrong();assert.equal(readOnlyStorage.requests.length,3,'Write-only storage failures must keep the memory guard');
+ console.log('PASS verified recovery clears a second tab pause; failed storage writes keep an in-memory pause');
+
  const c=context();await c.t.accountAction('account-mode');c.replies.push({data:{session:null,user:{}}});c.form.dataset.mode='signup';c.form.values={email:'a@example.test',password:'twelve-character-password',displayName:'  El-Hadj  '};await c.t.accountSubmit(c.form);
  assert.equal(c.requests.at(-1).options.data.display_name,'El-Hadj');const confirmation=c.t.accountGate();assert.match(confirmation,/confirmation/);assert.match(confirmation,/clique/i);assert.match(confirmation,/indésirables/);
  c.t.cloud.user={id:'user-a',email:'a@example.test'};c.t.cloud.displayName='<img src=x onerror=alert(1)>';assert(c.t.accountCard().includes('&lt;img'));assert(!c.t.accountCard().includes('<img src=x'));

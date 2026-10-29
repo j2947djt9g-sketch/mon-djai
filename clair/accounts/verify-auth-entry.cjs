@@ -18,17 +18,17 @@ const server=http.createServer((req,res)=>{
    const req=route.request(),url=new URL(req.url());
    if(url.pathname==='/auth/v1/signup'){
     calls.signup++;
-    return route.fulfill({status:signupLimited?429:200,contentType:'application/json',body:JSON.stringify(signupLimited?{code:'over_email_send_rate_limit',message:'Email rate limit exceeded'}:{id:'8450886d-891a-40e2-995e-ea46bb1409bc',aud:'authenticated',role:'authenticated',email:'new@example.invalid',identities:[{id:'new'}]})});
+    return route.fulfill({headers:{'X-Supabase-Api-Version':'2024-01-01'},status:signupLimited?429:200,contentType:'application/json',body:JSON.stringify(signupLimited?{code:'over_email_send_rate_limit',message:'Email rate limit exceeded'}:{id:'8450886d-891a-40e2-995e-ea46bb1409bc',aud:'authenticated',role:'authenticated',email:'new@example.invalid',identities:[{id:'new'}]})});
    }
    if(url.pathname==='/auth/v1/token'){
     calls.login++;assert.equal(url.searchParams.get('grant_type'),'password');
-    return route.fulfill({status:loginError==='over_request_rate_limit'?429:400,contentType:'application/json',body:JSON.stringify({code:loginError,message:loginError})});
+    return route.fulfill({headers:{'X-Supabase-Api-Version':'2024-01-01'},status:loginError==='over_request_rate_limit'?429:400,contentType:'application/json',body:JSON.stringify({code:loginError,message:loginError})});
    }
-   return route.fulfill({status:200,contentType:'application/json',body:'{}'});
+   return route.fulfill({headers:{'X-Supabase-Api-Version':'2024-01-01'},status:200,contentType:'application/json',body:'{}'});
   });
   const open=async()=>{await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');await page.keyboard.press('Escape');await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('#account-form').waitFor();};
   const email=()=>page.locator('#account-form input[name="email"]'),password=()=>page.locator('#account-form input[name="password"]'),submit=()=>page.locator('#account-form button[type="submit"]'),error=()=>page.locator('#account-error');
-  const waitText=async text=>{await page.waitForFunction(text=>document.querySelector('#account-error')?.textContent.includes(text),text);};
+  const waitText=async text=>{try{await page.waitForFunction(text=>document.querySelector('#account-error')?.textContent.includes(text),text);}catch(error){console.error(JSON.stringify({expected:text,actual:await page.locator('#account-error').innerText(),calls,pageErrors:errors}));throw error;}};
   await open();await page.locator('[data-action="account-mode"]').click();
   assert.match(await page.locator('#account-form').innerText(),/mail de confirmation/);
   await page.locator('[name="displayName"]').fill('Test');await email().fill('new@example.invalid');await password().fill('fictional password phrase');
