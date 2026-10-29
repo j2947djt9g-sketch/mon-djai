@@ -29,7 +29,7 @@
 - [x] Baseline account UI, password security and SDK tests passed on main 8a2e269.
 - [x] Extend account UI test with two retries, third pause, no fourth request, reload, hour expiry, success reset, address isolation and error exclusions. Observed expected RED against unmodified code.
 - [x] Update account-ui.js and embedded index module. Core account/security/recovery/SDK tests passed locally.
-- [ ] Verify expiry clears the old paused message; cover malformed/unavailable storage and offline state.
+- [x] Verify expiry clears the old paused message; cover malformed/unavailable storage and offline state.
 
 ### Task 2: Browser integration and release
 
@@ -41,3 +41,5 @@
 
 - Local baseline and changed core suites passed. No single-failure lock was present in current source; email-confirmation and provider messages were vague.
 - Windows browser startup failed due environment access, then the executor disconnected. Remaining verification runs in GitHub Actions; remote source preparation preserves all candidate content.
+
+- GitHub regression reproduced the stale one-hour message after expiry (RED). The timer now clears that message and only updates live guidance when its text changes.

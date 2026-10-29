@@ -197,7 +197,10 @@
     const button=form.querySelector('button[type="submit"]');
     if(button){button.disabled=accountBusy||wait>0;button.textContent=accountBusy?'Connexion…':wait?'Réessayer dans '+Math.ceil(wait/60)+' min':'Me connecter';}
     const hint=$('#account-login-wait');
-    if(hint)hint.textContent=wait?loginWaitMessage():'';
+    const text=wait?'Connexion disponible dans '+Math.ceil(wait/60)+' min.':'';
+    if(hint&&hint.textContent!==text)hint.textContent=text;
+    const error=$('#account-error');
+    if(!wait&&error?.textContent.startsWith('Trois mots de passe incorrects.'))error.textContent='';
   }
   document.addEventListener('input',event=>{
     if(event.target?.matches?.('#account-form input[name="email"]'))updateLoginButtons();
