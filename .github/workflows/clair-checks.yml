@@ -40,6 +40,7 @@ jobs:
           CLAIR_CHROME_PATH: /usr/bin/google-chrome
           CLAIR_PREVIEW: '1'
         run: |
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-auth-entry.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-profile.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-masterboard-install.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-masterboard.cjs
