@@ -52,7 +52,7 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
  console.log('PASS confirmation/provider errors are not wrong passwords, duplicate submissions are prevented and success resets the counter');
 
 
- const d=context();await d.wrong();await d.wrong();await d.wrong();
+ const d=context();d.t.render();await d.wrong();await d.wrong();await d.wrong();
  d.node('#account-form').dataset.mode='login';d.node('#account-form').querySelector=selector=>selector.startsWith('input')?{value:'a@example.test'}:d.node('#submit');
  d.advance(3600000);d.t.updateLoginButtons();assert.equal(d.node('#submit').disabled,false);assert.doesNotMatch(d.error(),/une heure/,'Expiry must clear stale lock wording');
  const offline=context();offline.sandbox.navigator.onLine=false;await offline.wrong();assert.equal(offline.requests.length,0);offline.sandbox.navigator.onLine=true;await offline.wrong();assert.match(offline.error(),/2 essais/);

@@ -42,4 +42,4 @@
 - Local baseline and changed core suites passed. No single-failure lock was present in current source; email-confirmation and provider messages were vague.
 - Windows browser startup failed due environment access, then the executor disconnected. Remaining verification runs in GitHub Actions; remote source preparation preserves all candidate content.
 
-- GitHub regression reproduced the stale one-hour message after expiry (RED). The timer now clears that message and only updates live guidance when its text changes.
+- GitHub's extra expiry test initially used an unrendered login fixture; it now renders the form before exercising its timer. The timer clears expired one-hour guidance and only updates live guidance when its text changes.
