@@ -35,7 +35,8 @@
 
 - [x] Add verify-auth-entry.cjs with intercepted HTTP and real SDK; add it to the existing workflow.
 - [x] Update app version to 2026-10-29.1 and offline cache to v38.
-- [ ] Run checks, independent whole-branch review, and publish with verified GitHub Pages content.
+- [x] Independent whole-branch review completed; two important findings are covered by regression tests.
+- [ ] Complete final browser checks and publish with verified GitHub Pages content.
 
 ## Execution record
 
@@ -43,3 +44,7 @@
 - Windows browser startup failed due environment access, then the executor disconnected. Remaining verification runs in GitHub Actions; remote source preparation preserves all candidate content.
 
 - GitHub's extra expiry test initially used an unrendered login fixture; it now renders the form before exercising its timer. The timer clears expired one-hour guidance and only updates live guidance when its text changes.
+
+- Independent review: missing SDK error-version headers in browser fixtures were corrected; the production SDK behavior was verified in the bundled error parser.
+- Independent review: verified recovery in another tab left a cached local pause alive. A regression ran RED in GitHub (Auth calls remained 3 instead of expected 4 after recovery). A successful missing-key read is now authoritative; memory-only counters are retained only when storage writes fail. Both normal clearing and failed-write fallback are covered.
+- Review items outside validation: SMTP delivery remains blocked pending sender setup; assistive technology requires manual validation; browser widths run in CI.

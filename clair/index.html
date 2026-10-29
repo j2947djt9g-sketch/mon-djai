@@ -1280,7 +1280,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     target.innerHTML=cloud.conflict?'<div class="notice"><p>Deux appareils ont modifié ton budget. Les deux copies sont conservées.</p><button class="button" data-action="account-conflict">Choisir une copie</button></div>':cloud.error?`<div class="notice">${esc(cloud.error)} <button class="link" data-action="account-sync">Réessayer</button></div>`:'';
   }
   // Browser retry guidance; Supabase's independent server limits still apply.
-  const LOGIN_WAIT_MS=3600000,loginRecords=new Map();
+  const LOGIN_WAIT_MS=3600000,loginRecords=new Map(),loginMemoryOnly=new Set();
   let accountLoginAttempt={key:'',email:''};
   async function loginAttemptKey(email){
     const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(email));
@@ -1290,7 +1290,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     const fresh=()=>({count:0,since:Date.now(),until:0});
     if(!key)return fresh();
     let record=loginRecords.get(key);
-    try{const raw=localStorage.getItem(key);if(raw)record=JSON.parse(raw);}catch{}
+    if(!loginMemoryOnly.has(key))try{const raw=localStorage.getItem(key);record=raw?JSON.parse(raw):null;}catch{}
     if(!record||!Number.isInteger(record.count)||record.count<0||record.count>3||
       !Number.isFinite(record.since)||record.since>Date.now()||
       !Number.isFinite(record.until)||record.until<0||record.until>Date.now()+LOGIN_WAIT_MS)return fresh();
@@ -1310,13 +1310,13 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     record.count=Math.min(3,record.count+1);
     if(record.count===3)record.until=Date.now()+LOGIN_WAIT_MS;
     loginRecords.set(accountLoginAttempt.key,record);
-    try{localStorage.setItem(accountLoginAttempt.key,JSON.stringify(record));}catch{}
+    try{localStorage.setItem(accountLoginAttempt.key,JSON.stringify(record));loginMemoryOnly.delete(accountLoginAttempt.key);}catch{loginMemoryOnly.add(accountLoginAttempt.key);}
     return record.count===3?loginWaitMessage():'Adresse e-mail ou mot de passe incorrect. Il te reste '+(3-record.count)+' essai'+(record.count===1?'s':'')+'.';
   }
   async function clearLoginAttempts(email){
     if(!email)return;
     const key=await loginAttemptKey(String(email).trim().toLowerCase());
-    loginRecords.delete(key);try{localStorage.removeItem(key);}catch{}
+    loginRecords.delete(key);loginMemoryOnly.delete(key);try{localStorage.removeItem(key);}catch{}
   }
   function updateLoginButtons(){
     const form=$('#account-form');
