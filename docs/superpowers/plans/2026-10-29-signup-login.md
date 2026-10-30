@@ -48,3 +48,5 @@
 - Independent review: missing SDK error-version headers in browser fixtures were corrected; the production SDK behavior was verified in the bundled error parser.
 - Independent review: verified recovery in another tab left a cached local pause alive. A regression ran RED in GitHub (Auth calls remained 3 instead of expected 4 after recovery). A successful missing-key read is now authoritative; memory-only counters are retained only when storage writes fail. Both normal clearing and failed-write fallback are covered.
 - Review items outside validation: SMTP delivery remains blocked pending sender setup; assistive technology requires manual validation; browser widths run in CI.
+
+- 2026-10-30 continuation: the final browser fixture also needs Access-Control-Expose-Headers so browser Fetch can read X-Supabase-Api-Version. The real Auth health response was inspected read-only and exposes that header; the fixture now matches it.
