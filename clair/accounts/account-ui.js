@@ -142,12 +142,18 @@
     form.reset();accountChangeUserId=null;
     dialog('Mot de passe modifié','<p role="status">Ton nouveau mot de passe est enregistré.</p><button class="button primary" data-action="close">Revenir à mes réglages</button>','account-change-done');
   }
-  function accountStatus(){return {loading:'Connexion…','signed-out':'Connexion requise',synced:'Synchronisé',pending:'À synchroniser',offline:'Hors ligne · enregistré ici',error:'Synchronisation à reprendre',conflict:'Deux copies à départager'}[cloud.status]||'Sur cet appareil';}
+  async function requireAccountWrite(){
+    if(!cloud.enabled)return true;
+    try{await cloud.requireWriteAccess();return true;}
+    catch(error){soundFeedback.cancelSave();notify(error.message);const field=$('#form-error');if(field&&$('#dialog').open)field.textContent=error.message;renderAccountStatus();return false;}
+  }
+  function accountStatus(){return {loading:'Connexion…','signed-out':'Connexion requise',suspended:'Compte suspendu · lecture seule',synced:'Synchronisé',pending:'À synchroniser',offline:'Hors ligne · enregistré ici',error:'Synchronisation à reprendre',conflict:'Deux copies à départager'}[cloud.status]||'Sur cet appareil';}
   function renderAccountStatus(){
     if(!cloud.enabled)return;
     const target=$('#sync-alert');
     if(!cloud.user){target.innerHTML='';return;}
     $('#status-label').textContent=accountStatus();
+    if(cloud.access==='suspended'){target.innerHTML='<section class="notice error" role="alert"><h2>Compte suspendu</h2><p><strong>Paie ton abonnement pour continuer.</strong></p><p>Tu peux consulter ton historique. Les nouveaux ajouts sont bloqués. Après ton paiement, contacte l’administrateur pour rétablir ton accès.</p><button class="button" data-action="account-sync">Vérifier mon accès</button></section>';return;}
     target.innerHTML=cloud.conflict?'<div class="notice"><p>Deux appareils ont modifié ton budget. Les deux copies sont conservées.</p><button class="button" data-action="account-conflict">Choisir une copie</button></div>':cloud.error?`<div class="notice">${esc(cloud.error)} <button class="link" data-action="account-sync">Réessayer</button></div>`:'';
   }
   // Browser retry guidance; Supabase's independent server limits still apply.
@@ -319,6 +325,7 @@
           response=await cloud.client.auth.signInWithPassword({email,password});
         }
         if(response.error){
+          if(response.error.code==='user_banned')throw Error('Compte suspendu. Paie ton abonnement pour continuer, puis contacte l’administrateur pour rétablir ton accès.');
           if(signup&&['user_already_exists','email_exists'].includes(response.error.code)){accountSignupResult='exists';render();return;}
           if(!signup&&response.error.code==='invalid_credentials')throw Error(recordLoginFailure());
           if(signup&&(response.error.code==='over_email_send_rate_limit'||response.error.status===429))throw Error('Le service e-mail ne peut pas envoyer la confirmation pour le moment. Réessaie plus tard ou contacte l’administrateur.');

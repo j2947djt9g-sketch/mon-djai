@@ -13,7 +13,7 @@ function context(hash=''){
    if(s==='[data-action="account-password-toggle"]'&&!p.includes('data-action="account-password-toggle"'))return null;
    return node(s);
  }
- const client={auth:{resetPasswordForEmail:async(email,options)=>{calls.mail.push({email,options});if(mailWait)await mailWait;return {error:mailError}},updateUser:async p=>{calls.password.push(p);if(passwordWait)await passwordWait;return {error:passwordError}}}};
+ const client={rpc:async()=>({data:true}),auth:{resetPasswordForEmail:async(email,options)=>{calls.mail.push({email,options});if(mailWait)await mailWait;return {error:mailError}},updateUser:async p=>{calls.password.push(p);if(passwordWait)await passwordWait;return {error:passwordError}}}};
  const s={Intl,Date:DateMock,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,
    setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{origin:'https://example.test',protocol:'https:',pathname:'/clair/',href:'https://example.test/clair/'+hash,hash,search:''},
    fetch:async(url,options={})=>{const body=JSON.parse(options.body);const result=await client.auth.resetPasswordForEmail(body.email,{redirectTo:s.location.origin+s.location.pathname});return {ok:!result.error,status:result.error?.status||202,json:async()=>result.error?{error:'L’envoi est temporairement limité. Contacte l’administrateur.',code:'recovery_limit',retry_after:1800}:{ok:true,retry_after:calls.mail.length===5?1800:60}};},
@@ -71,7 +71,7 @@ async function main(){
  slow.t.cloud.ready=false;slow.t.cloud.status='loading';
  slow.client.auth.onAuthStateChange=fn=>fn('PASSWORD_RECOVERY',{user:slowUser});slow.client.auth.getSession=async()=>({data:{session:{user:slowUser}}});
  slow.client.from=()=>({select(){return this},eq(){return this},async maybeSingle(){readStarted=true;await budgetGate;return {data:null}}});
- const opening=slow.t.cloud.init();for(let i=0;i<20&&!readStarted;i++)await Promise.resolve();assert(readStarted);assert.equal(slow.t.cloud.ready,true);assert.equal(slow.t.cloud.status,'loading');assert.match(slow.node('#page').innerHTML,/id="account-password-form"/);
+ const opening=slow.t.cloud.init();for(let i=0;i<60&&!readStarted;i++)await Promise.resolve();assert(readStarted);assert.equal(slow.t.cloud.ready,true);assert.equal(slow.t.cloud.status,'loading');assert.match(slow.node('#page').innerHTML,/id="account-password-form"/);
  releaseBudget();await opening;assert.equal(slow.t.state().step,'password');
  console.log('PASS: early PASSWORD_RECOVERY opens the verified password form while the budget read is still pending');
  console.log('ALL RECOVERY CHECKS PASSED');

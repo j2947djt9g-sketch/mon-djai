@@ -29,7 +29,7 @@ const server=http.createServer((req,res)=>{let p=path.resolve(root,'.'+new URL(r
     const response=await device(new Request(req.url(),{method:'POST',headers:{origin},body:req.postData()}));
     return route.fulfill({status:response.status,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:await response.text()});
    }
-   if(p==='/auth/v1/verify'){assert.equal(req.postDataJSON().type,'recovery');assert.equal(req.postDataJSON().token_hash,'a'.repeat(64));identityVerified=true;user.email_confirmed_at=now.toISOString();body={access_token:jwt,refresh_token:'FIXTURE',expires_at:exp,expires_in:3600,token_type:'bearer',user};}
+   if(p==='/rest/v1/rpc/clair_account_active')body=true;else if(p==='/auth/v1/verify'){assert.equal(req.postDataJSON().type,'recovery');assert.equal(req.postDataJSON().token_hash,'a'.repeat(64));identityVerified=true;user.email_confirmed_at=now.toISOString();body={access_token:jwt,refresh_token:'FIXTURE',expires_at:exp,expires_in:3600,token_type:'bearer',user};}
    else if(p==='/auth/v1/user'){assert(identityVerified);if(req.method()==='PUT'){assert.equal(req.postDataJSON().password,'NewPassword_42');updated++;}body=user;}
    else if(p==='/auth/v1/token'){assert.equal(req.postDataJSON().password,'NewPassword_42');body={access_token:jwt,refresh_token:'FIXTURE_MAIN',expires_at:exp,expires_in:3600,token_type:'bearer',user};}
    else if(p==='/auth/v1/logout')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*'}});

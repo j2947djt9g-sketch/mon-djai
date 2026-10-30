@@ -9,7 +9,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
   const uid='8450886d-891a-40e2-995e-ea46bb1409bc',user={id:uid,aud:'authenticated',role:'authenticated',email:'currency-'+code.toLowerCase()+'@example.invalid',user_metadata:{display_name:'Test'},app_metadata:{provider:'email'},identities:[{id:uid,provider:'email'}]};
   const exp=1800000000,jwt=[{alg:'HS256',typ:'JWT'},{sub:uid,aud:'authenticated',role:'authenticated',exp,iss:'https://hkssnbvktfscizojhftl.supabase.co/auth/v1'},'TEST-SIGNATURE'].map(x=>Buffer.from(typeof x==='string'?x:JSON.stringify(x)).toString('base64url')).join('.');let row=null,signups=0;
   await context.route('https://hkssnbvktfscizojhftl.supabase.co/**',async route=>{const request=route.request(),pathname=new URL(request.url()).pathname;let body={};
-   if(pathname==='/auth/v1/signup'){signups++;assert.equal(request.postDataJSON().email,user.email);body={access_token:jwt,refresh_token:'TEST-REFRESH',expires_in:3600,expires_at:exp,token_type:'bearer',user};}
+   if(pathname==='/rest/v1/rpc/clair_account_active')body=true;else if(pathname==='/auth/v1/signup'){signups++;assert.equal(request.postDataJSON().email,user.email);body={access_token:jwt,refresh_token:'TEST-REFRESH',expires_in:3600,expires_at:exp,token_type:'bearer',user};}
    else if(pathname==='/auth/v1/user')body=user;
    else if(pathname==='/rest/v1/clair_budgets')body=row;
    else if(pathname==='/rest/v1/rpc/save_clair_budget'){const p=request.postDataJSON();row={payload:p.p_payload,revision:(row?.revision||0)+1,operation_id:p.p_operation_id,display_name:p.p_display_name};body={saved:true,row};}

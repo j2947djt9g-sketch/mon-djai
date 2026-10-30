@@ -6,7 +6,7 @@
       this.config=config;this.hooks=hooks;this.enabled=!!config;this.user=null;
       this.client=null;this.ready=!this.enabled;this.status=this.enabled?'loading':'local';
       this.record=null;this.conflict=null;this.busy=false;this.timer=null;this.epoch=0;this.authTransition=null;
-      this.displayName='';this.error='';this.disposed=false;
+      this.displayName='';this.error='';this.disposed=false;this.access='unknown';this.accessGeneration=0;
       if(this.enabled){
         if(!/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(config.url)||!/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.key))throw Error('Configuration des comptes invalide.');
         this.client=sdk.createClient(config.url,config.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'clair-account-session-v1'}});
@@ -14,6 +14,35 @@
     }
     key(uid=this.user?.id){return uid?'clair-account-budget-v1-'+uid:null;}
     emit(){this.hooks.status?.(this);}
+    accessError(){return this.access==='suspended'?'Compte suspendu. Paie ton abonnement pour continuer.':'Connexion nécessaire pour vérifier l’accès à ton compte avant de modifier ton budget.';}
+    async checkAccess(){
+      if(!this.enabled)return true;
+      if(!this.user||this.authTransition!==null)throw Error('Connecte-toi pour modifier ton budget.');
+      if(navigator.onLine===false){if(this.access!=='suspended')this.access='unknown';throw Error(this.accessError());}
+      const epoch=this.epoch,uid=this.user.id,generation=++this.accessGeneration;
+      if(this.access!=='suspended')this.access='unknown';
+      let timeout;
+      try{
+        const {data,error}=await Promise.race([this.client.rpc('clair_account_active',{}),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(Error('Access verification timeout')),12000);})]);
+        if(epoch!==this.epoch||uid!==this.user?.id||this.authTransition!==null)throw Error('La session a changé. Vérifie ton compte puis réessaie.');
+        if(generation!==this.accessGeneration)return this.access==='active';
+        if(error||typeof data!=='boolean')throw Error(this.accessError());
+        const restored=this.access==='suspended';this.access=data?'active':'suspended';
+        try{const key='clair-account-access-v1-'+uid;if(data)localStorage.removeItem(key);else localStorage.setItem(key,'suspended');}catch{}
+        if(!data){clearTimeout(this.timer);this.status='suspended';this.error=this.accessError();}
+        else if(restored){this.status=this.record?.meta.dirty?'pending':'synced';this.error='';}
+        this.emit();return data;
+      }catch(error){
+        if(epoch===this.epoch&&generation===this.accessGeneration&&this.access!=='suspended')this.access='unknown';
+        throw error;
+      }finally{clearTimeout(timeout);}
+    }
+    async requireWriteAccess(){
+      if(!this.enabled)return;
+      const epoch=this.epoch;
+      if(!await this.checkAccess())throw Error(this.accessError());
+      if(epoch!==this.epoch||this.authTransition!==null)throw Error('La session a changé. Vérifie ton compte puis réessaie.');
+    }
     decode(raw,uid){
       if(!raw)return null;const value=JSON.parse(raw),m=value._cloud;
       if(!m||m.userId!==uid||!Number.isSafeInteger(m.revision)||m.revision<0||typeof m.dirty!=='boolean'||typeof m.operationId!=='string')throw Error('La copie locale du compte est invalide. Elle est conservée.');
@@ -22,6 +51,7 @@
     }
     pack(payload){
       if(!this.user||this.authTransition!==null)throw Error('Connecte-toi pour enregistrer dans ton compte.');
+      if(this.access!=='active')throw Error(this.accessError());
       const meta={userId:this.user.id,revision:this.record?.meta.revision||0,dirty:true,operationId:crypto.randomUUID()};
       return JSON.stringify({...payload,_cloud:meta});
     }
@@ -50,7 +80,8 @@
     async attach(user){
       const transitioning=this.authTransition!==null;this.authTransition=null;
       if(!transitioning&&user?.id===this.user?.id&&(this.ready||(this.user&&this.status==='loading')))return;
-      const epoch=++this.epoch;clearTimeout(this.timer);this.record=null;this.conflict=null;this.error='';this.ready=false;this.user=user;
+      const epoch=++this.epoch;clearTimeout(this.timer);this.record=null;this.conflict=null;this.error='';this.ready=false;this.user=user;this.access='unknown';++this.accessGeneration;
+      try{if(user&&localStorage.getItem('clair-account-access-v1-'+user.id)==='suspended')this.access='suspended';}catch{}
       if(!user){this.status='signed-out';this.ready=true;this.hooks.leave?.();this.emit();return;}
       this.displayName=String(user.user_metadata?.display_name||'').slice(0,64);
       this.status='loading';this.emit();
@@ -90,10 +121,12 @@
       this.status='synced';this.error='';this.hooks.apply?.(payload,raw);this.emit();
     }
     async sync(expectedEpoch=this.epoch){
-      if(!this.enabled||!this.user||this.authTransition!==null||this.busy||this.conflict||this.disposed)return;
+      if(!this.enabled||!this.user||this.authTransition!==null||this.busy||this.disposed)return;
       this.busy=true;const userId=this.user.id;
       try{
         if(navigator.onLine===false)throw Error('offline');
+        if(!await this.checkAccess()||this.conflict)return;
+        if(expectedEpoch!==this.epoch)return;
         const remote=await this.read();if(expectedEpoch!==this.epoch)return;
         const raw=localStorage.getItem(this.key(userId));this.record=this.decode(raw,userId);
         // Old clients can strip currency from their cache. Preserve both copies before any write.
@@ -124,14 +157,15 @@
         else{this.status='synced';this.error='';this.emit();}
       }catch(error){
         if(expectedEpoch!==this.epoch)return;
-        this.status=navigator.onLine===false?'offline':'error';
-        this.error=this.status==='offline'?'Tes modifications restent sur cet appareil.':'Synchronisation indisponible. Tes modifications restent sur cet appareil.';this.emit();
+        this.status=this.access==='suspended'?'suspended':navigator.onLine===false?'offline':'error';
+        this.error=this.status==='suspended'?this.accessError():this.status==='offline'?'Tes modifications restent sur cet appareil.':'Synchronisation indisponible. Tes modifications restent sur cet appareil.';this.emit();
       }finally{this.busy=false;if(expectedEpoch!==this.epoch&&this.user)this.schedule();}
     }
     setConflict(remote){
       this.conflict={remote};this.status='conflict';this.error='Deux appareils ont modifié ton budget. Choisis la copie à conserver.';this.emit();
     }
     resolve(useRemote){
+      if(this.access!=='active')throw Error(this.accessError());
       if(!this.conflict)return;
       if(useRemote){
         if(!this.conflict.remote)throw Error('Aucune copie en ligne n’est disponible.');
@@ -144,8 +178,11 @@
       const raw=JSON.stringify({...this.record.payload,_cloud:meta});localStorage.setItem(this.key(),raw);this.record={payload:this.record.payload,meta};this.conflict=null;this.hooks.apply?.(this.record.payload,raw);this.status='pending';this.emit();this.schedule();
     }
     async convertCurrency(to,revision,asOf){
+      const epoch=this.epoch,startingRaw=this.user?localStorage.getItem(this.key()):null;
+      await this.requireWriteAccess();
+      if(epoch!==this.epoch)throw Error('Le compte a changé pendant la conversion.');
       if(!this.user||!this.ready||this.busy||this.converting||this.conflict||this.status!=='synced'||this.record?.meta.dirty||this.record?.meta.revision!==revision)throw Error('Synchronise ton budget et recommence l’aperçu.');
-      const epoch=this.epoch,startingRaw=localStorage.getItem(this.key());this.converting=true;this.busy=true;this.emit();
+      this.converting=true;this.busy=true;this.emit();
       try{
         const {data,error}=await this.client.rpc('convert_clair_currency',{p_currency:to,p_expected_revision:revision,p_operation_id:crypto.randomUUID(),p_as_of:asOf});
         if(epoch!==this.epoch)throw Error('Le compte a changé pendant la conversion.');
