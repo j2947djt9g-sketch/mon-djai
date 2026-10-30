@@ -28,7 +28,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
   await openExpense();await manage('suspend');await page.locator('#tx-form button[type="submit"]').click();
   await page.waitForFunction(()=>document.querySelector('#form-error')?.textContent.includes('Paie ton abonnement'));
   assert.equal(await stored(),original);assert.equal(writes,0);assert.match(await page.locator('#sync-alert').innerText(),/Paie ton abonnement pour continuer/);
-  await page.locator('#dialog [data-action="close"]').first().click();await page.locator('[data-action="add"]').click();assert.equal(await page.locator('#tx-form').count(),0);assert.equal(await stored(),original);
+  await page.locator('#dialog [data-action="close"]').first().click();await page.locator('[data-action="add"]').click();assert.equal(await page.locator('#dialog').isVisible(),false);assert.equal(await stored(),original);
   await page.reload();await page.keyboard.press('Escape');await page.locator('#sync-alert [role="alert"]').waitFor();assert.equal(await stored(),original);
   await context.setOffline(true);await page.locator('[data-action="add"]').click();assert.equal(await stored(),original);assert.match(await page.locator('#sync-alert').innerText(),/Paie ton abonnement/);
   await context.setOffline(false);await manage('restore');await page.locator('[data-action="account-sync"]').click();await page.waitForFunction(()=>document.querySelector('#status-label')?.textContent==='Synchronisé');
