@@ -60,3 +60,11 @@ Un retour PASSWORD_RECOVERY validé par le SDK ouvre un écran consacré au nouv
 Après enregistrement, une confirmation persistante permet d'accéder directement au budget. Un lien invalide, expiré ou déjà utilisé propose de demander un nouveau lien. Les erreurs de débit, de réseau, de mot de passe identique et de session expirée sont affichées dans le parcours actif.
 
 Tests complémentaires : node clair/accounts/test-recovery.cjs et node clair/accounts/test-recovery-sdk.cjs. Le second utilise le SDK officiel intégré et un transport simulé pour vérifier les événements de récupération, la consommation du retour URL et l'appel updateUser. Aucun e-mail n'est envoyé et aucun compte réel n'est modifié par ces tests. La réception en boîte mail doit toujours être confirmée ; le SMTP public reste à configurer si le projet utilise l'envoi de test.
+
+## Confirmation and login retry guidance (2026-10-29)
+
+Signup explains that a new account must be confirmed by opening Clair's email and following its confirmation link. The pending confirmation screen repeats the steps, displays the submitted address and points to spam/address checks. A rejected confirmation send is reported as an email service problem, never as a successful delivery.
+
+The login screen counts only `invalid_credentials`: two wrong passwords remain retryable, the third starts a 3600-second browser pause. The normalized address is represented by a SHA-256 digest in local storage. Signup, unconfirmed email, offline/network failures and provider throttles do not consume attempts. Success and verified password recovery clear the corresponding counter. Forgot password and private administrator help remain reachable while paused.
+
+This is a browser UX guard, not a server-wide account lock: other browsers, cleared storage, or direct Auth API requests can bypass it. Supabase's independent server limits remain active. The existing five-request recovery quota is unchanged, and delivery still requires a configured mail sender.
