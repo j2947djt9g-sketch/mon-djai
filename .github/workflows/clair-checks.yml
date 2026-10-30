@@ -40,6 +40,7 @@ jobs:
           CLAIR_CHROME_PATH: /usr/bin/google-chrome
           CLAIR_PREVIEW: '1'
         run: |
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-account-access.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-auth-entry.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-profile.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-masterboard-install.cjs
@@ -89,6 +90,8 @@ jobs:
           SQL
           psql -v ON_ERROR_STOP=1 -f clair/accounts/schema.sql
           psql -v ON_ERROR_STOP=1 -f supabase/masterboard.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/account-access.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/verify-account-access.sql
           psql -v ON_ERROR_STOP=1 -f supabase/verify-masterboard.sql
           psql -v ON_ERROR_STOP=1 -f supabase/account-help.sql
           psql -v ON_ERROR_STOP=1 -f supabase/verify-account-help.sql

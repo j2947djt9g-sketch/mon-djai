@@ -10,7 +10,8 @@ const s={Intl,Date,TextEncoder,TextDecoder,URL,URLSearchParams,Blob,Headers,Requ
  const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json','x-supabase-api-version':'2024-01-01'}});
  if(target.pathname==='/auth/v1/token')return body.password==='correct current password'?response({access_token:temporaryToken,refresh_token:'TEST-TEMP-REFRESH',expires_in:3600,token_type:'bearer',user}):response({code:'invalid_credentials',msg:'Invalid login credentials'},400);
  if(target.pathname==='/auth/v1/user')return response(user);if(target.pathname==='/auth/v1/logout')return response({});
- if(target.pathname==='/rest/v1/clair_budgets'){const payload=s.ClairEngine.empty();payload.initialized=payload.setupDone=true;payload.openingCents=1700;return response({payload,revision:1,operation_id:'sdk-operation',display_name:'Test'})}throw Error('Unexpected API path '+target.pathname);
+ if(target.pathname==='/rest/v1/rpc/clair_account_active')return response(true);
+  if(target.pathname==='/rest/v1/clair_budgets'){const payload=s.ClairEngine.empty();payload.initialized=payload.setupDone=true;payload.openingCents=1700;return response({payload,revision:1,operation_id:'sdk-operation',display_name:'Test'})}throw Error('Unexpected API path '+target.pathname);
 }};
 s.window=s;s.globalThis=s;s.addEventListener=()=>{};s.removeEventListener=()=>{};vm.createContext(s);for(let i=0;i<3;i++)vm.runInContext(scripts[i],s);const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');vm.runInContext(scripts[3].slice(0,boot)+'window.test={cloud,accountAction,accountSubmit,getData:()=>data};})();',s);
 async function main(){

@@ -9,7 +9,7 @@ function device(uid,storage=new Map()){
  const writes=[],applications=[],navigator={onLine:true},timers=new Map();let callback,nextTimer=0;
  const client={auth:{onAuthStateChange:f=>callback=f,getSession:async()=>({data:{session:{user:currentUser}}}),signOut:async()=>({})},
  from:()=>({select(){return this},eq(_field,value){this.uid=value;return this},async maybeSingle(){if(readDelay)await readDelay;return {data:structuredClone(rows.get(this.uid)||null)}}}),
- async rpc(name,params){const id=currentUser.id;if(saveDelay)await saveDelay;const row=rows.get(id);
+ async rpc(name,params){if(name==='clair_account_active')return {data:true};const id=currentUser.id;if(saveDelay)await saveDelay;const row=rows.get(id);
  if(name==='convert_clair_currency'&&row?.revision===params.p_expected_revision)params.p_payload=E.convertCurrency(row.payload,params.p_currency,params.p_as_of);
  if(row?.operation_id===params.p_operation_id)return {data:{saved:true,row:structuredClone(row)}};
  if((row?.revision||0)!==params.p_expected_revision)return {data:{saved:false,row:structuredClone(row||null)}};

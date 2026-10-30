@@ -20,6 +20,7 @@ const s={Intl,Date,TextEncoder,TextDecoder,URL,URLSearchParams,Blob,Headers,Requ
    const target=new URL(url instanceof Request?url.url:url),method=options.method||'GET';calls.push({path:target.pathname,method});
    if(target.pathname==='/auth/v1/user')return new Response(JSON.stringify(user),{status:200,headers:{'content-type':'application/json'}});
    if(target.pathname==='/auth/v1/logout')return new Response('{}',{status:200});
+   if(target.pathname==='/rest/v1/rpc/clair_account_active')return new Response('true',{status:200,headers:{'content-type':'application/json'}});
    if(target.pathname==='/rest/v1/clair_budgets'){budgetRequested=true;await budgetGate;const payload=s.ClairEngine.empty();payload.initialized=payload.setupDone=true;payload.openingCents=1700;return new Response(JSON.stringify({payload,revision:1,operation_id:'sdk-operation',display_name:'Test'}),{status:200,headers:{'content-type':'application/json'}})}
    throw Error('Unexpected API path '+target.pathname);
  }};
@@ -31,7 +32,7 @@ async function main(){
  const t=s.test,opening=t.cloud.init();
  for(let n=0;n<50&&!node('#page').innerHTML.includes('account-password-form');n++)await new Promise(r=>setTimeout(r,10));
  assert.equal(t.cloud.user.id,uid);assert.equal(t.state(),'password');assert(node('#page').innerHTML.includes('account-password-form'));assert.equal(s.location.hash,'');
- assert(budgetRequested);assert.equal(t.cloud.status,'loading');assert.equal(t.cloud.ready,true);
+ await new Promise(resolve=>setImmediate(resolve));assert(budgetRequested);assert.equal(t.cloud.status,'loading');assert.equal(t.cloud.ready,true);
  await t.accountSubmit({id:'account-password-form',values:{password:'test recovery long phrase'},querySelector:()=>({disabled:false})});
  assert.equal(t.state(),'done');assert(calls.some(c=>c.path==='/auth/v1/user'&&c.method==='PUT'));
  releaseBudget();await opening;assert.equal(t.state(),'done');
