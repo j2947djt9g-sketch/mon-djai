@@ -21,5 +21,5 @@ sync(){let added=0;for(const t of fixture){if(!accounts.find(a=>a.id===t.account
 list(){return [...transactions.values()].sort((a,b)=>b.date.localeCompare(a.date)||a.id.localeCompare(b.id));},
 summary(){const list=this.list();return {incomeCents:list.filter(t=>t.amountCents>0&&!t.transferGroup).reduce((n,t)=>n+t.amountCents,0),expenseCents:list.filter(t=>t.amountCents<0&&!t.transferGroup).reduce((n,t)=>n-t.amountCents,0),connectedBalanceCents:accounts.filter(a=>a.connected).reduce((n,a)=>n+a.balanceCents,0)};}
 };}
-root.ClairBankDemo={createDemo,categorize,fixture};
+const api={createDemo,categorize,fixture};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.ClairBankDemo=api;
 })(typeof module!=='undefined'&&module.exports?module.exports:window);
