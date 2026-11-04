@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>CLAIR • Démo bancaire fictive</title><style>:root{font-family:system-ui,-apple-system,sans-serif;color:#202027;background:#f5f3f9}*{box-sizing:border-box}body{margin:0}.shell{max-width:780px;margin:auto;padding:24px 16px 64px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{font-size:24px;font-weight:850}.tag{font-size:12px;background:#eee4ff;color:#6536ad;padding:7px 10px;border-radius:20px}.muted{color:#66616e;font-size:13px}.panel{background:#fff;border:1px solid #e6e2eb;border-radius:20px;padding:20px;margin:18px 0}.hero{background:linear-gradient(120deg,#7738e9,#bd49a2);color:white}.hero .muted{color:#f4e9ff}.big{font-size:34px;font-weight:800;margin:10px 0}.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #efedf2}.item:last-child{border:0}.name{font-weight:650}.amount{font-weight:750;white-space:nowrap}.positive{color:#158045}button{border:0;border-radius:12px;padding:11px 14px;background:#743de8;color:white;font-weight:700;cursor:pointer}button:disabled{opacity:.5}button.secondary{background:#f1ecfa;color:#6432ae}button:focus-visible{outline:3px solid #18181b;outline-offset:3px}.actions{display:flex;gap:10px;flex-wrap:wrap}.warning{background:#fff5dc;padding:12px 15px;border-radius:12px;font-size:13px;line-height:1.5}.empty{padding:18px 0;color:#686370}@media(max-width:440px){.item{align-items:flex-start}.big{font-size:30px}button{padding:10px}}</style></head>
+<body><main class="shell"><header class="top"><div class="brand">CLAIR <span aria-hidden="true">◈</span></div><span class="tag">DÉMONSTRATION</span></header>
+<p class="muted">Prototype indépendant. Aucun compte bancaire réel, aucun accès Supabase et aucune donnée de budget existante.</p>
+<section class="panel hero"><div class="muted">Solde des comptes fictifs connectés</div><div class="big" id="balance">0,00 €</div><div id="connected-count">0 banque connectée</div></section>
+<section class="panel"><h2>Mes banques fictives</h2><div id="banks"></div><div class="actions"><button id="sync">Simuler une synchronisation</button><button class="secondary" id="reset">Réinitialiser la démo</button></div><p class="muted" id="status" role="status" aria-live="polite">Connecte une banque fictive pour commencer.</p></section>
+<section class="panel"><h2>Analyse des opérations</h2><div class="item"><span>Revenus hors virements internes</span><strong id="income">0,00 €</strong></div><div class="item"><span>Dépenses hors virements internes</span><strong id="expenses">0,00 €</strong></div><p class="warning">Les virements entre comptes personnels sont affichés dans l'historique, mais exclus des revenus et dépenses. Les soldes sont des exemples fixes, indépendants des opérations simulées.</p></section>
+<section class="panel"><h2>Transactions simulées</h2><div id="transactions" class="empty">Aucune transaction pour le moment.</div></section></main>
+<script>/* CLAIR Open Banking demo: fictitious data only. No network calls. */
+(function(root){
+'use strict';
+const initialAccounts=[
+{id:'sg',name:'Société Générale (fictif)',balanceCents:125075,currency:'EUR'},
+{id:'revolut',name:'Revolut (fictif)',balanceCents:160000,currency:'EUR'}];
+const fixture=[
+{id:'demo-001',accountId:'sg',date:'2026-11-01',label:'Courses alimentaires',amountCents:-3250},
+{id:'demo-002',accountId:'sg',date:'2026-11-02',label:'Transport Irigo',amountCents:-2200},
+{id:'demo-003',accountId:'sg',date:'2026-11-03',label:'Virement reçu',amountCents:25000},
+{id:'demo-004',accountId:'sg',date:'2026-11-04',label:'Virement vers Revolut',amountCents:-10000,transferGroup:'internal-001'},
+{id:'demo-005',accountId:'revolut',date:'2026-11-04',label:'Virement depuis Société Générale',amountCents:10000,transferGroup:'internal-001'},
+{id:'demo-006',accountId:'revolut',date:'2026-11-04',label:'Abonnement musique',amountCents:-599}
+];
+function categorize(t){if(t.transferGroup)return 'Virement interne';const s=t.label.toLowerCase();if(/course|aliment/.test(s))return 'Alimentation';if(/transport|irigo/.test(s))return 'Transport';if(/abonnement|musique/.test(s))return 'Abonnements';if(t.amountCents>0)return 'Revenus';return 'Autres';}
+function createDemo(){const accounts=initialAccounts.map(x=>({...x,connected:false}));const transactions=new Map();return {
+accounts,transactions,
+connect(id){const a=accounts.find(x=>x.id===id);if(!a)throw Error('Banque fictive inconnue');a.connected=true;return a;},
+disconnect(id){const a=accounts.find(x=>x.id===id);if(!a)return false;a.connected=false;for(const [key,t] of transactions)if(t.accountId===id)transactions.delete(key);return true;},
+sync(){let added=0;for(const t of fixture){if(!accounts.find(a=>a.id===t.accountId)?.connected)continue;const key=t.accountId+':'+t.id;if(!transactions.has(key)){transactions.set(key,{...t,category:categorize(t)});added++;}}return added;},
+list(){return [...transactions.values()].sort((a,b)=>b.date.localeCompare(a.date)||a.id.localeCompare(b.id));},
+summary(){const list=this.list();return {incomeCents:list.filter(t=>t.amountCents>0&&!t.transferGroup).reduce((n,t)=>n+t.amountCents,0),expenseCents:list.filter(t=>t.amountCents<0&&!t.transferGroup).reduce((n,t)=>n-t.amountCents,0),connectedBalanceCents:accounts.filter(a=>a.connected).reduce((n,a)=>n+a.balanceCents,0)};}
+};}
+const api={createDemo,categorize,fixture};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.ClairBankDemo=api;
+})(typeof module!=='undefined'&&module.exports?module.exports:window);
+</script><script>'use strict';
+const demo=window.ClairBankDemo.createDemo();
+const euro=cents=>(cents/100).toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
+const node=id=>document.getElementById(id);
+function render(){
+const connected=demo.accounts.filter(a=>a.connected);
+node('balance').textContent=euro(demo.summary().connectedBalanceCents);
+node('connected-count').textContent=connected.length+' banque(s) fictive(s) connectée(s)';
+node('banks').replaceChildren();
+for(const a of demo.accounts){const row=document.createElement('div');row.className='item';const info=document.createElement('div');const name=document.createElement('div');name.className='name';name.textContent=a.name;const sub=document.createElement('div');sub.className='muted';sub.textContent=a.connected?'Connectée • '+euro(a.balanceCents):'Non connectée';info.append(name,sub);const btn=document.createElement('button');btn.className=a.connected?'secondary':'';btn.textContent=a.connected?'Déconnecter':'Connecter';btn.addEventListener('click',()=>{a.connected?demo.disconnect(a.id):demo.connect(a.id);node('status').textContent=a.connected?'Banque fictive connectée.':'Banque fictive déconnectée.';render();});row.append(info,btn);node('banks').append(row);}
+const s=demo.summary();node('income').textContent=euro(s.incomeCents);node('expenses').textContent=euro(s.expenseCents);
+node('transactions').replaceChildren();const tx=demo.list();if(!tx.length){node('transactions').textContent='Aucune transaction pour le moment.';node('transactions').className='empty';}else{node('transactions').className='';for(const t of tx){const row=document.createElement('div');row.className='item';const left=document.createElement('div');const name=document.createElement('div');name.className='name';name.textContent=t.label;const sub=document.createElement('div');sub.className='muted';sub.textContent=t.date+' • '+t.category+' • '+t.accountId;left.append(name,sub);const amt=document.createElement('div');amt.className='amount'+(t.amountCents>0?' positive':'');amt.textContent=euro(t.amountCents);row.append(left,amt);node('transactions').append(row);}}}
+node('sync').addEventListener('click',()=>{const added=demo.sync();node('status').textContent=added+' nouvelle(s) opération(s) fictive(s) importée(s).';render();});
+node('reset').addEventListener('click',()=>{for(const a of demo.accounts)demo.disconnect(a.id);node('status').textContent='Démonstration réinitialisée.';render();});render();</script></body></html>
