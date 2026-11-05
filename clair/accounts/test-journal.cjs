@@ -1,10 +1,10 @@
 (function testJournal(){
  const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto').webcrypto;
- const html=fs.readFileSync(__dirname+'/../index.html','utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]),nodes=new Map();
+ const html=fs.readFileSync(__dirname+'/../index.html','utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]),nodes=new Map(),storage=new Map(),events={};let storageFails=false;
  const node=selector=>{if(!nodes.has(selector))nodes.set(selector,{innerHTML:'',textContent:'',value:'',dataset:{},style:{},open:false,hidden:false,attributes:{},setAttribute(k,v){this.attributes[k]=v},addEventListener(){},scrollIntoView(){},focus(){}});return nodes.get(selector)};
- const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout(){},clearTimeout(){},setInterval(){},location:{protocol:'file:',href:'file:///clair/index.html'},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener(){}}};
+ const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,FormData:class{constructor(form){this.fields=form.fields}get(k){return this.fields[k]??null}},setTimeout(){},clearTimeout(){},setInterval(){},location:{protocol:'file:',href:'file:///clair/index.html'},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem(k,v){if(storageFails)throw Error('storage unavailable');storage.set(k,v)},removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener(type,fn){events[type]=fn}}};
  sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
- const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);vm.runInContext(scripts[3].slice(0,boot)+`window.test={journal,journalFlow,journalResults,txRow,render,state:journalState,setData(d){data=d;snapshot=JSON.stringify(d)},setMonth(m){month=m},setPage(p){page=p}};})();`,sandbox);
+ const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);vm.runInContext(scripts[3].slice(0,boot)+`window.test={journal,journalFlow,journalResults,txRow,render,state:journalState,setData(d){data=d;snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot)},getData(){return data},setModal(m){modal=m},setMonth(m){month=m},setPage(p){page=p}};})();`,sandbox);
  const E=sandbox.ClairEngine,t=sandbox.test,d=E.empty();d.initialized=d.setupDone=true;d.openingBalanceDate='2026-10-01';d.openingCents=100000;
  d.savingsProjects=[{id:'trip',name:'Voyage <test>',kind:'voyage',icon:'plane',color:'violet',targetCents:100000,targetDate:null,archived:false}];
  const tx=(id,type,amountCents,name,extra={})=>({id,type,amountCents,name,date:'2026-10-15',categoryId:'autre',note:'',...extra});
@@ -22,5 +22,53 @@
  const flow=t.state.flow;t.journalFlow('__proto__');assert.equal(t.state.flow,flow);
  assert.match(t.txRow(d.transactions[0]),/data-cashflow="income"/);assert.match(t.txRow(d.transactions[1]),/data-cashflow="expense"/);assert.match(t.txRow(d.transactions[3]),/data-savings="true"/);assert.match(t.txRow(d.transactions[3]),/>Épargne<\/span>/);assert.match(t.txRow(d.transactions[4]),/Retrait d’épargne/);
  assert.equal(JSON.stringify(d),before);assert.equal(E.balance(d),balance);
+ // A category must narrow both the rows and their summary without changing the ledger.
+ d.transactions.push(tx('food','expense',1250,'Courses',{categoryId:'alimentation'}),tx('food-in','income',5000,'Budget repas',{categoryId:'alimentation'}));
+ node('#category-filter').value='alimentation';
+ assert.deepEqual(show('expense'),['food'],'The selected category must exclude other expenses');
+ assert.match(node('#journal-summary').innerHTML,/Alimentation/);
+ assert.match(node('#journal-summary').innerHTML,/1 opération/);
+ assert.match(node('#journal-summary').innerHTML,/12,50/);
+ assert.deepEqual(show('income'),['food-in']);
+ assert.match(node('#journal-summary').innerHTML,/50,00/);
+ assert.match(t.txRow(d.transactions.at(-1)),/Argent reçu · Alimentation/);
+ assert.deepEqual(show('all','all','repas'),['food-in']);
+ assert.deepEqual(show('expense','auto'),[]);
+ assert.match(node('#journal-summary').innerHTML,/0 opération/);
+ assert.match(node('#journal-companion').innerHTML,/data-mascot-state="filtered"/);
+ show('all');
+ assert.match(t.journal(),/value="alimentation" selected/);
+ t.setMonth('2026-09');t.journalResults();assert.deepEqual(rows(),[]);
+ t.setMonth('2026-10');t.journalResults();assert.equal(rows().length,2);
+ node('#category-filter').value='epargne';show('all');
+ const savingsSummary=node('#journal-summary').innerHTML;
+ assert.match(savingsSummary,/30,00/);assert.match(savingsSummary,/5,00/);
+ assert.match(savingsSummary,/mis de côté/);assert.match(savingsSummary,/retirés/);
+ assert.doesNotMatch(savingsSummary,/30,00[^]*dépensé/);
+ node('#category-filter').value='all';show('all');
+ assert.match(node('#journal-summary').innerHTML,/290,00/,'Income excludes savings withdrawals');
+ assert.match(node('#journal-summary').innerHTML,/45,50/,'Spending excludes savings deposits');
+ d.customCategories=[{id:'custom-test',label:'<img src=x> & Santé',icon:'·'}];
+ const controls=t.journal();assert.match(controls,/&lt;img src=x&gt; &amp; Santé/);assert.doesNotMatch(controls,/<img src=x>/);
+ node('#category-filter').value='alimentation';show('expense','manual','Courses');
+ events.click({target:{closest:()=>({dataset:{action:'journal-reset'}})}});assert.equal(t.state.category,'all');assert.equal(t.state.query,'');assert.equal(t.state.flow,'all');assert.equal(t.state.kind,'all');assert.equal(rows().length,8);
+ // Exercise the existing submit boundary; category persistence must survive normalization.
+ const submit=(id,fields)=>events.submit({target:{id,fields,closest:()=>true},preventDefault(){}});
+ (async()=>{
+  t.setData(d);const initialBalance=E.balance(t.getData());
+  await submit('category-form',{label:'  Bourse étudiante  '});
+  const created=t.getData().customCategories.find(c=>c.label==='Bourse étudiante');assert(created,'Create and persist a personal category');
+  assert.equal(E.balance(t.getData()),initialBalance);assert(E.normalize(JSON.parse([...storage.values()].find(v=>v.includes('Bourse étudiante')))).customCategories.some(c=>c.id===created.id));
+  const count=t.getData().customCategories.length;
+  await submit('category-form',{label:'BOURSE ÉTUDIANTE'});assert.equal(t.getData().customCategories.length,count);assert.match(node('#form-error').textContent,/existe/);
+  storageFails=true;await submit('category-form',{label:'Santé perso'});storageFails=false;assert.equal(t.getData().customCategories.length,count,'Failed storage must roll back category creation');
+  t.setModal({kind:'tx',id:null,type:'income'});
+  await submit('tx-form',{amount:'20,00',date:'2026-10-20',name:'Aide études',categoryId:created.id,note:''});
+  const income=t.getData().transactions.find(t=>t.name==='Aide études');assert.equal(income.categoryId,created.id,'Deposits retain the selected category');assert.equal(E.balance(t.getData()),initialBalance+2000);
+  t.setModal({kind:'tx',id:income.id,type:'income'});
+  await submit('tx-form',{amount:'20,00',date:'2026-10-20',name:'Aide études',categoryId:'famille',note:''});
+  assert.equal(t.getData().transactions.find(t=>t.id===income.id).categoryId,'famille');assert.equal(E.balance(t.getData()),initialBalance+2000,'Recategorization must not change money');
+  console.log('PASS custom category persistence, duplicate rejection, storage rollback and categorized deposit correction');
+ })().catch(error=>{console.error(error);process.exitCode=1});
  console.log('PASS: mixed default, income/expense separation without savings, combined source/search/month filters, preserved selections, escaped names, accessible pressed states and unchanged ledger');
 })();
