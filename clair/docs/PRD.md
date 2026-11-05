@@ -7,7 +7,7 @@
 - Référence : code du dépôt j2947djt9g-sketch/mon-djai, dossier clair/.
 - Base examinée avant cette retouche : fca3aec260f28288e585281af7841c4c7b5e6265.
 - Date de mise à jour : 16 octobre 2026.
-- Application : https://j2947djt9g-sketch.github.io/mon-djai/clair/
+- Application principale : https://clair-budget.vercel.app/
 - Lire d'abord [CONTEXTE.md](CONTEXTE.md). Architecture et données : [CONSTRUCTION.md](CONSTRUCTION.md). Code : [SOURCES.md](SOURCES.md).
 - Ce document décrit le produit existant et les demandes déjà acceptées. Il ne transforme pas une fonction préparée dans le code en service opérationnel.
 
