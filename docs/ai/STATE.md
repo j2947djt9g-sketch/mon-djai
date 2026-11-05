@@ -1,27 +1,25 @@
 # Clair — état court de reprise
 
-Mis à jour le 5 novembre 2026. Référence produit vérifiée : `13fbf2e28e65f968a57687bfd89a6f3dd9e3e568` ; vérifier le dernier commit avant une nouvelle modification.
+Mis à jour le 5 novembre 2026. Branche de travail : `feat/clair-express`, base `dc376fb`. Production produit : `13fbf2e` ; vérifier branche, statut et dernier commit avant de reprendre.
 
 ## Repères stables
 
-- Application : https://clair-budget.vercel.app/ ; la racine redirige vers `/clair/`.
-- Code cible : `clair/index.html`. L’`index.html` à la racine est une autre application historique.
-- HTML/CSS/JS statiques, SDK Supabase embarqué, modules sources sous `clair/accounts/`. Budget JSON v3, montants entiers en centimes, dates Europe/Paris.
-- Comptes et synchronisation existants ; préserver les clés par propriétaire, les révisions et les conflits. Une nouvelle adresse ne migre pas automatiquement le stockage local ou l’installation PWA.
-- Commencer par `MAP.md` pour trouver le module et ses tests. Les anciens `clair/docs/CONTEXTE.md` et `SOURCES.md` mélangent des versions : références à consulter seulement pour un point précis.
+- Public : https://clair-budget.vercel.app/ → `/clair/`. Cible : `clair/index.html` ; l’index racine appartient à une autre application.
+- HTML/CSS/JS statiques, SDK Supabase embarqué, sources sous `clair/accounts/`. JSON v3, montants entiers en centimes, dates Europe/Paris, stockage et révisions par propriétaire.
+- Lire `MAP.md` par tâche ; maintenir les copies embarquées. Éviter les archives `CONTEXTE.md`/`SOURCES.md` sauf besoin précis. Publication manuelle par fichiers, sans lien GitHub–Vercel : `DEPLOYMENT.md`.
 
 ## Trois changements récents
 
-1. PR27, publiée : partage et ouverture en ligne vers Vercel ; URL canonique, robots et sitemap ajoutés. Accès HTTP public et ressources vérifiés. L’indexation Google n’est pas confirmée et aucune demande Search Console n’a été effectuée.
-2. PR26, publiée : animation complète à la première visite, accès rapide ensuite ; dépense directe avec brouillon conservé ; aide sur les filtres d’épargne incompatibles. Les propositions d’audit 3 (recherche toute période) et 5 (restauration de position) ne sont pas approuvées.
-3. Présente intervention : ajouter un plan de contexte court, sans changer le produit. La référence Graphty n’a pas été retrouvée dans les dépôts connectés ; cette organisation applique l’objectif décrit par l’utilisateur, sans prétendre recopier un document vérifié.
+1. Branche Express en revue : montant seul, budget courant confirmé une fois par utilisateur, raccourcis, catégorie facultative/historique, correction protégée, mode hors connexion. Modules `express-{core,insights,ui}.js`, CSS, moteur/cloud et tests. `expressSchema:1` et provenance optionnels préservés ; GBP natif ajouté, conversion GBP croisée refusée sans taux vérifié.
+2. Compatibilité serveur préparée dans `express-compatibility.sql`, testée uniquement sur PostgreSQL isolé. Elle et la mise à jour de rappels GBP doivent être publiées avant la livraison finale pour bloquer les anciens clients qui retirent les métadonnées. Import/reset gardent le marqueur et contrôlent propriétaire/contexte. Aucune migration distante, fusion ou publication autorisée.
+3. PR27/26 déjà publiées : partage Vercel/SEO, animation de première visite, saisie directe et aide filtres d’épargne. Indexation Google non confirmée ; propositions d’audit 3 et 5 non approuvées. Le plan de contexte court est issu de PR28.
 
-## Vérifications et limites connues
+## Vérifications et limites
 
-- Base produit : 28 suites Node et contrôles GitHub verts pour PR27 ; profil/partage testé avec données fictives, sur plusieurs tailles et devises. Cela ne remplace pas un essai avec un compte réel ou un iPhone physique.
-- L’aide, la récupération et les rappels côté serveur avaient des origines limitées à GitHub Pages lors du contrôle du 5 novembre. Ne pas les annoncer fonctionnels sur Vercel sans nouvelle vérification ciblée. La connexion ordinaire n’a pas été validée ici sur un vrai compte.
-- Déploiement Vercel manuel par fichiers ; connexion GitHub–Vercel non configurée. Cibles et fichiers nécessaires : `DEPLOYMENT.md`.
+- Express : 32 suites Node ; Chromium avec comptes fictifs, cinq codes devises, vues 320/390 px, standalone simulé et déconnexion/reconnexion. Preuves et limites : `EXPRESS_DELIVERY.md`.
+- Banque : étude et tarifs sourcés dans `BANKING_FEASIBILITY.md`. Aucune connexion gratuite durable vérifiée ; import/rapprochement restent une proposition à autoriser, aucun composant bancaire développé.
+- Ni compte réel ni iPhone/Safari physique testés. Aide/récupération/rappels sur Vercel : restriction d’origine connue, ne pas annoncer leur fonctionnement réel sans contrôle ciblé.
 
 ## Reprise
 
-Aucune modification produit en cours. Pour une nouvelle demande : identifier le sujet, ouvrir sa source et ses tests via la carte, puis actualiser ce bloc à la fin. Ne pas recommencer les travaux déjà publiés des PR26/27.
+Examiner la PR dédiée sur `feat/clair-express`. Ne pas fusionner ni publier sans accord explicite. Autorisation distincte nécessaire pour la migration serveur, la publication et toute phase D bancaire.

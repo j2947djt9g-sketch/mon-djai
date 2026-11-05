@@ -80,6 +80,12 @@
       if(clean.preferences){clean.preferences.photo=null;if(clean.preferences.wallpaper==='photo')clean.preferences.wallpaper='plain';}
       return clean;
     }
+    expressDowngrade(remote,local){
+      if(remote?.expressSchema!==1)return false;
+      if(local?.expressSchema!==1)return true;
+      const byId=new Map((local.transactions||[]).map(t=>[t.id,t]));
+      return (remote.transactions||[]).some(t=>t.express&&byId.has(t.id)&&['source','createdAt','originalCurrency','accountId','idempotencyKey'].some(k=>t.express[k]!==byId.get(t.id).express?.[k]));
+    }
     adopt(row, expectedEpoch=this.epoch){
       if(expectedEpoch!==this.epoch)return;
       const payload=this.hooks.normalize(row.payload);
@@ -103,6 +109,12 @@
         if(remote?.payload?.savingsSchema===1&&raw&&JSON.parse(raw).savingsSchema!==1){
           if(this.record?.meta.dirty)this.setConflict(remote);
           else this.adopt(remote,expectedEpoch);
+          return;
+        }
+        // Keep the schema capability even after an explicit reset or legacy import.
+        // A stripped same-revision cache is not evidence that provenance was intentionally removed.
+        if(remote&&this.record&&this.expressDowngrade(remote.payload,this.record.payload)){
+          if(this.record.meta.dirty)this.setConflict(remote);else this.adopt(remote,expectedEpoch);
           return;
         }
         if(this.record?.meta.dirty){
@@ -138,6 +150,7 @@
         this.adopt(this.conflict.remote);return;
       }
       if(this.conflict.remote?.payload.initialized&&this.record?.payload.initialized&&((this.conflict.remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR')||(this.conflict.remote.payload.currencyRevision||0)!==(this.record.payload.currencyRevision||0)))throw Error('Les copies utilisent des devises différentes ou une ancienne conversion. Sauvegarde cette copie, puis conserve la copie en ligne.');
+      if(this.expressDowngrade(this.conflict.remote?.payload,this.record?.payload))throw Error('Cette copie a perdu des informations Express. Sauvegarde-la, puis conserve la copie en ligne.');
       // The conflict UI exports the device copy before asking the user to choose.
       const meta={...this.record.meta,revision:this.conflict.remote?.revision||0,operationId:crypto.randomUUID(),dirty:true};
       // Commit metadata only after persistence succeeds, so a full storage leaves both copies intact.
