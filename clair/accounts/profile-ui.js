@@ -64,7 +64,7 @@
   function editProfile(){const goal=dailyGoalCents();dialog('Mes repères',`<form id="profile-form">${field('Prénom ou pseudo','profileName',data.preferences.profileName||cloud.displayName||'','text','maxlength="64" autocomplete="nickname"')}<label class="check"><input type="checkbox" name="dailyGoalEnabled" data-daily-goal-toggle ${goal?'checked':''}>Définir un budget journalier</label><div data-daily-goal-fields ${goal?'':'hidden'}>${field('Mon objectif par jour (€)','dailyGoalAmount',goal?amount(goal):'','text',`inputmode="${currencyMeta().digits?'decimal':'numeric'}" ${goal?'':'disabled'} placeholder="0"`)}</div><p class="help">Facultatif. Cet objectif ne crée aucune dépense et tu peux le désactiver à tout moment.</p>${formActions()}</form>`,'profile-edit');}
   function collectDailyGoal(f){if(!f.get('dailyGoalEnabled'))return null;return {currency:activeCurrency(),amountCents:num(f.get('dailyGoalAmount'))};}
   function toggleDailyGoal(el){const panel=el.form?.querySelector('[data-daily-goal-fields]');if(!panel)return;panel.hidden=!el.checked;panel.querySelectorAll('input').forEach(input=>{input.disabled=!el.checked;});}
-  function shareUrl(){return 'https://j2947djt9g-sketch.github.io/mon-djai/clair/';}
+  function shareUrl(){return 'https://clair-budget.vercel.app/';}
   async function shareClair(){
     const url=shareUrl(),payload={title:'Clair — Ton budget, l’esprit tranquille.',text:'Découvre Clair pour suivre ton budget et prévoir tes dépenses.',url};
     if(navigator.share){try{await navigator.share(payload);return;}catch(error){if(error?.name==='AbortError')return;}}

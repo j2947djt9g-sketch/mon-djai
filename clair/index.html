@@ -6,6 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Clair"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icons/icon-180.png">
 <title>Clair — Ton budget, l’esprit tranquille.</title>
+<link rel="canonical" href="https://clair-budget.vercel.app/clair/">
+<meta property="og:url" content="https://clair-budget.vercel.app/clair/">
 <meta name="description" content="Budget personnel, charges récurrentes et synchronisation entre tes appareils."><meta property="og:title" content="Clair — Ton budget, l’esprit tranquille."><meta property="og:description" content="Ton budget personnel et tes habitudes, accessibles avec ton compte."><meta property="og:type" content="website"><meta name="twitter:card" content="summary">
 <style>
 :root{--font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',system-ui,'Segoe UI',Roboto,sans-serif;--accent:#fa2d58;--accent-strong:#d4183f;--accent-text:#c8143c;--accent-ink:#fff;--bg:#f2f2f7;--paper:rgba(255,255,255,.74);--paper-solid:#fff;--ink:#1d1d1f;--muted:#5f5f66;--line:rgba(0,0,0,.09);--soft:rgba(250,45,88,.10);--field:#fff;--red:#c4161c;--ok:#1f7a3a;--side:rgba(246,246,250,.72);--shadow:0 10px 40px rgba(0,0,0,.08);--blur:saturate(180%) blur(22px);color-scheme:light}
@@ -1898,7 +1900,7 @@ async function installClair(){
  if(isInstalled()){notify('Clair est déjà ouvert comme une application.');return;}if(installBusy)return;
  if(installPrompt){const prompt=installPrompt;installPrompt=null;installBusy=true;try{await prompt.prompt();const result=await prompt.userChoice;notify(result.outcome==='accepted'?'Installation demandée au navigateur.':'Tu pourras installer Clair plus tard.');}catch{notify('Ouvre le menu de ton navigateur pour installer Clair.');}finally{installBusy=false;if(page==='settings')render();}return;}
  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
- dialog('Installer Clair',location.protocol==='file:'?'<p>Ouvre la version en ligne pour installer Clair.</p><a class="button primary" href="https://j2947djt9g-sketch.github.io/mon-djai/clair/">Ouvrir Clair en ligne</a>':ios?'<ol class="install-steps"><li>Ouvre Clair dans Safari.</li><li>Ouvre le menu de partage.</li><li>Choisis « Sur l’écran d’accueil », puis « Ajouter ».</li></ol>':'<p>Dans le menu de ton navigateur, cherche « Installer Clair », « Installer cette page comme application » ou « Ajouter à l’écran d’accueil ».</p><p class="help">Si cette commande est absente, tu peux utiliser Clair dans ton navigateur ou télécharger le fichier.</p>','install');
+ dialog('Installer Clair',location.protocol==='file:'?'<p>Ouvre la version en ligne pour installer Clair.</p><a class="button primary" href="https://clair-budget.vercel.app/">Ouvrir Clair en ligne</a>':ios?'<ol class="install-steps"><li>Ouvre Clair dans Safari.</li><li>Ouvre le menu de partage.</li><li>Choisis « Sur l’écran d’accueil », puis « Ajouter ».</li></ol>':'<p>Dans le menu de ton navigateur, cherche « Installer Clair », « Installer cette page comme application » ou « Ajouter à l’écran d’accueil ».</p><p class="help">Si cette commande est absente, tu peux utiliser Clair dans ton navigateur ou télécharger le fichier.</p>','install');
 }
 async function downloadClair(){
  if(downloadBusy)return;downloadBusy=true;if(page==='settings')render();
@@ -2026,7 +2028,7 @@ function paymentDetails(key){
   function editProfile(){const goal=dailyGoalCents();dialog('Mes repères',`<form id="profile-form">${field('Prénom ou pseudo','profileName',data.preferences.profileName||cloud.displayName||'','text','maxlength="64" autocomplete="nickname"')}<label class="check"><input type="checkbox" name="dailyGoalEnabled" data-daily-goal-toggle ${goal?'checked':''}>Définir un budget journalier</label><div data-daily-goal-fields ${goal?'':'hidden'}>${field('Mon objectif par jour (€)','dailyGoalAmount',goal?amount(goal):'','text',`inputmode="${currencyMeta().digits?'decimal':'numeric'}" ${goal?'':'disabled'} placeholder="0"`)}</div><p class="help">Facultatif. Cet objectif ne crée aucune dépense et tu peux le désactiver à tout moment.</p>${formActions()}</form>`,'profile-edit');}
   function collectDailyGoal(f){if(!f.get('dailyGoalEnabled'))return null;return {currency:activeCurrency(),amountCents:num(f.get('dailyGoalAmount'))};}
   function toggleDailyGoal(el){const panel=el.form?.querySelector('[data-daily-goal-fields]');if(!panel)return;panel.hidden=!el.checked;panel.querySelectorAll('input').forEach(input=>{input.disabled=!el.checked;});}
-  function shareUrl(){return 'https://j2947djt9g-sketch.github.io/mon-djai/clair/';}
+  function shareUrl(){return 'https://clair-budget.vercel.app/';}
   async function shareClair(){
     const url=shareUrl(),payload={title:'Clair — Ton budget, l’esprit tranquille.',text:'Découvre Clair pour suivre ton budget et prévoir tes dépenses.',url};
     if(navigator.share){try{await navigator.share(payload);return;}catch(error){if(error?.name==='AbortError')return;}}
