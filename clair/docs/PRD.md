@@ -110,7 +110,7 @@
 
 ### F07 — Ajouts et historique
 
-- « Ajouter » propose « Argent reçu » et « Dépense exceptionnelle ».
+- « Ajouter une dépense » ouvre directement le formulaire ; « Dépense / Argent reçu » permet de choisir le sens sans perdre les champs saisis. Les corrections d’opérations existantes conservent leur sens.
 - Saisie du montant, de la date, du nom, de la catégorie et d'une note.
 - Historique par mois, recherche et filtres : toutes, automatiques, saisies, revenus.
 - Modifier une opération ; supprimer ou annuler une occurrence.
@@ -217,3 +217,10 @@
 - Le message explicatif se place sous le groupe montant/mascotte. Les deux sous-cartes de prévision restent côte à côte sur téléphone.
 - La mascotte du solde reste fixe. Les choix d'expression et l'animation de bienvenue restent ceux validés précédemment.
 - Neuf suites Node réussies et montants français contrôlés, y compris les montants longs. Le navigateur automatique n'a pas pu démarrer ; dernier rendu visuel et iPhone physique : [À CONFIRMER].
+
+## Fluidité validée — 5 novembre 2026
+
+- Conserver le tracé animé du nom Clair à la première visite (3,2 secondes et fondu de 700 ms, sauf réduction des animations). Mémoriser cette découverte sur l’appareil ; les visites suivantes passent directement à la restauration du compte, sans contourner son chargement. Cette règle remplace les anciennes descriptions de bienvenue ci-dessus.
+- Ouvrir directement une nouvelle dépense et conserver le brouillon lors du choix Dépense / Argent reçu.
+- Expliquer les filtres Épargne incompatibles avec Argent reçu / Argent dépensé et proposer le retour à Tout en conservant les autres filtres. Les transferts restent distincts des revenus et achats.
+- Réalisation des propositions 1, 2 et 4 autorisée par l’utilisateur. Publication des seuls changements approuvés après validation technique.

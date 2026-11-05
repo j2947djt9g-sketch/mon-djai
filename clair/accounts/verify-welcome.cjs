@@ -36,7 +36,8 @@
     await page.clock.runFor(3200);await page.locator('#welcome.splash-leaving').waitFor();assert.equal(await page.locator('#welcome').evaluate(el=>getComputedStyle(el,'::backdrop').backgroundColor),'rgba(0, 0, 0, 0)');
     await page.locator('#welcome').evaluate(el=>{const exit=el.getAnimations().find(a=>a.animationName==='splash-exit');exit.pause();exit.currentTime=350;});const opacity=await page.locator('#welcome').evaluate(el=>Number(getComputedStyle(el).opacity));assert(opacity>0&&opacity<1);await page.locator('#account-form[data-mode="login"]').waitFor();const loginBox=await page.locator('#account-form').boundingBox();
     await page.clock.runFor(700);await page.locator('#welcome').waitFor({state:'hidden'});assert.deepEqual(await page.locator('#account-form').boundingBox(),loginBox,'Login form stays in place when the fade completes');
-    await page.reload();await page.locator('#welcome.splash-full').waitFor({state:'visible'});await page.clock.runFor(4000);await page.locator('#welcome').waitFor({state:'hidden'});
+    assert.equal(await page.evaluate(()=>localStorage.getItem('clair-welcome-seen-v1')),'1');
+    await page.reload();await page.locator('#account-form[data-mode="login"]').waitFor();assert.equal(await page.locator('#welcome').isVisible(),false,'A returning visitor must reach the account form without replaying the animation');
     assert.deepEqual(errors,[]);await context.close();
     console.log('PASS splash Chromium '+width+'x'+height+': unchanged ordered C/L/A/I/R strokes, stable centered layout, 3.9-second opening and crossfade into login');
    }
