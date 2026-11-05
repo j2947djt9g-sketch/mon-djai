@@ -40,6 +40,8 @@ jobs:
           CLAIR_CHROME_PATH: /usr/bin/google-chrome
           CLAIR_PREVIEW: '1'
         run: |
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-journal.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-currency.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-auth-entry.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-profile.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-masterboard-install.cjs
@@ -47,12 +49,10 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-assisted-recovery.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-device-unlock.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-exchange.cjs
-          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-currency.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-sounds.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-navigation.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-startup-session.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-browser.cjs
-          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-journal.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-welcome.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-subscriptions.cjs
 

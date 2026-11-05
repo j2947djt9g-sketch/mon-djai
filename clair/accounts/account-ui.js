@@ -34,7 +34,8 @@
     leave:()=>{close();guide=null;wizard=null;undo=null;data=E.empty();snapshot=null;page='home';loadError=null;rawRecovery='';},
     badCache:(error,raw)=>{loadError=error.message;rawRecovery=raw||'';render();},
     apply:(next,raw)=>{
-      const changed=JSON.stringify(next)!==JSON.stringify(data);
+      // Default metadata in a save acknowledgement is not a remote budget edit.
+      const changed=JSON.stringify(E.normalize(next))!==JSON.stringify(E.normalize(data));
       if(changed){close();wizard=null;undo=null;}
       data=next;snapshot=raw;loadError=null;if(accountResetStep)return;render();catchUp();
       if(changed&&data.initialized)notify('Budget actualisé depuis ton compte.');

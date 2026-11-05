@@ -8,7 +8,7 @@ const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,cr
 sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.scrollTo=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;
 vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
 let ui=scripts[3],boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert.ok(boot>0);
-ui=ui.slice(0,boot)+`window.test={switchPage,rules,budget,startCharge,chargeView,openRule,beginSetup,wizardView,collectWizard,
+ui=ui.slice(0,boot)+`window.test={cloud,switchPage,rules,budget,startCharge,chargeView,openRule,beginSetup,wizardView,collectWizard,
 getPage(){return page;},getCharge(){return chargeDraft;},getWizard(){return wizard;},getModal(){return modal;},getData(){return data;},
 setData(d){data=d;snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot);},setWizard(w){wizard=w;}};})();`;
 vm.runInContext(ui,sandbox);const t=sandbox.test,E=sandbox.ClairEngine,d=E.empty();d.initialized=true;d.setupDone=true;d.openingCents=100000;d.openingBalanceDate=E.today();t.setData(d);
@@ -51,4 +51,17 @@ const change=kind=>events.change({target:{id:'rule-kind',value:kind,dataset:{},m
  assert.throws(()=>t.collectWizard(),/montant|somme|supérieur|nombre|valide/i);
  assert.equal(JSON.stringify(t.getData()),before);
  console.log('PASS setup back accepts incomplete fields, forward still validates, and navigation never creates a rule or debit');
+ // Acknowledging the tutorial save adds default metadata to a fresh budget.
+ // That acknowledgement must leave the setup draft open; a real remote edit must close it.
+ const fresh=E.empty();fresh.preferences.guideVersion=1;t.setData(fresh);t.beginSetup();
+ t.getWizard().step=3;t.getWizard().balance='1000,00';t.wizardView();
+ const draft=t.getWizard(),ack=E.normalize(JSON.parse(JSON.stringify(fresh)));
+ assert.equal(fresh.currencyRevision,undefined);assert.equal(ack.currencyRevision,0);
+ t.cloud.hooks.apply(ack,JSON.stringify(ack));
+ assert.equal(node('#dialog').open,true,'Tutorial save acknowledgement must not dismiss setup');
+ assert.equal(t.getWizard(),draft);assert.equal(t.getWizard().balance,'1000,00');
+ const remote=E.normalize(ack);remote.initialized=true;remote.setupDone=true;remote.openingCents=20000;
+ t.cloud.hooks.apply(remote,JSON.stringify(remote));
+ assert.equal(node('#dialog').open,false);assert.equal(t.getWizard(),null);assert.equal(t.getData().openingCents,20000);
+ console.log('PASS tutorial acknowledgement preserves setup; genuine remote budget changes still dismiss stale drafts');
 })().catch(error=>{console.error(error);process.exitCode=1;});
