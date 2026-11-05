@@ -125,3 +125,7 @@
 - index.html et sw.js modifiés ; cache v11. Moteur financier, SDK, cloud, comptes et ressources visuelles préservés.
 - Neuf suites Node réussies et huit montants contrôlés sans altération ni mutation du budget. Le navigateur de test ne démarre pas : le dernier rendu visuel et l'iPhone physique restent à confirmer.
 - PRD, CONSTRUCTION et SOURCES actualisés pour cette retouche, publication publique toujours autorisée dans le périmètre clair/.
+
+## Fluidité — 5 novembre 2026 (préparée, non publiée)
+
+L’utilisateur a validé les propositions 1, 2 et 4 : animation complète à la première visite seulement, formulaire de dépense direct avec choix de sens et brouillon conservé, explication/action pour les filtres incompatibles de l’épargne. La clé locale `clair-welcome-seen-v1` ne contient qu’un marqueur de découverte, aucune donnée financière. Les opérations existantes, règles, devises et distinctions comptables sont conservées. Voir le plan et la spécification `2026-11-05-fluidity-124`. Publier uniquement les changements approuvés après validation technique.

@@ -369,3 +369,11 @@
 - Service worker v11 pour renouveler le cache de l'application ; liste des ressources inchangée.
 - Tests : les neuf suites .cjs passent. Contrôle supplémentaire sur huit montants positifs, nuls, négatifs et longs : texte français inchangé et aucun changement du budget pendant home(). Scripts intégrés compilés ; moteur, SDK, cloud et sources de compte préservés.
 - Limite : Playwright/Edge n'a pas pu démarrer dans l'environnement de test et le navigateur connecté était indisponible. Aucun résultat de contrôle géométrique ou de capture visuelle n'est présenté comme acquis ; rendu sur navigateur et iPhone physique à confirmer.
+
+## Fluidité — 5 novembre 2026 (préparation)
+
+- `welcome()` mémorise une introduction terminée sur cet appareil ; sa répétition est évitée sans modifier le chargement du compte.
+- `openTx()` accepte un brouillon de champs bruts, réutilisé lors du choix Dépense / Argent reçu. Les corrections existantes gardent leur sens et le submit financier reste inchangé.
+- Le message contextuel de l’historique explique les filtres d’épargne incompatibles ; `journal-show-savings` sélectionne uniquement le sens Tout.
+- Sources dashboard, journal et styles synchronisées avec `index.html`. Tests ajoutés : `test-fluidity.cjs` et `verify-fluidity.cjs`, ce dernier inclus dans la CI. Les tests de bienvenue et de restauration de session couvrent première visite et retour.
+- Validation : 28 suites Node ; navigateur avec données fictives, quatre largeurs 320/390/768/1440 et devises EUR/USD/XOF/XAF. Aucun compte réel utilisé, aucun déploiement effectué.
