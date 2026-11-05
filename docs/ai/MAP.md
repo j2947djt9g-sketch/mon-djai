@@ -2,12 +2,13 @@
 
 Lecture **par tâche**, chemins depuis la racine : `I` = `clair/index.html`, `A` = `clair/accounts/`. Le `index.html` racine appartient à une autre application historique ; Clair démarre dans `I`.
 
-Chercher une ancre avec `rg -n --max-columns 240 --max-columns-preview 'ancre' fichier`, puis lire une fenêtre ciblée. Éviter les lectures intégrales de `I`, `clair/docs/SOURCES.md` et des SDK minifiés. Le code actuel prime sur les archives.
+Chercher avec `rg -n`, puis lire un extrait. Éviter `I`, `SOURCES.md` et les SDK en entier.
 
 | Tâche | Lire / ancre exacte | Vérifications ciblées dans `A` |
 |---|---|---|
 | Moteur, dates, débits automatiques | **Inline seulement dans `I`** : `root.ClairEngine =`, `normalize`, `occurrences`, `sync`, `balance`, `reserve`, `upcoming`, `skip` | `test-engine-long-term.cjs`, `test-local.cjs`, `test-subscriptions.cjs` |
 | Saisie, modification, suppression, import | **Inline `I`** : `commit`, `catchUp`, `openTx`, `pay`, `importFile` ; branches partagées `if(form.id==='tx-form')`, `if(action==='delete-tx'&&t)`, `if(form.id==='reconcile-form')` | `test-local.cjs`, `test-fluidity.cjs`, `verify-fluidity.cjs` |
+| Express, historique, banque | `A/express-{core,insights,ui}.js`, `A/express-ui.css`, moteur inline ; `express-compatibility.sql` ; étude `BANKING_FEASIBILITY.md`, livraison `EXPRESS_DELIVERY.md` ici | `test-express-*.cjs`, `verify-express.cjs`, `verify-express.sql` |
 | Auth, synchronisation, récupération | `A/cloud.js`, `A/account-ui.js`, `A/schema.sql` ; pages `clair/reset.html`, `clair/help.html` et `A/reset-page.js`, `A/device-unlock.js` | `test-cloud.cjs`, `test-account-ui.cjs`, `test-recovery.cjs`, `test-account-security-sdk.cjs`, `verify-auth-entry.cjs` |
 | Profil, tutoriel, partage | `A/profile-ui.js`, `A/profile.css` ; `shareClair`, `openTutorial`, `dailyGoalCents` | `test-profile.cjs`, `verify-profile.cjs` |
 | Accueil, styles, mascotte, sons | `A/dashboard-ui.js`, `A/dashboard.css`, `A/companion-ui.js`, `A/sounds.js` ; styles de base et `applyPrefs` dans `I` | `test-balance-contrast.cjs`, `test-mascot-daily.cjs`, `test-sounds.cjs`, `verify-browser.cjs` |
@@ -19,6 +20,6 @@ Chercher une ancre avec `rg -n --max-columns 240 --max-columns-preview 'ancre' f
 | Administration, aide, déverrouillage | `masterboard/README.md`, `masterboard/masterboard.js` ; `supabase/functions/clair-{masterboard,account-help,device-unlock,account-recovery}/index.ts`, SQL correspondants dans `supabase/` ; `A/device-unlock.js` | `test-masterboard.cjs`, `test-assisted-recovery.cjs`, `test-device-unlock.cjs`, `test-recovery-limits.cjs` |
 | Publication, PWA, SEO, documentation | `DEPLOYMENT.md` ici ; `.github/workflows/clair-{checks,live-check}.yml` ; `clair/sw.js`, `clair/manifest.webmanifest`, `<head>` de `I`, `robots.txt`, `sitemap.xml`, `_config.yml` ; produit : `clair/docs/PRD.md` | `test-service-worker.cjs` ; contrôles dans les workflows |
 
-Les modules JS cités de `A` et les CSS dashboard/profil/journal/device-unlock/welcome ont une **copie intégrée identique** dans `I` : maintenir les deux. Exceptions : `reset-page.js` est externe à `reset.html` ; `help.html` charge `device-unlock.js`, aussi embarqué dans `I`. `recovery-support.css` reste externe. Les gestionnaires partagés et le démarrage ne sont pas des modules séparés.
+Les modules JS et CSS cités (dont Express) ont une **copie identique** dans `I` : maintenir les deux. Exceptions : `reset-page.js` est externe à `reset.html` ; `help.html` charge `device-unlock.js`, aussi embarqué dans `I`. `recovery-support.css` reste externe. Les gestionnaires partagés et le démarrage ne sont pas des modules séparés.
 
-Depuis la racine : `node clair/accounts/<fichier>.cjs`. `test-*` : Node ; `verify-*.cjs` : navigateur, Playwright et Chromium (`CLAIR_CHROME_PATH` selon le script). CI et SQL : `clair-checks.yml`. Choisir les contrôles selon la modification ; une simulation ne prouve pas la réception réelle d’un e-mail ou d’une notification.
+Depuis la racine : `node clair/accounts/<fichier>.cjs`. `test-*` : Node ; `verify-*.cjs` : navigateur, Playwright et Chromium (`CLAIR_CHROME_PATH` selon le script). CI et SQL : `clair-checks.yml`. Choisir selon la modification ; une simulation ne prouve pas un envoi réel.

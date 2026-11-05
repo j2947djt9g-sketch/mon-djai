@@ -1,14 +1,14 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto').webcrypto;
 const html=fs.readFileSync(__dirname+'/../index.html','utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
 function context(storage=new Map(),initialTime=Date.now()){
- const nodes=new Map(),requests=[],replies=[];let clock=initialTime;
+ const nodes=new Map(),requests=[],replies=[];let clock=initialTime,observeRequest=null;
  const node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',value:'',style:{},dataset:{},disabled:false,open:false,showModal(){this.open=true},close(){this.open=false},addEventListener(){},scrollIntoView(){},focus(){}});return nodes.get(s)};
  const query=s=>{
   if(['#account-form','#account-forgot-form','#account-password-form','#account-loading'].includes(s)&&!node('#page').innerHTML.includes('id="'+s.slice(1)+'"'))return null;
   if(s==='#account-form input[name="email"]'&&!node('#page').innerHTML.includes('id="account-form"'))return null;
   return node(s);
  };
- const client={auth:{signInWithPassword:async p=>{requests.push(p);return replies.shift()},signUp:async p=>{requests.push(p);return replies.shift()},resetPasswordForEmail:async()=>({}),updateUser:async()=>({})}};
+ const client={auth:{signInWithPassword:async p=>{requests.push(p);observeRequest?.();return replies.shift()},signUp:async p=>{requests.push(p);return replies.shift()},resetPasswordForEmail:async()=>({}),updateUser:async()=>({})}};
  const DateMock=class extends Date{static now(){return clock}};
  const sandbox={Intl,Date:DateMock,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{origin:'https://example.test',protocol:'https:',href:'https://example.test/clair/',pathname:'/clair/'},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:query,addEventListener(){}},supabase:{createClient:()=>client},CLAIR_ACCOUNT_CONFIG:{url:'https://test.supabase.co',key:'sb_publishable_test'},FormData:class{constructor(form){this.values=form.values}get(k){return this.values[k]??null}}};
  sandbox.window=sandbox;sandbox.addEventListener=()=>{};
@@ -17,9 +17,8 @@ function context(storage=new Map(),initialTime=Date.now()){
  ui=ui.slice(0,boot)+'window.test={cloud,render,accountGate,accountCard,accountSubmit,accountAction,accountStatus,legacyBudget,transferLegacy,updateLoginButtons,setData(d){data=d},getData(){return data;}};})();';vm.runInContext(ui,sandbox);const t=sandbox.test;
  t.cloud.ready=true;t.cloud.status='signed-out';
  const form={id:'account-form',dataset:{mode:'login'},values:{email:'a@example.test',password:'wrong'},querySelector:()=>node('#submit'),reset(){}};
- return {t,sandbox,node,requests,replies,storage,form,now:()=>clock,advance:ms=>clock+=ms,error:()=>node('#account-error').textContent,wrong:()=>{replies.push({data:{session:null,user:null},error:{code:'invalid_credentials',status:400}});return t.accountSubmit(form)}};
+ return {t,sandbox,node,requests,replies,storage,form,nextAuthRequest:()=>new Promise(resolve=>{observeRequest=()=>{observeRequest=null;resolve()}}),now:()=>clock,advance:ms=>clock+=ms,error:()=>node('#account-error').textContent,wrong:()=>{replies.push({data:{session:null,user:null},error:{code:'invalid_credentials',status:400}});return t.accountSubmit(form)}};
 }
-const tick=()=>new Promise(resolve=>setImmediate(resolve));
 (async()=>{
  const a=context(),{t,node,storage}=a;
  const legacy=a.sandbox.ClairEngine.empty();legacy.initialized=legacy.setupDone=true;legacy.openingCents=1700;storage.set('clair-github-money-v3',JSON.stringify(legacy));
@@ -44,8 +43,10 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
   b.replies.push({data:{session:null,user:null},error});await b.t.accountSubmit(b.form);assert.equal(b.node('#submit').disabled,false);
  }
  await b.wrong();assert.match(b.error(),/2 essais/,'Only invalid credentials consume a retry');
- let unlock;b.replies.push(new Promise(resolve=>{unlock=resolve}));const pending=b.t.accountSubmit(b.form);await b.t.accountSubmit(b.form);
- for(let i=0;i<30&&b.requests.length<6;i++)await tick();assert.equal(b.requests.length,6,'Concurrent submit must not duplicate Auth calls');
+ let unlock;b.replies.push(new Promise(resolve=>{unlock=resolve}));const authEntered=b.nextAuthRequest();const pending=b.t.accountSubmit(b.form);await b.t.accountSubmit(b.form);
+ // Native SHA-256 may finish after any number of event-loop turns under load.
+ // Observe entry into Auth directly while its reply remains held by unlock.
+ await Promise.race([authEntered,pending.then(()=>{throw Error('Login completed before reaching Auth')})]);assert.equal(b.requests.length,6,'Concurrent submit must not duplicate Auth calls');
  unlock({data:{session:null,user:null},error:{code:'invalid_credentials',status:400}});await pending;assert.match(b.error(),/1 essai/);
  b.t.cloud.attach=async()=>{};b.replies.push({data:{session:{user:{id:'u',email:'a@example.test'}},user:{id:'u',email:'a@example.test'}},error:null});await b.t.accountSubmit(b.form);
  await b.wrong();assert.match(b.error(),/2 essais/,'Successful login resets consecutive failures');

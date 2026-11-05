@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const html=fs.readFileSync(__dirname+'/../index.html','utf8'),box={window:{},Intl,Date};vm.createContext(box);vm.runInContext([...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1],box);const E=box.window.ClairEngine,date='2026-10-23';
+const html=fs.readFileSync(__dirname+'/../index.html','utf8'),box={window:{},Intl,Date},script=process.env.CLAIR_ENGINE_SCRIPT?fs.readFileSync(process.env.CLAIR_ENGINE_SCRIPT,'utf8'):[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1];vm.createContext(box);vm.runInContext(script,box);const E=box.window.ClairEngine,date='2026-10-23';
 assert.equal(E.exchangePolicy.usdAnnual.reduce((a,b)=>a+b,0)/10,1.12087);assert.equal(E.exchangeAmount(10000,'EUR','XOF'),6559600);assert.equal(E.exchangeAmount(100000,'XOF','XAF'),100000);
 const vectors=[];
 for(const from of ['EUR','USD','XOF','XAF'])for(const to of ['EUR','USD','XOF','XAF']){

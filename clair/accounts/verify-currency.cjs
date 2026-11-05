@@ -4,7 +4,7 @@ const root=path.resolve(__dirname,'..');
 const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}try{res.setHeader('Content-Type',{'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.webp':'image/webp'}[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}});
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,executablePath:process.env.CLAIR_CHROME_PATH});
- try{for(const width of [320,390,768,1440])for(const code of ['EUR','USD','XOF','XAF']){
+ try{for(const width of [320,390,768,1440])for(const code of ['EUR','USD','GBP','XOF','XAF']){
   const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   const uid='8450886d-891a-40e2-995e-ea46bb1409bc',user={id:uid,aud:'authenticated',role:'authenticated',email:'currency-'+code.toLowerCase()+'@example.invalid',user_metadata:{display_name:'Test'},app_metadata:{provider:'email'},identities:[{id:uid,provider:'email'}]};
   const exp=1800000000,jwt=[{alg:'HS256',typ:'JWT'},{sub:uid,aud:'authenticated',role:'authenticated',exp,iss:'https://hkssnbvktfscizojhftl.supabase.co/auth/v1'},'TEST-SIGNATURE'].map(x=>Buffer.from(typeof x==='string'?x:JSON.stringify(x)).toString('base64url')).join('.');let row=null,signups=0;
@@ -17,7 +17,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
   });
   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('[data-action="account-mode"]').click();await page.locator('#account-form[data-mode="signup"]').waitFor();
   await page.locator('[name="displayName"]').fill('Test');await page.locator('[name="email"]').fill(user.email);await page.locator('[name="password"]').fill('Fictional-password-42!');await page.locator('#account-form button[type="submit"]').click();await page.locator('[data-action="tutorial-skip"]').click();await page.locator('#wizard-form').waitFor();assert.equal(signups,1);
-  assert.equal(await page.locator('#setup-currency option').count(),4);await page.locator('[name="balance"]').fill('99');await page.locator('#setup-currency').selectOption(code);
+  assert.deepEqual(await page.locator('#setup-currency option').evaluateAll(options=>options.map(option=>option.value).sort()),['EUR','GBP','USD','XAF','XOF']);await page.locator('[name="balance"]').fill('99');await page.locator('#setup-currency').selectOption(code);
   if(code!=='EUR')assert.equal(await page.locator('[name="balance"]').inputValue(),'');
   if(code.startsWith('X')){await page.locator('[name="balance"]').fill('100,50');await page.locator('#wizard-form button[type="submit"]').click();assert(await page.locator('#setup-currency').isVisible());assert.match(await page.locator('#form-error').innerText(),/entier/);}
   await page.locator('[name="balance"]').fill('100000');await page.locator('#wizard-form button[type="submit"]').click();await page.locator('[name="meals"]').check();await page.locator('[name="habitName"]').fill('Transport quotidien');await page.locator('[name="habitCategoryId"]').selectOption('transport');
