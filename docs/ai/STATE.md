@@ -1,25 +1,26 @@
 # Clair — état court de reprise
 
-Mis à jour le 11 novembre 2026. Branche de travail : `feat/clair-express`, base `dc376fb`. Production produit : `13fbf2e` ; vérifier branche, statut et dernier commit avant de reprendre.
+Mis à jour le 11 novembre 2026. Production : source `bb116bb`, publiée sur Vercel. Vérifier branche, statut et dernier commit avant de reprendre.
 
 ## Repères stables
 
-- Public : https://clair-budget.vercel.app/ → `/clair/`. Cible : `clair/index.html` ; l’index racine appartient à une autre application.
-- HTML/CSS/JS statiques, SDK Supabase embarqué, sources sous `clair/accounts/`. JSON v3, montants entiers en centimes, dates Europe/Paris, stockage et révisions par propriétaire.
-- Lire `MAP.md` par tâche ; maintenir les copies embarquées. Éviter les archives `CONTEXTE.md`/`SOURCES.md` sauf besoin précis. Publication manuelle par fichiers, sans lien GitHub–Vercel : `DEPLOYMENT.md`.
+- **Publication CLAIR : Vercel uniquement**, https://clair-budget.vercel.app/ → `/clair/`, projet `clair-budget`. Paquet manuel, sans publication automatique depuis GitHub : `DEPLOYMENT.md`.
+- Cible : `clair/index.html` ; l’index racine appartient à une autre application. HTML/CSS/JS statiques, SDK Supabase embarqué, sources sous `clair/accounts/`.
+- JSON v3, montants entiers en centimes, dates Europe/Paris, stockage/révisions par propriétaire. Lire `MAP.md` par tâche et maintenir les copies embarquées ; éviter les archives volumineuses.
 
 ## Trois changements récents
 
-1. Branche Express en revue : montant seul, budget courant confirmé une fois par utilisateur, raccourcis, catégorie facultative/historique, correction protégée, mode hors connexion. Région de l’appareil : suggestion modifiable au nouveau budget via `region-currency.js`, sans GPS ni conversion implicite. Modules Express, moteur/cloud et tests. `expressSchema:1` et provenance optionnels préservés ; GBP/MAD/CAD/CHF natifs ; conversion croisée refusée sans taux vérifié.
-2. Compatibilité serveur préparée dans `express-compatibility.sql`, testée uniquement sur PostgreSQL isolé. Elle et la mise à jour de rappels des nouvelles devises doivent être publiées avant la livraison finale pour bloquer les anciens clients qui retirent les métadonnées. Import/reset gardent le marqueur et contrôlent propriétaire/contexte. Aucune migration distante, fusion ou publication autorisée.
-3. PR27/26 déjà publiées : partage Vercel/SEO, animation de première visite, saisie directe et aide filtres d’épargne. Indexation Google non confirmée ; propositions d’audit 3 et 5 non approuvées. Le plan de contexte court est issu de PR28.
+1. Express publié : montant seul, budget courant confirmé une fois, raccourcis, catégorie proposée/modifiable, correction protégée et hors connexion. Huit codes natifs EUR/USD/GBP/MAD/CAD/CHF/XOF/XAF. Région de l’appareil : suggestion modifiable au nouveau budget, sans GPS. Aucune conversion croisée GBP/MAD/CAD/CHF sans taux vérifié.
+2. Migration `clair_express_schema_and_native_currencies` appliquée : garde Express/provenance et huit devises, sans réécriture des budgets ; RLS, garde épargne et conversion atomique conservées. Rappels `clair-reminders` version 3 actifs, origines exactes Vercel/GitHub autorisées, JWT/propriétaires conservés.
+3. PR29 reste ouverte sur `feat/clair-express`. Le contrôle automatique a refusé la fusion dans `main`, jugeant l’accord de fusion distinct manquant. L’utilisateur a autorisé la migration, les rappels et la publication Vercel ; la version testée a été publiée directement depuis la branche. `main` reste `dc376fb` : ne pas republier cet ancien produit.
 
 ## Vérifications et limites
 
-- Express : 33 suites Node ; Chromium avec comptes fictifs, huit codes devises, vues 320/390 px, standalone simulé et déconnexion/reconnexion. Preuves et limites : `EXPRESS_DELIVERY.md`.
-- Banque : volet abandonné à la demande de l’utilisateur. Aucune connexion, aucun import ni rapprochement à développer. `BANKING_FEASIBILITY.md` reste une archive datée.
-- Ni compte réel ni iPhone/Safari physique testés. Rappels : correction d’origine Vercel préparée et testée, non publiée. Aide/récupération : restriction d’origine connue ; aucun fonctionnement réel annoncé sans contrôle ciblé.
+- Code `bb116bb` : 33 suites Node, parcours navigateur/SQL et Semgrep verts (workflow `43057880460`). En public : racine 307, 46 fichiers identiques, smoke Express EUR/MAD/XOF et région ar-MA→MAD avec choix CAD, transport Supabase fictif. Preuves : `EXPRESS_DELIVERY.md`.
+- Vercel READY : `dpl_BFsXnKrXBdAGdiGt7JkbVWvr8EcH`, HTML Git `ef0314a4f9cbe57d9aa092a3219d249130ecd360`. Rappels réels : préflight 204, origine étrangère 403, requête sans JWT 401 ; aucune notification envoyée pour un test.
+- Ni compte réel ni iPhone/Safari physique testés. Aide/récupération : restriction d’origine déjà connue, à contrôler séparément. Indexation Google non confirmée ; propositions d’audit 3/5 non approuvées.
+- Banque : volet abandonné ; aucune connexion, aucun import ni rapprochement à développer. Étude archivée.
 
 ## Reprise
 
-Examiner la PR29 en brouillon sur `feat/clair-express`. Ne pas fusionner ni publier sans accord explicite. Publication des seules fonctions hors banque : accord explicite demandé ; migration serveur et rappels restent préparés. Le volet bancaire est annulé.
+Partir de la version publiée sur `feat/clair-express`. La fusion GitHub reste une action distincte à autoriser ; ne pas contourner son refus automatique. Toute future publication CLAIR se fait sur Vercel.

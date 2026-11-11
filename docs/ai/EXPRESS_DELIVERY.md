@@ -1,6 +1,6 @@
 # Livraison CLAIR Express — 11 novembre 2026
 
-Branche dédiée : `feat/clair-express`, base `dc376fb`, PR29 en brouillon. **Aucune fusion, publication Vercel, migration distante ou connexion bancaire effectuée.** Les autres applications du dépôt ne sont pas modifiées.
+**Publié sur Vercel : https://clair-budget.vercel.app/**, source `bb116bb` de `feat/clair-express`, déploiement `dpl_BFsXnKrXBdAGdiGt7JkbVWvr8EcH` READY. Migration de compatibilité appliquée et rappels v3 actifs après accord explicite. PR29 ouverte, sans fusion dans `main` : le contrôle automatique a jugé l’autorisation de fusion distincte manquante. Les autres applications du dépôt ne sont pas modifiées.
 
 ## Fonctions développées
 
@@ -25,7 +25,7 @@ Problèmes corrigés : changement d’utilisateur pendant l’import asynchrone 
 - PostgreSQL 17.6 Docker isolé : `verify-currency.sql`, `verify-exchange.sql`, `verify-express.sql` passent. Le dernier vérifie GBP/MAD/CAD/CHF, le refus de retrait du marqueur/provenance, suppression/reset explicites, refus de conversion sans taux des nouvelles devises et conversion EUR→USD autorisée.
 - Le premier passage CI a révélé un retour à la ligne mobile selon la police. Une grille fixe et un test de police de secours vérifient maintenant l’alignement calcul/Ajouter/Express, les cibles de 44 px et l’ouverture/fermeture du calcul. Copies sources embarquées et `git diff --check` vérifiés. Nouveaux contrôles Express ajoutés à GitHub Actions ; les résultats CI distants sont à consulter sur la PR.
 
-Données et sessions fictives uniquement. Aucun essai de vrai compte, banque, iPhone/Safari physique, installation PWA réelle, email ou notification reçue. Le rapprochement bancaire **n’est ni implémenté ni testé**. La synchronisation navigateur est testée avec transport Supabase simulé ; SQL testé séparément en local.
+Données et sessions fictives uniquement. Aucun essai de vrai compte, banque, iPhone/Safari physique, installation PWA réelle, email ou notification reçue. Le volet bancaire est abandonné. La synchronisation navigateur est testée avec transport Supabase simulé ; SQL testé séparément en local ; les définitions et protections déployées ont été contrôlées sans écrire de budget réel.
 
 ## Fichiers modifiés
 
@@ -38,8 +38,12 @@ Données et sessions fictives uniquement. Aucun essai de vrai compte, banque, iP
 
 Le volet bancaire est abandonné à la demande de l’utilisateur. Aucune connexion, aucun import ni rapprochement bancaire n’est prévu. L’étude déjà réalisée reste une archive datée dans `BANKING_FEASIBILITY.md`. Les fonctions livrées utilisent le budget Clair et la saisie manuelle Express.
 
-À autoriser séparément :
+Livraison réalisée :
 
-1. Appliquer `express-compatibility.sql` après `exchange.sql` avant toute publication : sans cette garde serveur, un ancien client peut retirer des métadonnées Express. Préparer sauvegarde et contrôle ciblé lors de cette intervention.
-2. Publier la fonction de rappels CLAIR mise à jour pour les nouvelles devises, puis fusionner/publier l’application après accord explicite. Vérifier les cibles de `DEPLOYMENT.md` ; aucune publication automatique GitHub–Vercel configurée.
-Aucun fournisseur activé, secret bancaire demandé ou coût engagé. Le correctif des rappels autorise les origines exactes GitHub Pages et Vercel, avec tests CORS, JWT et propriétaires ; il reste à publier. Les restrictions d’origine déjà connues de récupération/aide sur Vercel restent à contrôler séparément. Aucun test local ne prouve une réception réelle de notification.
+1. Migration `clair_express_schema_and_native_currencies` appliquée ; vérification des huit devises, RLS, garde épargne, provenance Express, sécurité invoker et garde de conversion atomique. Aucun budget réécrit.
+2. Bundle complet `clair-reminders` v3 actif, fichiers relus identiques au code validé. Requêtes réelles : origines Vercel/GitHub OPTIONS 204, origine étrangère 403, POST sans JWT 401. Aucun envoi de notification déclenché pour un test.
+3. Vercel production READY, deux alias attendus, racine 307 vers `/clair/`. Les 46 ressources publiques correspondent octet par octet au paquet de 47 fichiers (configuration Vercel comprise). HTML Git : `ef0314a4f9cbe57d9aa092a3219d249130ecd360`.
+4. Vérification indépendante sur le site public : Express EUR 0,50→3, MAD 0,50→3 et nouvelle dépense de 25, XOF entier, doublons/correction/hors connexion et région ar-MA proposant MAD avec choix CAD conservé. HTML et ressources réels ; toutes les requêtes Supabase de ces parcours sont interceptées avec données fictives, sans écriture réelle.
+5. `main` n’a pas été fusionné : rejet du contrôle automatique sur cette action distincte. La publication Vercel autorisée a utilisé directement la branche testée ; ne pas republier l’ancien `main`. La PR29 conserve le code et les preuves.
+
+Aucun fournisseur activé, secret bancaire demandé ou coût engagé. Le correctif des rappels autorise les origines exactes GitHub Pages et Vercel, avec tests CORS, JWT et propriétaires ; il est publié dans la version 3. Les restrictions d’origine déjà connues de récupération/aide sur Vercel restent à contrôler séparément. Aucun test local ne prouve une réception réelle de notification.
