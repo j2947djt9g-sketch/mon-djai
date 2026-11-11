@@ -22,3 +22,7 @@ Les huit codes partagent la même base EUR : EUR 1, USD 1,113, GBP 0,83578, MAD 
 Ordre : appliquer uniquement `exchange-v2.sql`, vérifier les définitions/droits/gardes et les anciens taux, puis publier le paquet validé sur Vercel. Ne jamais appliquer les fichiers `verify-*.sql` en production : ils reconstruisent des tables de test. Ne pas réappliquer `exchange.sql` : il réinstallerait l’ancienne garde à quatre devises. Ne pas modifier silencieusement les valeurs d’une politique déjà publiée ; utiliser un nouvel identifiant et un déploiement coordonné.
 
 Cible : https://clair-budget.vercel.app/ ; la fusion GitHub reste une action distincte non autorisée. État du déploiement à lire dans `STATE.md` et `DEPLOYMENT.md`.
+
+## État de la livraison
+
+Code testé `dd7c852`, workflow `43068736763` entièrement vert. Le contrôle automatique a refusé l’application de la migration de production v2, jugeant qu’un accord spécifique manque pour ce changement serveur. Une question explicite attend la réponse de l’utilisateur. Les trois nouvelles fonctions n’ont pas été installées et le nouveau front n’a pas été déployé ; la production Vercel précédente est conservée. Cinq blobs statiques ont été téléversés en préparation, sans mise en ligne. Ne pas contourner ce refus ni réessayer sans nouvel accord.
