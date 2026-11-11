@@ -6,7 +6,7 @@ export function parisTime(now=new Date()){
 export function remindersFor(payload,date){
   if(!payload?.initialized||!payload.setupDone||payload.preferences?.reminders===false)return [];
   const currency=payload.currency===undefined?'EUR':payload.currency;
-  if(!['EUR','USD','XOF','XAF'].includes(currency))return [];
+  if(!['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF'].includes(currency))return [];
   const due=new Date(Date.parse(date+'T12:00:00Z')+2*86400000).toISOString().slice(0,10);
   const day=Number(due.slice(8)),month=Number(due.slice(5,7));
   const last=new Date(Date.UTC(Number(due.slice(0,4)),month,0)).getUTCDate();

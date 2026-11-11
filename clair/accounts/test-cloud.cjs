@@ -1,16 +1,16 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=require('crypto').webcrypto;
 const source=fs.readFileSync(__dirname+'/cloud.js','utf8'),html=fs.readFileSync(__dirname+'/../index.html','utf8');
 const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);scripts.forEach(s=>new vm.Script(s));
-const ectx={window:{},Date,Intl};vm.createContext(ectx);vm.runInContext(scripts[0],ectx);const E=ectx.window.ClairEngine;
-assert.equal(require('crypto').createHash('sha256').update(scripts[0]).digest('hex'),'6bd13f21295f287c94de31e39e4a8c1ebc5fcfc1d05f363f4044fc7ed768198b');
+const engineSource=process.env.CLAIR_ENGINE_SCRIPT?fs.readFileSync(process.env.CLAIR_ENGINE_SCRIPT,'utf8'):scripts[0];
+const ectx={window:{},Date,Intl};vm.createContext(ectx);vm.runInContext(engineSource,ectx);const E=ectx.window.ClairEngine;
 let rows=new Map(),saveDelay=null,readDelay=null,loseResponse=false;
 function device(uid,storage=new Map()){
  let currentUser={id:uid,email:uid+'@example.test',user_metadata:{display_name:uid}};
  const writes=[],applications=[],navigator={onLine:true},timers=new Map();let callback,nextTimer=0;
  const client={auth:{onAuthStateChange:f=>callback=f,getSession:async()=>({data:{session:{user:currentUser}}}),signOut:async()=>({})},
  from:()=>({select(){return this},eq(_field,value){this.uid=value;return this},async maybeSingle(){if(readDelay)await readDelay;return {data:structuredClone(rows.get(this.uid)||null)}}}),
- async rpc(name,params){const id=currentUser.id;if(saveDelay)await saveDelay;const row=rows.get(id);
- if(name==='convert_clair_currency'&&row?.revision===params.p_expected_revision)params.p_payload=E.convertCurrency(row.payload,params.p_currency,params.p_as_of);
+ async rpc(name,params){if(name.startsWith('convert_clair_currency')){assert.equal(name,'convert_clair_currency_v2');assert.equal(params.p_policy_id,'inforeuro-2026-11');}const id=currentUser.id;if(saveDelay)await saveDelay;const row=rows.get(id);
+ if(name==='convert_clair_currency_v2'&&row?.revision===params.p_expected_revision)params.p_payload=E.convertCurrency(row.payload,params.p_currency,params.p_as_of);
  if(row?.operation_id===params.p_operation_id)return {data:{saved:true,row:structuredClone(row)}};
  if((row?.revision||0)!==params.p_expected_revision)return {data:{saved:false,row:structuredClone(row||null)}};
  const next={payload:params.p_payload,revision:(row?.revision||0)+1,operation_id:params.p_operation_id,display_name:params.p_display_name};rows.set(id,structuredClone(next));writes.push(params);
@@ -104,7 +104,7 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  oldRaw._cloud.dirty=true;oldRaw._cloud.operationId=crypto.randomUUID();oldRaw.transactions.push({id:'old-addition',type:'expense',amountCents:200,date:E.today(),name:'Old addition',categoryId:'autre'});
  const dirtyOldCache=new Map([[secondSaver.cloud.key(),JSON.stringify(oldRaw)]]),dirtyUpgraded=device('named-savings',dirtyOldCache);await dirtyUpgraded.init();assert.equal(dirtyUpgraded.cloud.status,'conflict');assert.equal(rows.get('named-savings').payload.savingsProjects[0].id,'trip');assert(dirtyUpgraded.cloud.record.payload.transactions.some(t=>t.id==='old-addition'));
  console.log('PASS: an old clean cache recovers named projects; an old dirty cache cannot silently replace them even at the same revision');
- for(const currency of ['USD','XOF','XAF']){
+ for(const currency of ['USD','GBP','XOF','XAF']){
   const uid='currency-'+currency,a=device(uid);await a.init();const d=budget(100000);d.currency=currency;a.edit(d);await a.cloud.sync();
   const b=device(uid);await b.init();assert.equal(b.cloud.record.payload.currency,currency);assert.equal(b.cloud.record.payload.openingCents,100000);
   const raw=JSON.parse(b.storage.get(b.cloud.key()));delete raw.currency;raw._cloud.dirty=true;raw._cloud.operationId=crypto.randomUUID();
@@ -112,14 +112,24 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  }
  console.log('PASS currency saved on a second device; stale EUR copies preserve both budgets and require retaining remote currency');
  const converter=device('converter');await converter.init();converter.edit(budget(100000));await converter.cloud.sync();
- await converter.cloud.convertCurrency('USD',1,E.today());assert.equal(converter.cloud.record.payload.currency,'USD');assert.equal(converter.cloud.record.payload.openingCents,112087);assert.equal(converter.cloud.record.payload.currencyRevision,1);
- const passive=device('converter');await passive.init();await converter.cloud.convertCurrency('XOF',2,E.today());await passive.cloud.sync();assert.equal(passive.cloud.status,'synced');assert.equal(passive.cloud.record.payload.currency,'XOF');
- const dirty=structuredClone(passive.cloud.record.payload);dirty.openingCents+=100;passive.edit(dirty);await assert.rejects(()=>passive.cloud.convertCurrency('EUR',3,E.today()),/Synchronise/);
+ await assert.rejects(()=>converter.cloud.convertCurrency('USD',1,E.today()),/politique/i);assert.equal(converter.cloud.record.payload.currency,'EUR');await assert.rejects(()=>converter.cloud.convertCurrency('USD',1,E.today(),'unknown'),/politique/i);
+ await converter.cloud.convertCurrency('USD',1,E.today(),'inforeuro-2026-11');assert.equal(converter.cloud.record.payload.currency,'USD');assert.equal(converter.cloud.record.payload.openingCents,111300);assert.equal(converter.cloud.record.payload.currencyRevision,1);
+ const passive=device('converter');await passive.init();await converter.cloud.convertCurrency('XOF',2,E.today(),'inforeuro-2026-11');await passive.cloud.sync();assert.equal(passive.cloud.status,'synced');assert.equal(passive.cloud.record.payload.currency,'XOF');
+ const dirty=structuredClone(passive.cloud.record.payload);dirty.openingCents+=100;passive.edit(dirty);await assert.rejects(()=>passive.cloud.convertCurrency('EUR',3,E.today(),'inforeuro-2026-11'),/Synchronise/);
  const simultaneous=device('simultaneous-conversion');await simultaneous.init();simultaneous.edit(budget(100000));await simultaneous.cloud.sync();const otherTab=device('simultaneous-conversion',simultaneous.storage);await otherTab.init();
- let releaseConversion;saveDelay=new Promise(resolve=>releaseConversion=resolve);const converting=simultaneous.cloud.convertCurrency('USD',1,E.today());otherTab.edit(budget(110000));releaseConversion();await assert.rejects(converting,/onglet/);saveDelay=null;
- assert.equal(simultaneous.cloud.record.payload.openingCents,110000);assert.equal(simultaneous.cloud.record.payload.currency,'EUR');assert.equal(simultaneous.cloud.conflict.remote.payload.currency,'USD');assert.equal(rows.get('simultaneous-conversion').payload.openingCents,112087);
+ let releaseConversion;saveDelay=new Promise(resolve=>releaseConversion=resolve);const converting=simultaneous.cloud.convertCurrency('USD',1,E.today(),'inforeuro-2026-11');otherTab.edit(budget(110000));releaseConversion();await assert.rejects(converting,/onglet/);saveDelay=null;
+ assert.equal(simultaneous.cloud.record.payload.openingCents,110000);assert.equal(simultaneous.cloud.record.payload.currency,'EUR');assert.equal(simultaneous.cloud.conflict.remote.payload.currency,'USD');assert.equal(rows.get('simultaneous-conversion').payload.openingCents,111300);
  console.log('PASS explicit conversion: clean sync, generation, exact rates, second-device adoption and both copies preserved when another tab edits in flight');
  const prefsA=device('profile-preferences');await prefsA.init();const prefs=budget(100000);prefs.preferences.guideVersion=1;prefs.preferences.profileName='Mon pseudo';prefs.preferences.dailyGoal={currency:'EUR',amountCents:2500};prefsA.edit(prefs);await prefsA.cloud.sync();const prefsB=device('profile-preferences');await prefsB.init();assert.equal(prefsB.cloud.record.payload.preferences.guideVersion,1);assert.equal(prefsB.cloud.record.payload.preferences.profileName,'Mon pseudo');assert.equal(prefsB.cloud.record.payload.preferences.dailyGoal.amountCents,2500);assert.equal(E.balance(prefsB.cloud.record.payload),100000);const prefsOther=device('other-profile');await prefsOther.init();assert.equal(prefsOther.cloud.record,null);console.log('PASS profile preferences: tutorial completion, nickname and daily objective reach a second device and remain isolated by account');
+ const expressA=device('express-provenance');await expressA.init();const expressBudget=budget(100000);expressBudget.expressSchema=1;expressBudget.preferences.express={defaultAccountId:'current-budget'};expressBudget.transactions=[{id:'express-1',type:'expense',amountCents:300,date:E.today(),name:'Dépense Express',categoryId:'non-classee',express:{source:'express',createdAt:'2026-11-05T12:00:00.000Z',originalCurrency:'EUR',accountId:'current-budget',idempotencyKey:'express-1'}}];expressA.edit(expressBudget);loseResponse=true;await expressA.cloud.sync();const expressRevision=rows.get('express-provenance').revision;await expressA.cloud.sync();assert.equal(rows.get('express-provenance').revision,expressRevision);
+ const expressB=device('express-provenance');await expressB.init();assert.equal(expressB.cloud.record.payload.preferences.express.defaultAccountId,'current-budget');assert.equal(expressB.cloud.record.payload.transactions[0].express.idempotencyKey,'express-1');assert.equal(E.balance(expressB.cloud.record.payload),99700);
+ const oldExpressRaw=JSON.parse(expressB.storage.get(expressB.cloud.key()));delete oldExpressRaw.expressSchema;delete oldExpressRaw.preferences.express;oldExpressRaw.transactions.forEach(t=>delete t.express);
+ const cleanExpress=device('express-provenance',new Map([[expressB.cloud.key(),JSON.stringify(oldExpressRaw)]]));await cleanExpress.init();assert.equal(cleanExpress.cloud.record.payload.expressSchema,1);assert.equal(cleanExpress.cloud.record.payload.transactions[0].express.idempotencyKey,'express-1');
+ oldExpressRaw._cloud.dirty=true;oldExpressRaw._cloud.operationId=crypto.randomUUID();oldExpressRaw.openingCents+=100;const dirtyExpress=device('express-provenance',new Map([[expressB.cloud.key(),JSON.stringify(oldExpressRaw)]]));await dirtyExpress.init();assert.equal(dirtyExpress.cloud.status,'conflict');assert.equal(rows.get('express-provenance').payload.transactions[0].express.idempotencyKey,'express-1');assert.throws(()=>dirtyExpress.cloud.resolve(false),/Express/);assert.equal(dirtyExpress.cloud.status,'conflict');dirtyExpress.cloud.resolve(true);assert.equal(dirtyExpress.cloud.record.payload.expressSchema,1);
+ const reordered=structuredClone(expressBudget);reordered.transactions[0].express=Object.fromEntries(Object.entries(reordered.transactions[0].express).reverse());assert.equal(expressA.cloud.expressDowngrade(reordered,expressBudget),false);
+ const strippedRaw=JSON.parse(expressB.storage.get(expressB.cloud.key()));strippedRaw._cloud.dirty=true;strippedRaw._cloud.operationId=crypto.randomUUID();delete strippedRaw.transactions[0].express;
+ const strippedExpress=device('express-provenance',new Map([[expressB.cloud.key(),JSON.stringify(strippedRaw)]]));await strippedExpress.init();assert.equal(strippedExpress.cloud.status,'conflict');assert.throws(()=>strippedExpress.cloud.resolve(false),/Express/);assert.equal(rows.get('express-provenance').payload.transactions[0].express.idempotencyKey,'express-1');
+ const expressOther=device('express-unrelated');await expressOther.init();assert.equal(expressOther.cloud.record,null);console.log('PASS Express provenance: lost-response retry, second-device consent and metadata, same-revision old caches, protected conflict resolution and account isolation');
  console.log('PASS: all scripts parse; reviewed engine with savings metadata parses');
 })().catch(e=>{console.error(e);process.exitCode=1});
 

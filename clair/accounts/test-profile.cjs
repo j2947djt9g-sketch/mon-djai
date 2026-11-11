@@ -8,16 +8,16 @@ vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(sc
 let ui=scripts[3],boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);ui=ui.slice(0,boot)+`window.test={cloud,beginSetup,completeSetup,collectWizard,profile,openTutorial,finishTutorial,shareClair,dailyGoalCents,setData(d){data=d;snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot);},getData(){return data;},wizard(){return wizard;},guide(){return guide;},modal(){return modal;}};})();`;vm.runInContext(ui,sandbox);
 const E=sandbox.ClairEngine,t=sandbox.test,click=(action,extra={})=>events.click({target:{closest:()=>({dataset:{action,...extra}})}}),plain=x=>JSON.parse(JSON.stringify(x));
 (async()=>{
- for(const code of ['EUR','USD','XOF','XAF']){
+ for(const code of ['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF']){
   const d=E.empty();d.currency=code;t.setData(d);t.beginSetup();assert.equal(t.modal().kind,'tutorial');assert.equal(t.guide().step,0);
   await click('tutorial-next');assert.equal(t.guide().step,1);await click('tutorial-back');assert.equal(t.guide().step,0);await click('tutorial-skip');assert.equal(t.modal().kind,'wizard');assert.equal(t.getData().preferences.guideVersion,1);
   const w=t.wizard();assert.equal(w.meals,false);assert(w.days.every(x=>x===0));assert.equal(w.dailyGoalEnabled,false);
   w.balance='100000';w.currency=code;w.step=1;node('#wizard-form').values={};t.collectWizard();assert.equal(w.meals,false);t.completeSetup();
-  assert.equal(t.getData().rules.length,0);assert.equal(t.getData().transactions.length,0);assert.equal(E.balance(t.getData()),10000000);assert.equal(t.getData().preferences.dailyGoal,null);
+  assert.equal(t.getData().rules.length,0);assert.equal(t.getData().transactions.length,0);assert.equal(E.balance(t.getData()),10000000);assert.equal(t.getData().preferences.dailyGoal,null);if(code==='GBP')assert.match(t.profile(),/GBP · Livre sterling/);if(code==='MAD')assert.match(t.profile(),/MAD · Dirham marocain/);if(code==='CAD')assert.match(t.profile(),/CAD · Dollar canadien/);if(code==='CHF')assert.match(t.profile(),/CHF · Franc suisse/);
   t.openTutorial(false);await click('tutorial-finish');assert.equal(t.guide(),null);assert.equal(t.getData().preferences.guideVersion,1);
  }
  const weekly=E.empty();weekly.preferences.guideVersion=1;t.setData(weekly);t.beginSetup();Object.assign(t.wizard(),{balance:'1000',meals:true,name:'Transport quotidien',habitCategoryId:'transport',days:[0,450,0,0,0,0,0]});t.completeSetup();assert.equal(t.getData().rules[0].categoryId,'transport');assert.equal(t.getData().rules[0].name,'Transport quotidien');assert.equal(t.getData().transactions.length,0);
- console.log('PASS four currencies: tutorial skip/back/replay, no prefilled days, no automatic expense or goal, untouched balance');
+ console.log('PASS eight currencies: tutorial skip/back/replay, no prefilled days, no automatic expense or goal, untouched balance');
  const d=E.empty();d.initialized=d.setupDone=true;d.openingCents=100000;d.transactions=[{id:'expense',type:'expense',amountCents:2000,date:E.today(),name:'Repas',categoryId:'alimentation'}];t.setData(d);
  const ledger=JSON.stringify(t.getData().transactions),balance=E.balance(t.getData());node('#profile-form').values={profileName:'<img src=x onerror=alert(1)>',dailyGoalEnabled:'on',dailyGoalAmount:'25,50'};await events.submit({target:{id:'profile-form',closest:()=>true,values:node('#profile-form').values},preventDefault(){}});
  assert.equal(t.dailyGoalCents(),2550);assert.equal(E.balance(t.getData()),balance);assert.equal(JSON.stringify(t.getData().transactions),ledger);assert.match(t.profile(),/20,00/);assert.match(t.profile(),/5,50/);assert.match(t.profile(),/&lt;img/);assert.doesNotMatch(t.profile(),/<img src=x/);

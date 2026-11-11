@@ -1,10 +1,15 @@
-  // Eurostat/ECB annual EUR/USD averages, 2016–2025, equally weighted by year.
-  // EUR/CFA official fixed parity: 655.957 XOF or XAF per EUR (French Treasury).
-  // Sources and method: clair/accounts/exchange-rates.json.
-  const exchangePolicy=Object.freeze({id:'annual-mean-2016-2025',period:'2016–2025',usdAnnual:Object.freeze([1.1069,1.1297,1.1810,1.1195,1.1422,1.1827,1.0530,1.0813,1.0824,1.1300]),perEuro:Object.freeze({EUR:100000,USD:112087,XOF:65595700,XAF:65595700})});
-  function exchangeRate(from,to){return exchangePolicy.perEuro[currencyCode(to)]/exchangePolicy.perEuro[currencyCode(from)];}
+  // Frozen European Commission InforEuro accounting reference, November 2026.
+  // Exact EUR-base integers (scale 100000); provenance: exchange-rates-v2.json.
+  const exchangePolicy=Object.freeze({id:'inforeuro-2026-11',period:'novembre 2026',perEuro:Object.freeze({EUR:100000,USD:111300,GBP:83578,MAD:1098365,CAD:155770,CHF:92220,XOF:65595700,XAF:65595700})});
+  function exchangeRate(from,to){
+    from=currencyCode(from);to=currencyCode(to);if(from===to)return 1;
+    if(!own(exchangePolicy.perEuro,from)||!own(exchangePolicy.perEuro,to))throw Error('Aucun taux de change vérifié n’est disponible pour cette devise. Ton budget est conservé.');
+    return exchangePolicy.perEuro[to]/exchangePolicy.perEuro[from];
+  }
   function exchangeAmount(value,from,to){
     if(!Number.isSafeInteger(value))throw Error('Montant invalide pour la conversion.');
+    from=currencyCode(from);to=currencyCode(to);exchangeRate(from,to);
+    if(from===to){if(Math.abs(value)>10000000000)throw Error('Un montant converti dépasse la capacité du budget.');return value;}
     const q=currencies[currencyCode(to)].digits===0?100n:1n;
     const a=BigInt(Math.abs(value))*BigInt(exchangePolicy.perEuro[currencyCode(to)]),b=BigInt(exchangePolicy.perEuro[currencyCode(from)])*q;
     const result=Number(((a*2n+b)/(2n*b))*q)*(value<0?-1:1);

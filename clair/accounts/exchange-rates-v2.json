@@ -1,0 +1,49 @@
+{
+  "policy": "inforeuro-2026-11",
+  "id": "inforeuro-2026-11",
+  "period": {
+    "label": "November 2026",
+    "start": "2026-11-01",
+    "end": "2026-11-30"
+  },
+  "referenceCurrency": "EUR",
+  "scale": 100000,
+  "unitsPerEuro": {
+    "EUR": "1",
+    "USD": "1.113",
+    "GBP": "0.83578",
+    "MAD": "10.98365",
+    "CAD": "1.5577",
+    "CHF": "0.9222",
+    "XOF": "655.957",
+    "XAF": "655.957"
+  },
+  "perEuro": {
+    "EUR": 100000,
+    "USD": 111300,
+    "GBP": 83578,
+    "MAD": 1098365,
+    "CAD": 155770,
+    "CHF": 92220,
+    "XOF": 65595700,
+    "XAF": 65595700
+  },
+  "method": "Frozen European Commission InforEuro monthly accounting reference snapshot for November 2026. Published values express currency units per one EUR. All directions use the same snapshot: target units per EUR divided by source units per EUR. These are indicative accounting references, not live market rates, retail exchange rates or executable bank quotes; fees are not included. The Commission describes underlying references as market rates near the penultimate day of the previous month; the exact individual observation time is not supplied by this dataset.",
+  "retrieval": {
+    "verifiedOn": "2026-11-11",
+    "rawResponseSha256": "7570737d05964680b4fbb7d771ff7ba1561d15b3f464803ed13b8d1b82058a02",
+    "validation": "Each published value was matched exactly using decimal arithmetic against the official monthly-rates response. USD, GBP, MAD, CAD and CHF were also matched to official currency-history records with EUR reference currency and validity 2026-11-01 through 2026-11-30. The EUR-to-MAD official converter with factor 1 independently returned 10.98365."
+  },
+  "sources": [
+    "https://ec.europa.eu/budg/inforeuro/api/public/monthly-rates?year=2026&month=11",
+    "https://commission.europa.eu/funding-tenders/procedures-guidelines-tenders/information-contractors-and-beneficiaries/exchange-rate-inforeuro_en",
+    "https://ec.europa.eu/budg/inforeuro/api/config?lang=EN",
+    "https://ec.europa.eu/budg/inforeuro/api/public/currencies/USD",
+    "https://ec.europa.eu/budg/inforeuro/api/public/currencies/GBP",
+    "https://ec.europa.eu/budg/inforeuro/api/public/currencies/MAD",
+    "https://ec.europa.eu/budg/inforeuro/api/public/currencies/CAD",
+    "https://ec.europa.eu/budg/inforeuro/api/public/currencies/CHF",
+    "https://ec.europa.eu/budg/inforeuro/api/converted-rate?isoFrom=EUR&isoTo=MAD&year=2026&month=11&factor=1"
+  ],
+  "rounding": "Nearest cent for EUR, USD, GBP, MAD, CAD and CHF; nearest whole franc for XOF and XAF; ties away from zero. Each amount is rounded once. The opening balance reconciles the ledger to the directly converted current balance. Values that would vanish or exceed storage limits block the entire conversion."
+}
