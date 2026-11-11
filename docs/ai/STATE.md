@@ -11,13 +11,15 @@ Mis à jour le 11 novembre 2026. Lire AGENTS puis cette page et MAP ; vérifier 
 ## Trois changements récents
 
 1. Branche **`feat/clair-category-illustrations`**, base `bb8d9f1` de `feat/clair-express` : atlas original 16 illustrations, renderer/sélecteur progressif, historique/paiements/enveloppes/Express, secours vectoriel et SW v40. Moteur/cloud inchangés. Détails : `VISUAL_DELIVERY.md`.
-2. `clair/design-preview/` contient trois maquettes interactives A Verre doux / B Express / C Contraste avec accueil, profil lisible et barre flottante/effets de toucher. **À valider avant intégration nav/profil** ; données fictives, aucun backend. Défaut existant profil photo/clair identifié, non publié corrigé. Aperçu/PR à consigner dans `VISUAL_DELIVERY.md`. Aucun accord pour production ou Supabase dans cette mission.
+2. `clair/design-preview/` contient trois maquettes interactives A Verre doux / B Express / C Contraste avec accueil, profil lisible et barre flottante/effets de toucher. **À valider avant intégration nav/profil** ; données fictives, aucun backend. Défaut existant profil photo/clair identifié, non publié corrigé. Aperçu Vercel READY + PR30 brouillon : liens dans `VISUAL_DELIVERY.md`. Aucun accord pour production ou Supabase dans cette mission.
 3. Express, huit devises et conversion InforEuro novembre 2026 v2 restent publiés. Migration v2 et rappels v3 déjà autorisés/appliqués : ne pas les rejouer. PR29 ouverte ; `main` ancien `dc376fb`, fusion refusée par contrôle automatique faute d’accord distinct. Ne pas contourner. Banque abandonnée : aucune connexion/import/rapprochement à développer.
 
 ## Preuves et limites
 
 - Refonte : 34 suites Node ; catégories (22 saisies/huit devises, clavier, JSON, reset, images/CSS/JS absents), Express (9 configurations), journal (4 tailles), fluidité (4), maquettes (12 vues 320/390) verts. Relecture indépendante sans bloquant/important ; captures fictives avant/après dans la galerie.
-- Production contrôlée inchangée avant aperçu. Pas de Safari/iPhone physique, compte réel ou notification reçue testés. Aide/récupération : restriction d’origine déjà connue. Indexation Google non confirmée ; audits 3/5 non approuvés.
+- Production contrôlée inchangée après aperçu (30 ressources vérifiées, galerie mobile testée). Pas de Safari/iPhone physique, compte réel ou notification reçue testés. Aide/récupération : restriction d’origine déjà connue. Indexation Google non confirmée ; audits 3/5 non approuvés.
+
+CI initiale : suites locales/Node, nouveautés et SQL verts ; ancien test devise adapté au sélecteur visible, CI de suivi en attente.
 
 ## Reprise
 

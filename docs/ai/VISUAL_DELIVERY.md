@@ -19,7 +19,7 @@ Travail du 11 novembre 2026 sur `feat/clair-category-illustrations`, base `bb8d9
 - 34 suites Node vertes, dont contrats des catégories, Express, monnaies, synchronisation, profil et SW.
 - Nouveau `verify-category-art.cjs` : trois vues/contrastes et invariance JSON, sélecteur au clavier, libellés/FormData/change/reset, pas de soumission involontaire, mode sombre, mouvement réduit, images/CSS/JS indisponibles, 22 saisies Express exactes sur huit devises.
 - `verify-express.cjs` : neuf configurations, huit devises, iPhone 320/390 et standalone simulé, déconnexion/reconnexion et double soumission, corrections et provenance.
-- `verify-journal.cjs` : quatre tailles 320/390/768/1440, filtres, catégories personnelles, dépôts/corrections/rechargement ; `verify-fluidity.cjs` : quatre configurations EUR/USD/XOF/XAF. Tests mis à jour pour utiliser le sélecteur visible.
+- `verify-journal.cjs` : quatre tailles 320/390/768/1440, filtres, catégories personnelles, dépôts/corrections/rechargement ; `verify-fluidity.cjs` : quatre configurations EUR/USD/XOF/XAF. Tests mis à jour pour utiliser le sélecteur visible. `verify-currency.cjs` conserve les parcours de configuration/région sur huit devises avec le nouveau contrôle illustré.
 - `verify-design-preview.cjs` : douze vues A/B/C, accueil/profil, 320/390, cibles navigation ≥44px, Express fictif, aucun stockage ni appel externe. Syntaxe et `git diff --check` verts.
 - Relecture indépendante UI/qualité/sécurité : aucun défaut bloquant ou important restant. Moteur et synchronisation embarqués identiques à la base, catégories et montants conservés.
 
@@ -29,4 +29,10 @@ Corrections issues des revues : chemin de l’atlas dans la CSS externe, boucle 
 
 Chromium simulant des dimensions iPhone ; aucun Safari/iPhone physique testé. Le clic sur un label externe du filtre ne transfère pas encore le focus au sélecteur personnalisé (le résumé est nommé et utilisable au clavier). Les maquettes sont en mode clair ; le composant réel des catégories est vérifié aussi en sombre. Aucun test bancaire : volet abandonné.
 
-Aperçu Vercel isolé et lien PR : à consigner après création. Ne pas fusionner dans main ni publier la production. La confirmation du style et l’accord de publication sont les prochaines décisions utilisateur.
+Aperçu **READY**, cible preview (aucun alias de production) : https://clair-budget-l7fl0ssie-diabagateouattara601-7626.vercel.app/ . Déploiement `dpl_97683BbMXYaRzcTwtziiz4emJyah`, source applicative `968aed2` (budget fictif/configuration sans backend ajoutés seulement au paquet d’aperçu).
+
+PR brouillon : https://github.com/j2947djt9g-sketch/mon-djai/pull/30 ; fichiers modifiés : https://github.com/j2947djt9g-sketch/mon-djai/pull/30/files . Agents mobilisés : audit UI, composant frontend, maquettes, styles, qualité et sécurité ; coordination/illustrations/livraison par l’agent principal.
+
+Vérification publique : racine redirigée vers la galerie, 30 ressources publiques conformes aux empreintes du paquet ; CSP/robots vérifiés, aide/récupération/SW absents. Galerie desktop/mobile et trois profils vérifiés sur les ressources Vercel via transport HTTPS Node de confiance avec contrôle des empreintes. Le script de feedback ajouté par Vercel aux aperçus est bloqué par la CSP ; il est identifié séparément pour comparer le HTML applicatif. Empreinte de production inchangée avant/après : `81dd1f98c12b10a33a0411e84755bf8d075acb21`.
+
+La première CI a réussi Node, les nouvelles suites, journal/fluidité/Express et les deux jobs SQL isolés, puis a rencontré l’ancien test de devise qui utilisait le select natif masqué. `verify-currency.cjs` utilise maintenant le sélecteur visible ; 37 parcours locaux du test de devise corrigé passent ; nouvelle CI à suivre. Aucun correctif financier ni changement applicatif supplémentaire. Ne pas fusionner dans main ni publier la production. La confirmation du style et l’accord de publication sont les prochaines décisions utilisateur.
