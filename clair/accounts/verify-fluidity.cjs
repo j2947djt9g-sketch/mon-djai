@@ -1,3 +1,4 @@
+const {chooseCategory}=require('./browser-category-picker.cjs');
 // Real DOM and keyboard checks against fictional local data. All nonlocal requests are blocked.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const root=path.resolve(__dirname,'..');
@@ -27,15 +28,15 @@ async function main(){
    assert.equal(await expense().getAttribute('aria-pressed'),'true');assert.equal(await income().getAttribute('aria-pressed'),'false');assert.equal(await expense().getAttribute('type'),'button');assert.equal(await income().getAttribute('type'),'button');
    assert.equal(await field('amount').getAttribute('inputmode'),currency.startsWith('X')?'numeric':'decimal');assert.match(await field('amount').locator('..').innerText(),currency==='EUR'?/€/ :currency==='USD'?/\$US/:/F CFA/);
    const draft={amount:currency.startsWith('X')?'1500':'9,',date:'2026-10-18',name:'Bourse <essai>',categoryId:'custom-study',note:'Parents & études'};
-   for(const [name,value]of Object.entries(draft)){if(name==='categoryId')await field(name).selectOption(value);else await field(name).fill(value);}
+   for(const [name,value]of Object.entries(draft)){if(name==='categoryId')await chooseCategory(page,field(name),value);else await field(name).fill(value);}
    const assertDraft=async category=>{for(const [name,value]of Object.entries({...draft,categoryId:category}))assert.equal(await field(name).inputValue(),value,'Switching type must preserve '+name);};
    await income().focus();await page.keyboard.press('Enter');await assertDraft('custom-study');assert.equal(await income().getAttribute('aria-pressed'),'true');assert.equal(await expense().getAttribute('aria-pressed'),'false');
    await expense().focus();await page.keyboard.press('Space');await assertDraft('custom-study');assert.equal(await expense().getAttribute('aria-pressed'),'true');
-   await income().click();await field('categoryId').selectOption('income');await expense().click();await assertDraft('alimentation');
+   await income().click();await chooseCategory(page,field('categoryId'),'income');await expense().click();await assertDraft('alimentation');
    assert.equal((await readData()).transactions.length,3,'Choosing a type must never save a transaction');
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'New transaction controls overflow at '+width);
    await field('amount').fill('0');await form.locator('button[type="submit"]').click();assert((await page.locator('#form-error').innerText()).trim());assert.equal((await readData()).transactions.length,3);
-   await income().click();await field('amount').fill(currency.startsWith('X')?'1500':'12,50');await field('categoryId').selectOption('custom-study');await form.locator('button[type="submit"]').click();await page.locator('#dialog').waitFor({state:'hidden'});
+   await income().click();await field('amount').fill(currency.startsWith('X')?'1500':'12,50');await chooseCategory(page,field('categoryId'),'custom-study');await form.locator('button[type="submit"]').click();await page.locator('#dialog').waitFor({state:'hidden'});
    let saved=await readData(),entry=saved.transactions.find(t=>t.name===draft.name);assert.equal(entry.type,'income');assert.equal(entry.categoryId,'custom-study');assert.equal(entry.amountCents,currency.startsWith('X')?150000:1250);assert.equal(entry.note,draft.note);assert.equal(entry.date,draft.date);assert.equal(saved.currency,currency);
    await add();await field('amount').fill(currency.startsWith('X')?'1500':'12,50');await field('name').fill('Courses fictives');await form.locator('button[type="submit"]').click();await page.locator('#dialog').waitFor({state:'hidden'});saved=await readData();assert.equal(saved.transactions.find(t=>t.name==='Courses fictives').type,'expense');
    await page.locator('[data-nav="journal"]:visible').first().click();const rows=page.locator('#journal-results .row');
@@ -44,14 +45,14 @@ async function main(){
    const category=page.locator('#category-filter'),kind=page.locator('#kind-filter'),search=page.locator('#search'),flow=value=>page.locator('[data-action="journal-flow"][data-flow="'+value+'"]');
    if(!await kind.isVisible())await page.locator('#journal-more summary').click();const beforeFilters=JSON.stringify(await readData());
    for(const direction of ['income','expense'])for(const [source,categoryId,count]of [['savings','all',2],['all','epargne',2],['manual','epargne',2],['auto','epargne',0],['savings','telephone',0]]){
-    await flow('all').click();await category.selectOption(categoryId);await kind.selectOption(source);await search.fill('Voyage');await flow(direction).click();assert.equal(await rows.count(),0);
+    await flow('all').click();await chooseCategory(page,category,categoryId);await kind.selectOption(source);await search.fill('Voyage');await flow(direction).click();assert.equal(await rows.count(),0);
     const recovery=page.locator('#journal-companion [data-action="journal-show-savings"]');assert.equal(await recovery.count(),1);assert.match(await recovery.innerText(),/Afficher l[’']épargne dans Tout/);assert.match(await page.locator('#journal-companion').innerText(),/revenu|achat|dépens|transfert/i);
     const month=await page.locator('.month-nav span').innerText();await recovery.focus();await page.keyboard.press('Enter');
     assert.equal(await flow('all').getAttribute('aria-pressed'),'true');assert.equal(await category.inputValue(),categoryId);assert.equal(await kind.inputValue(),source);assert.equal(await search.inputValue(),'Voyage');assert.equal(await page.locator('.month-nav span').innerText(),month);assert.equal(await page.locator('#journal-more').evaluate(el=>el.open),true);assert.equal(await recovery.count(),0);assert.equal(await rows.count(),count);
     assert.equal(JSON.stringify(await readData()),beforeFilters,'Recovery must never change the budget');assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Savings guidance overflows at '+width);
    }
-   await category.selectOption('epargne');await kind.selectOption('savings');await page.locator('[data-action="month-prev"]').click();await flow('income').click();const previousMonth=await page.locator('.month-nav span').innerText();await page.locator('[data-action="journal-show-savings"]').click();assert.equal(await page.locator('.month-nav span').innerText(),previousMonth);assert.equal(await rows.count(),0);assert.equal(await search.inputValue(),'Voyage');await page.locator('[data-action="month-next"]').click();assert.equal(await rows.count(),2);
-   await category.selectOption('telephone');await kind.selectOption('all');await search.fill('introuvable');await flow('expense').click();assert.equal(await page.locator('[data-action="journal-show-savings"]').count(),0,'Unrelated empty results must retain ordinary guidance');
+   await chooseCategory(page,category,'epargne');await kind.selectOption('savings');await page.locator('[data-action="month-prev"]').click();await flow('income').click();const previousMonth=await page.locator('.month-nav span').innerText();await page.locator('[data-action="journal-show-savings"]').click();assert.equal(await page.locator('.month-nav span').innerText(),previousMonth);assert.equal(await rows.count(),0);assert.equal(await search.inputValue(),'Voyage');await page.locator('[data-action="month-next"]').click();assert.equal(await rows.count(),2);
+   await chooseCategory(page,category,'telephone');await kind.selectOption('all');await search.fill('introuvable');await flow('expense').click();assert.equal(await page.locator('[data-action="journal-show-savings"]').count(),0,'Unrelated empty results must retain ordinary guidance');
    assert.deepEqual(errors,[]);await context.close();console.log('PASS fluidity '+width+'px '+currency+': direct expense, keyboard type choice, raw drafts, categories, signed saves, corrections, targeted savings recovery and unchanged ledger');
   }
  }finally{await browser.close();}
