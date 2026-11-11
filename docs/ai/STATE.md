@@ -1,26 +1,26 @@
 # Clair — état court de reprise
 
-Mis à jour le 11 novembre 2026. Production : source `bb116bb`, publiée sur Vercel. Vérifier branche, statut et dernier commit avant de reprendre.
+Mis à jour le 11 novembre 2026. Production Vercel : source `dd7c852` (correctif conversion). Vérifier branche, statut et dernier commit avant de reprendre.
 
 ## Repères stables
 
 - **Publication CLAIR : Vercel uniquement**, https://clair-budget.vercel.app/ → `/clair/`, projet `clair-budget`. Paquet manuel, sans publication automatique depuis GitHub : `DEPLOYMENT.md`.
 - Cible : `clair/index.html` ; l’index racine appartient à une autre application. HTML/CSS/JS statiques, SDK Supabase embarqué, sources sous `clair/accounts/`.
-- JSON v3, montants entiers en centimes, dates Europe/Paris, stockage/révisions par propriétaire. Lire `MAP.md` par tâche et maintenir les copies embarquées ; éviter les archives volumineuses.
+- JSON v3, centimes entiers, dates Europe/Paris, stockage/révisions par propriétaire. Lire `MAP.md` par tâche, maintenir les copies embarquées et éviter les archives volumineuses.
 
 ## Trois changements récents
 
-1. Express publié : montant seul, budget courant confirmé une fois, raccourcis, catégorie proposée/modifiable, correction protégée et hors connexion. Huit codes natifs EUR/USD/GBP/MAD/CAD/CHF/XOF/XAF. Région de l’appareil : suggestion modifiable au nouveau budget, sans GPS. Correctif de conversion testé (InforEuro novembre 2026, RPC v2) : voir `EXCHANGE.md`. Migration de trois fonctions refusée par le contrôle automatique faute d’accord spécifique ; question posée, ne pas publier avant réponse. Production inchangée.
-2. Migration `clair_express_schema_and_native_currencies` appliquée : garde Express/provenance et huit devises, sans réécriture des budgets ; RLS, garde épargne et conversion atomique conservées. Rappels `clair-reminders` version 3 actifs, origines exactes Vercel/GitHub autorisées, JWT/propriétaires conservés.
-3. PR29 reste ouverte sur `feat/clair-express`. Le contrôle automatique a refusé la fusion dans `main`, jugeant l’accord de fusion distinct manquant. L’utilisateur a autorisé la migration, les rappels et la publication Vercel ; la version testée a été publiée directement depuis la branche. `main` reste `dc376fb` : ne pas republier cet ancien produit.
+1. Les huit devises sont convertibles : référence officielle InforEuro novembre 2026, politique `inforeuro-2026-11`. Source/période affichées ; date et politique figées entre aperçu/confirmation. RPC v2 et calcul entier exact ; anciens helpers/taux inchangés. Les écritures existantes ne sont converties qu’après confirmation. Contrats : `EXCHANGE.md`.
+2. Migration `clair_reference_exchange_v2_2026_11` appliquée après accord explicite de l’utilisateur (l’ancien refus automatique est levé pour cette action). RLS/gardes/anciens RPC vérifiés inchangés. Express, raccourcis, catégories, huit codes natifs et suggestion régionale modifiable restent publiés. Rappels v3 actifs, origines Vercel/GitHub autorisées.
+3. PR29 ouverte sur `feat/clair-express`. La fusion `main` a été refusée par le contrôle automatique, jugée distincte de l’accord de publication. Ne pas contourner ce refus. `main` reste `dc376fb` et ne contient pas la production ; publier depuis la branche validée.
 
 ## Vérifications et limites
 
-- Code `bb116bb` : 33 suites Node, parcours navigateur/SQL et Semgrep verts (workflow `43057880460`). En public : racine 307, 46 fichiers identiques, smoke Express EUR/MAD/XOF et région ar-MA→MAD avec choix CAD, transport Supabase fictif. Preuves : `EXPRESS_DELIVERY.md`.
-- Vercel READY : `dpl_BFsXnKrXBdAGdiGt7JkbVWvr8EcH`, HTML Git `ef0314a4f9cbe57d9aa092a3219d249130ecd360`. Rappels réels : préflight 204, origine étrangère 403, requête sans JWT 401 ; aucune notification envoyée pour un test.
-- Ni compte réel ni iPhone/Safari physique testés. Aide/récupération : restriction d’origine déjà connue, à contrôler séparément. Indexation Google non confirmée ; propositions d’audit 3/5 non approuvées.
-- Banque : volet abandonné ; aucune connexion, aucun import ni rapprochement à développer. Étude archivée.
+- Code `dd7c852` : 33 suites Node, 64 vecteurs v2 + 16 hérités JS/SQL, 32 parcours navigateur (229 conversions), Semgrep verts ; workflow `43068736763`. Base réelle : 64 calculs purs exacts, droits et empreintes des fonctions héritées contrôlés ; aucun budget réel écrit pour tester.
+- Production READY : `dpl_BcrZig2Kb3zVyuegxXPLN9Qbj8TU`, HTML Git `6cf9fb3c1c2e7a80417c6f35b29d36432b837ae8`. Racine 307 et 47 ressources publiques identiques. Vérification publique EUR→MAD→EUR→CAD, GBP/CHF→MAD, choix actifs et aperçu appliqué ; transport Supabase fictif.
+- Pas d’iPhone/Safari physique, de conversion d’un vrai compte ou de notification reçue testés. Aide/récupération : restriction d’origine déjà connue. Indexation Google non confirmée ; audits 3/5 non approuvés.
+- Banque : volet abandonné ; aucune connexion, aucun import ni rapprochement à développer.
 
 ## Reprise
 
-Partir de `feat/clair-express`. Après accord explicite pour v2 : appliquer `exchange-v2.sql`, puis publier le paquet Vercel. La fusion GitHub reste une action distincte à autoriser ; ne pas contourner son refus automatique. Toute future publication CLAIR se fait sur Vercel.
+Continuer sur `feat/clair-express`. V2 est publiée et autorisée : ne pas répéter la demande. Ne pas rejouer `exchange.sql` (ancienne garde à quatre devises) ni les fixtures SQL en production. Toute publication CLAIR se fait sur Vercel.

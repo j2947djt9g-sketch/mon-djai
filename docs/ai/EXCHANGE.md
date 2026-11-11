@@ -2,7 +2,7 @@
 
 Le sélecteur publié affichait GBP/MAD/CAD/CHF grisés : le moteur et le RPC initial n’avaient des taux que pour EUR/USD/XOF/XAF. Les nouvelles devises étaient utilisables à la création, pas pour convertir un budget existant.
 
-## Politique actuelle préparée
+## Politique actuelle publiée
 
 Référence mensuelle officielle de la Commission européenne, InforEuro novembre 2026, politique immuable `inforeuro-2026-11`. `exchange-rates-v2.json` contient les valeurs exactes, leurs entiers à l’échelle 100000, la période, les sources et la preuve de vérification. Il s’agit d’une référence comptable indicative, sans frais de change, pas d’un cours en temps réel. Aucun compte bancaire ni service payant connecté.
 
@@ -25,4 +25,8 @@ Cible : https://clair-budget.vercel.app/ ; la fusion GitHub reste une action dis
 
 ## État de la livraison
 
-Code testé `dd7c852`, workflow `43068736763` entièrement vert. Le contrôle automatique a refusé l’application de la migration de production v2, jugeant qu’un accord spécifique manque pour ce changement serveur. Une question explicite attend la réponse de l’utilisateur. Les trois nouvelles fonctions n’ont pas été installées et le nouveau front n’a pas été déployé ; la production Vercel précédente est conservée. Cinq blobs statiques ont été téléversés en préparation, sans mise en ligne. Ne pas contourner ce refus ni réessayer sans nouvel accord.
+L’utilisateur a donné l’accord spécifique demandé : migration `clair_reference_exchange_v2_2026_11` appliquée, puis Vercel production READY `dpl_BcrZig2Kb3zVyuegxXPLN9Qbj8TU`, source `dd7c852`. Le refus automatique initial n’est plus un blocage pour ce correctif ; la fusion GitHub demeure une action distincte non autorisée.
+
+Vérification réelle sans budget écrit : 64 calculs purs exacts, empreintes des trois fonctions héritées et deux gardes inchangées, RLS conservée, nouveau RPC sécurité invoker avec accès authentifié et refus anonyme. REST v2 répond 401/42501 sans session. En public : racine 307, 47 ressources identiques au paquet, HTML Git `6cf9fb3c1c2e7a80417c6f35b29d36432b837ae8`. Trois cas mobiles vérifient EUR→MAD→EUR→CAD, GBP→MAD et CHF→MAD, sept choix alternatifs actifs, source/période, aperçu/montant enregistré, sauvegarde/annulation/rechargement. Toutes les requêtes Supabase de ces parcours sont simulées : aucun vrai compte converti pour tester.
+
+Les requêtes HTTP de contrôle utilisent la validation TLS de l’environnement. Le navigateur de test derrière le proxy géré a nécessité une exception de certificat, avec empreinte de chaque document épinglée ; cela ne modifie aucun réglage du site ni ne constitue un essai Safari physique.

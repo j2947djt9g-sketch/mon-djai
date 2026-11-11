@@ -1,6 +1,6 @@
 # Livraison CLAIR Express — 11 novembre 2026
 
-**Publié sur Vercel : https://clair-budget.vercel.app/**, source `bb116bb` de `feat/clair-express`, déploiement `dpl_BFsXnKrXBdAGdiGt7JkbVWvr8EcH` READY. Migration de compatibilité appliquée et rappels v3 actifs après accord explicite. PR29 ouverte, sans fusion dans `main` : le contrôle automatique a jugé l’autorisation de fusion distincte manquante. Les autres applications du dépôt ne sont pas modifiées.
+**Publié sur Vercel : https://clair-budget.vercel.app/**, source Express `bb116bb`, complétée par le correctif de conversion `dd7c852` de `feat/clair-express`, déploiement `dpl_BcrZig2Kb3zVyuegxXPLN9Qbj8TU` READY. Migration de compatibilité appliquée et rappels v3 actifs après accord explicite. PR29 ouverte, sans fusion dans `main` : le contrôle automatique a jugé l’autorisation de fusion distincte manquante. Les autres applications du dépôt ne sont pas modifiées.
 
 ## Fonctions développées
 
@@ -8,7 +8,7 @@
 - Saisie du seul montant ; date civile Europe/Paris, instant UTC, devise et budget ajoutés automatiquement. Catégorie historique prudente ou Non classée ; choix facultatif et correction dans le formulaire existant.
 - Raccourcis de montants fréquents, complétés par des montants usuels ; ils remplissent le champ sans enregistrer. Analyse des petites dépenses par catégorie sur 30 jours, seuil affiché. Détection de dépenses similaires disponible comme fonction pure ; aucune fusion ni création automatique.
 - Devise suggérée à la création selon la région explicite configurée sur l’appareil : MA→MAD, CA→CAD, CH→CHF et régions des devises existantes. Choix modifiable, aucune position GPS ou recherche IP ; une langue sans région et une région inconnue gardent le choix EUR existant. Aucun changement des budgets déjà initialisés.
-- Montants entiers en centimes, EUR/USD/GBP/MAD/CAD/CHF/XOF/XAF ; francs CFA entiers. GBP/MAD/CAD/CHF natifs, conversion croisée refusée faute de taux vérifié. JSON v3 conservé avec extension Express optionnelle.
+- Montants entiers en centimes, EUR/USD/GBP/MAD/CAD/CHF/XOF/XAF ; francs CFA entiers. Conversion des huit codes par référence InforEuro novembre 2026 ; détails de politique, tests et déploiement dans `EXCHANGE.md`. JSON v3 conservé avec extension Express optionnelle.
 - Ticket stable, verrou de soumission, insertion idempotente, validation stricte, reprise après erreur de stockage, persistance locale puis synchronisation existante. Contrôles du propriétaire, de la session et des changements de budget ; correction impossible après suppression/modification concurrente.
 - Métadonnées Express préservées dans sauvegardes, synchronisation et conversions autorisées. Import/reset conservent le marqueur de compatibilité et vérifient leur contexte avant toute écriture.
 
@@ -42,8 +42,12 @@ Livraison réalisée :
 
 1. Migration `clair_express_schema_and_native_currencies` appliquée ; vérification des huit devises, RLS, garde épargne, provenance Express, sécurité invoker et garde de conversion atomique. Aucun budget réécrit.
 2. Bundle complet `clair-reminders` v3 actif, fichiers relus identiques au code validé. Requêtes réelles : origines Vercel/GitHub OPTIONS 204, origine étrangère 403, POST sans JWT 401. Aucun envoi de notification déclenché pour un test.
-3. Vercel production READY, deux alias attendus, racine 307 vers `/clair/`. Les 46 ressources publiques correspondent octet par octet au paquet de 47 fichiers (configuration Vercel comprise). HTML Git : `ef0314a4f9cbe57d9aa092a3219d249130ecd360`.
+3. Vercel production READY, deux alias attendus, racine 307 vers `/clair/`. Les 47 ressources publiques correspondent octet par octet au paquet de 48 fichiers (configuration Vercel comprise). HTML Git courant : `6cf9fb3c1c2e7a80417c6f35b29d36432b837ae8`.
 4. Vérification indépendante sur le site public : Express EUR 0,50→3, MAD 0,50→3 et nouvelle dépense de 25, XOF entier, doublons/correction/hors connexion et région ar-MA proposant MAD avec choix CAD conservé. HTML et ressources réels ; toutes les requêtes Supabase de ces parcours sont interceptées avec données fictives, sans écriture réelle.
 5. `main` n’a pas été fusionné : rejet du contrôle automatique sur cette action distincte. La publication Vercel autorisée a utilisé directement la branche testée ; ne pas republier l’ancien `main`. La PR29 conserve le code et les preuves.
 
 Aucun fournisseur activé, secret bancaire demandé ou coût engagé. Le correctif des rappels autorise les origines exactes GitHub Pages et Vercel, avec tests CORS, JWT et propriétaires ; il est publié dans la version 3. Les restrictions d’origine déjà connues de récupération/aide sur Vercel restent à contrôler séparément. Aucun test local ne prouve une réception réelle de notification.
+
+## Correctif des devises grisées
+
+Le correctif `dd7c852` ajoute les taux officiels communs aux huit devises et un protocole de conversion v2, sans changer les anciens taux/RPC. Migration spécifique autorisée et appliquée, Vercel READY, 47 ressources publiques identiques. Les trois parcours mobiles de conversion publics passent avec données fictives. Voir `EXCHANGE.md` pour les sources, les 64 calculs vérifiés et les limites. Le nouveau calcul ne réécrit aucun budget à l’installation ; il s’applique lors d’une conversion explicitement confirmée.
