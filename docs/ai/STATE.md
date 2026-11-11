@@ -10,7 +10,7 @@ Mis à jour le 11 novembre 2026. Production : source `bb116bb`, publiée sur Ver
 
 ## Trois changements récents
 
-1. Express publié : montant seul, budget courant confirmé une fois, raccourcis, catégorie proposée/modifiable, correction protégée et hors connexion. Huit codes natifs EUR/USD/GBP/MAD/CAD/CHF/XOF/XAF. Région de l’appareil : suggestion modifiable au nouveau budget, sans GPS. Aucune conversion croisée GBP/MAD/CAD/CHF sans taux vérifié.
+1. Express publié : montant seul, budget courant confirmé une fois, raccourcis, catégorie proposée/modifiable, correction protégée et hors connexion. Huit codes natifs EUR/USD/GBP/MAD/CAD/CHF/XOF/XAF. Région de l’appareil : suggestion modifiable au nouveau budget, sans GPS. Correctif de conversion des huit devises préparé : référence officielle InforEuro novembre 2026, aperçu daté et RPC v2 ; voir `EXCHANGE.md`. La production actuelle garde les quatre choix grisés jusqu’à sa publication.
 2. Migration `clair_express_schema_and_native_currencies` appliquée : garde Express/provenance et huit devises, sans réécriture des budgets ; RLS, garde épargne et conversion atomique conservées. Rappels `clair-reminders` version 3 actifs, origines exactes Vercel/GitHub autorisées, JWT/propriétaires conservés.
 3. PR29 reste ouverte sur `feat/clair-express`. Le contrôle automatique a refusé la fusion dans `main`, jugeant l’accord de fusion distinct manquant. L’utilisateur a autorisé la migration, les rappels et la publication Vercel ; la version testée a été publiée directement depuis la branche. `main` reste `dc376fb` : ne pas republier cet ancien produit.
 
@@ -23,4 +23,4 @@ Mis à jour le 11 novembre 2026. Production : source `bb116bb`, publiée sur Ver
 
 ## Reprise
 
-Partir de la version publiée sur `feat/clair-express`. La fusion GitHub reste une action distincte à autoriser ; ne pas contourner son refus automatique. Toute future publication CLAIR se fait sur Vercel.
+Partir de `feat/clair-express`. Publier le correctif de conversion après les contrôles : migration additive `exchange-v2.sql`, puis paquet Vercel. La fusion GitHub reste une action distincte à autoriser ; ne pas contourner son refus automatique. Toute future publication CLAIR se fait sur Vercel.

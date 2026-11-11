@@ -24,31 +24,31 @@ test('dateAt uses the transaction instant and Europe Paris across midnight and D
  assert.equal(E.dateAt('2026-03-28T23:30:00.000Z'),'2026-03-29');assert.equal(E.dateAt('2026-07-01T22:30:00.000Z'),'2026-07-02');
  assert.throws(()=>E.dateAt('not-a-date'),/date|Date|instant/);assert.throws(()=>E.dateAt('2026-02-30T12:00:00.000Z'),/date|Date|instant/);
 });
-test('GBP supports native amounts and same currency exchange without an invented rate',()=>{
+test('GBP supports native amounts and same currency exchange with verified cross rates',()=>{
  const d=budget();d.currency='GBP';d.transactions[0].express.originalCurrency='GBP';const clean=E.normalize(d);
  assert.equal(clean.currency,'GBP');assert.equal(E.cents('0,50','GBP'),50);assert.equal(E.inputAmount(300,'GBP'),'3,00');assert.match(E.formatMoney(300,'GBP'),/3[,.]00/);
  assert.equal(E.exchangeRate('GBP','GBP'),1);assert.equal(E.exchangeAmount(300,'GBP','GBP'),300);assert.equal(E.convertCurrency(clean,'GBP','2026-11-05').transactions[0].amountCents,300);
- for(const code of ['EUR','USD','XOF','XAF']){assert.throws(()=>E.exchangeAmount(300,'GBP',code),/taux.*vérifié/i);assert.throws(()=>E.exchangeAmount(300,code,'GBP'),/taux.*vérifié/i);assert.throws(()=>E.exchangeRate('GBP',code),/taux.*vérifié/i);assert.throws(()=>E.convertCurrency(clean,code,'2026-11-05'),/taux.*vérifié/i);}
+ for(const code of ['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF']){assert.ok(E.exchangeRate(clean.currency,code)>0);assert.ok(E.exchangeAmount(100000,clean.currency,code)>0);const out=E.convertCurrency(clean,code,'2026-11-05');assert.equal(out.currency,code);assert.deepEqual(copy(out.transactions[0].express),copy(clean.transactions[0].express));}
 });
-test('MAD supports native amounts and same currency exchange without an invented rate',()=>{
+test('MAD supports native amounts and same currency exchange with verified cross rates',()=>{
  const d=budget();d.currency='MAD';d.transactions[0].express.originalCurrency='MAD';d.transactions[0].amountCents=325;const clean=E.normalize(copy(d));assert.equal(clean.version,3);assert.equal(clean.expressSchema,1);assert.equal(clean.transactions[0].express.originalCurrency,'MAD');assert.equal(E.balance(clean,'2026-11-05'),9675);assert.equal(E.normPrefs({dailyGoal:{currency:'MAD',amountCents:2550}}).dailyGoal.amountCents,2550);
  assert.equal(clean.currency,'MAD');assert.equal(E.cents('0,50','MAD'),50);assert.equal(E.inputAmount(300,'MAD'),'3,00');assert.match(E.formatMoney(300,'MAD'),/3[,.]00/);
  assert.equal(E.exchangeRate('MAD','MAD'),1);assert.equal(E.exchangeAmount(300,'MAD','MAD'),300);assert.equal(E.convertCurrency(clean,'MAD','2026-11-05').transactions[0].amountCents,325);
- for(const code of ['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF'].filter(code=>code!==clean.currency)){assert.throws(()=>E.exchangeAmount(300,'MAD',code),/taux.*vérifié/i);assert.throws(()=>E.exchangeAmount(300,code,'MAD'),/taux.*vérifié/i);assert.throws(()=>E.exchangeRate('MAD',code),/taux.*vérifié/i);assert.throws(()=>E.convertCurrency(clean,code,'2026-11-05'),/taux.*vérifié/i);}
+ for(const code of ['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF']){assert.ok(E.exchangeRate(clean.currency,code)>0);assert.ok(E.exchangeAmount(100000,clean.currency,code)>0);const out=E.convertCurrency(clean,code,'2026-11-05');assert.equal(out.currency,code);assert.deepEqual(copy(out.transactions[0].express),copy(clean.transactions[0].express));}
 });
-test('CAD supports native amounts and same currency exchange without an invented rate',()=>{
+test('CAD supports native amounts and same currency exchange with verified cross rates',()=>{
  const d=budget();d.currency='CAD';d.transactions[0].express.originalCurrency='CAD';d.transactions[0].amountCents=325;const clean=E.normalize(copy(d));assert.equal(clean.version,3);assert.equal(clean.expressSchema,1);assert.equal(clean.transactions[0].express.originalCurrency,'CAD');assert.equal(E.balance(clean,'2026-11-05'),9675);assert.equal(E.normPrefs({dailyGoal:{currency:'CAD',amountCents:2550}}).dailyGoal.amountCents,2550);
  assert.equal(clean.currency,'CAD');assert.equal(E.cents('0,50','CAD'),50);assert.equal(E.inputAmount(300,'CAD'),'3,00');assert.match(E.formatMoney(300,'CAD'),/3[,.]00/);
  assert.equal(E.exchangeRate('CAD','CAD'),1);assert.equal(E.exchangeAmount(300,'CAD','CAD'),300);assert.equal(E.convertCurrency(clean,'CAD','2026-11-05').transactions[0].amountCents,325);
- for(const code of ['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF'].filter(code=>code!==clean.currency)){assert.throws(()=>E.exchangeAmount(300,'CAD',code),/taux.*vérifié/i);assert.throws(()=>E.exchangeAmount(300,code,'CAD'),/taux.*vérifié/i);assert.throws(()=>E.exchangeRate('CAD',code),/taux.*vérifié/i);assert.throws(()=>E.convertCurrency(clean,code,'2026-11-05'),/taux.*vérifié/i);}
+ for(const code of ['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF']){assert.ok(E.exchangeRate(clean.currency,code)>0);assert.ok(E.exchangeAmount(100000,clean.currency,code)>0);const out=E.convertCurrency(clean,code,'2026-11-05');assert.equal(out.currency,code);assert.deepEqual(copy(out.transactions[0].express),copy(clean.transactions[0].express));}
 });
-test('CHF supports native amounts and same currency exchange without an invented rate',()=>{
+test('CHF supports native amounts and same currency exchange with verified cross rates',()=>{
  const d=budget();d.currency='CHF';d.transactions[0].express.originalCurrency='CHF';d.transactions[0].amountCents=325;const clean=E.normalize(copy(d));assert.equal(clean.version,3);assert.equal(clean.expressSchema,1);assert.equal(clean.transactions[0].express.originalCurrency,'CHF');assert.equal(E.balance(clean,'2026-11-05'),9675);assert.equal(E.normPrefs({dailyGoal:{currency:'CHF',amountCents:2550}}).dailyGoal.amountCents,2550);
  assert.equal(clean.currency,'CHF');assert.equal(E.cents('0,50','CHF'),50);assert.equal(E.inputAmount(300,'CHF'),'3,00');assert.match(E.formatMoney(300,'CHF'),/3[,.]00/);
  assert.equal(E.exchangeRate('CHF','CHF'),1);assert.equal(E.exchangeAmount(300,'CHF','CHF'),300);assert.equal(E.convertCurrency(clean,'CHF','2026-11-05').transactions[0].amountCents,325);
- for(const code of ['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF'].filter(code=>code!==clean.currency)){assert.throws(()=>E.exchangeAmount(300,'CHF',code),/taux.*vérifié/i);assert.throws(()=>E.exchangeAmount(300,code,'CHF'),/taux.*vérifié/i);assert.throws(()=>E.exchangeRate('CHF',code),/taux.*vérifié/i);assert.throws(()=>E.convertCurrency(clean,code,'2026-11-05'),/taux.*vérifié/i);}
+ for(const code of ['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF']){assert.ok(E.exchangeRate(clean.currency,code)>0);assert.ok(E.exchangeAmount(100000,clean.currency,code)>0);const out=E.convertCurrency(clean,code,'2026-11-05');assert.equal(out.currency,code);assert.deepEqual(copy(out.transactions[0].express),copy(clean.transactions[0].express));}
 });
 test('verified conversions retain the original Express provenance and account preference',()=>{
  const d=budget(),before=JSON.stringify(d),out=E.convertCurrency(d,'USD','2026-11-05');
- assert.deepEqual(copy(out.transactions[0].express),metadata());assert.equal(out.transactions[0].amountCents,336);assert.equal(out.preferences.express.defaultAccountId,'current-budget');assert.equal(out.expressSchema,1);assert.equal(JSON.stringify(d),before);
+ assert.deepEqual(copy(out.transactions[0].express),metadata());assert.equal(out.transactions[0].amountCents,334);assert.equal(out.preferences.express.defaultAccountId,'current-budget');assert.equal(out.expressSchema,1);assert.equal(JSON.stringify(d),before);
 });

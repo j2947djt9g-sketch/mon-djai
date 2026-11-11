@@ -134,3 +134,6 @@ jobs:
           CLAIR_SQL_VECTORS=1 node clair/accounts/test-exchange.cjs > "$RUNNER_TEMP/clair-exchange-vectors.sql"
           psql -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/clair-exchange-vectors.sql"
           psql -v ON_ERROR_STOP=1 -f clair/accounts/verify-express.sql
+          psql -v ON_ERROR_STOP=1 -f clair/accounts/verify-exchange-v2.sql
+          CLAIR_SQL_V2_VECTORS=1 node clair/accounts/test-exchange.cjs > "$RUNNER_TEMP/clair-exchange-v2-vectors.sql"
+          psql -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/clair-exchange-v2-vectors.sql"

@@ -156,11 +156,12 @@
       // Commit metadata only after persistence succeeds, so a full storage leaves both copies intact.
       const raw=JSON.stringify({...this.record.payload,_cloud:meta});localStorage.setItem(this.key(),raw);this.record={payload:this.record.payload,meta};this.conflict=null;this.hooks.apply?.(this.record.payload,raw);this.status='pending';this.emit();this.schedule();
     }
-    async convertCurrency(to,revision,asOf){
+    async convertCurrency(to,revision,asOf,policyId){
+      if(policyId!=='inforeuro-2026-11')throw Error('Politique de conversion invalide. Recommence l’aperçu avec une version à jour.');
       if(!this.user||!this.ready||this.busy||this.converting||this.conflict||this.status!=='synced'||this.record?.meta.dirty||this.record?.meta.revision!==revision)throw Error('Synchronise ton budget et recommence l’aperçu.');
       const epoch=this.epoch,startingRaw=localStorage.getItem(this.key());this.converting=true;this.busy=true;this.emit();
       try{
-        const {data,error}=await this.client.rpc('convert_clair_currency',{p_currency:to,p_expected_revision:revision,p_operation_id:crypto.randomUUID(),p_as_of:asOf});
+        const {data,error}=await this.client.rpc('convert_clair_currency_v2',{p_currency:to,p_expected_revision:revision,p_operation_id:crypto.randomUUID(),p_as_of:asOf,p_policy_id:policyId});
         if(epoch!==this.epoch)throw Error('Le compte a changé pendant la conversion.');
         if(error)throw Error(error.message||'Conversion indisponible. Ton budget est conservé.');
         if(!data?.saved){this.setConflict(data?.row||null);throw Error('Un autre appareil a modifié le budget. Vérifie la copie en ligne.');}

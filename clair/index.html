@@ -540,10 +540,9 @@ html[data-theme=dark] .profile-page{--profile-banner-bg:linear-gradient(125deg,#
     if(typeof value!=='string'||!Object.prototype.hasOwnProperty.call(currencies,value))throw Error('Devise non prise en charge. Mets Clair à jour ou utilise une sauvegarde compatible.');
     return value;
   }
-  // Eurostat/ECB annual EUR/USD averages, 2016–2025, equally weighted by year.
-  // EUR/CFA official fixed parity: 655.957 XOF or XAF per EUR (French Treasury).
-  // Sources and method: clair/accounts/exchange-rates.json.
-  const exchangePolicy=Object.freeze({id:'annual-mean-2016-2025',period:'2016–2025',usdAnnual:Object.freeze([1.1069,1.1297,1.1810,1.1195,1.1422,1.1827,1.0530,1.0813,1.0824,1.1300]),perEuro:Object.freeze({EUR:100000,USD:112087,XOF:65595700,XAF:65595700})});
+  // Frozen European Commission InforEuro accounting reference, November 2026.
+  // Exact EUR-base integers (scale 100000); provenance: exchange-rates-v2.json.
+  const exchangePolicy=Object.freeze({id:'inforeuro-2026-11',period:'novembre 2026',perEuro:Object.freeze({EUR:100000,USD:111300,GBP:83578,MAD:1098365,CAD:155770,CHF:92220,XOF:65595700,XAF:65595700})});
   function exchangeRate(from,to){
     from=currencyCode(from);to=currencyCode(to);if(from===to)return 1;
     if(!own(exchangePolicy.perEuro,from)||!own(exchangePolicy.perEuro,to))throw Error('Aucun taux de change vérifié n’est disponible pour cette devise. Ton budget est conservé.');
@@ -1173,11 +1172,12 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       // Commit metadata only after persistence succeeds, so a full storage leaves both copies intact.
       const raw=JSON.stringify({...this.record.payload,_cloud:meta});localStorage.setItem(this.key(),raw);this.record={payload:this.record.payload,meta};this.conflict=null;this.hooks.apply?.(this.record.payload,raw);this.status='pending';this.emit();this.schedule();
     }
-    async convertCurrency(to,revision,asOf){
+    async convertCurrency(to,revision,asOf,policyId){
+      if(policyId!=='inforeuro-2026-11')throw Error('Politique de conversion invalide. Recommence l’aperçu avec une version à jour.');
       if(!this.user||!this.ready||this.busy||this.converting||this.conflict||this.status!=='synced'||this.record?.meta.dirty||this.record?.meta.revision!==revision)throw Error('Synchronise ton budget et recommence l’aperçu.');
       const epoch=this.epoch,startingRaw=localStorage.getItem(this.key());this.converting=true;this.busy=true;this.emit();
       try{
-        const {data,error}=await this.client.rpc('convert_clair_currency',{p_currency:to,p_expected_revision:revision,p_operation_id:crypto.randomUUID(),p_as_of:asOf});
+        const {data,error}=await this.client.rpc('convert_clair_currency_v2',{p_currency:to,p_expected_revision:revision,p_operation_id:crypto.randomUUID(),p_as_of:asOf,p_policy_id:policyId});
         if(epoch!==this.epoch)throw Error('Le compte a changé pendant la conversion.');
         if(error)throw Error(error.message||'Conversion indisponible. Ton budget est conservé.');
         if(!data?.saved){this.setConflict(data?.row||null);throw Error('Un autre appareil a modifié le budget. Vérifie la copie en ligne.');}
@@ -2322,23 +2322,24 @@ function submitCharge(f){
     currencyPreviewState=null;
     const available=code=>{try{E.exchangeRate(data.currency,code);return true;}catch{return false;}};
     if(!Object.keys(E.currencies).some(code=>code!==data.currency&&available(code))){dialog('Conversion indisponible',`<p class="help">Aucun taux vérifié n’est disponible pour changer la devise de ton budget (${esc(data.currency)}). Tes montants gardent leur devise actuelle.</p><div class="dialog-actions"><button type="button" class="button" data-action="close">Fermer</button></div>`,'currency');return;}
-    dialog('Changer de devise',`<p class="help">Tout ton budget sera converti : solde, historique, habitudes, budgets et épargne.</p><label class="field"><span>Nouvelle devise</span><select id="currency-target">${Object.entries(E.currencies).filter(([c])=>c!==data.currency).map(([c,m])=>`<option value="${c}" ${available(c)?'':'disabled'}>${esc(m.label)}${available(c)?'':' — taux indisponible'}</option>`).join('')}</select></label><p class="notice">Les conversions avec le dollar américain utilisent la moyenne annuelle 2016–2025 : 1 € = 1,12087 $US. Ce taux historique est indicatif et ne correspond pas au cours du jour. Pour le CFA : 1 € = 655,957 F CFA.</p><p class="help">Arrondi au centime en EUR/USD, au franc entier en CFA. Les autres devises n’ont pas encore de taux de conversion vérifié. Une sauvegarde locale sera conservée avant la conversion. Les conversions répétées peuvent cumuler des arrondis.</p><div id="form-error" class="notice error" role="alert"></div><div class="dialog-actions"><button type="button" class="button" data-action="close">Annuler</button><button type="button" class="button primary" data-action="currency-preview">Voir la conversion</button></div>`,'currency');
+    dialog('Changer de devise',`<p class="help">Tout ton budget sera converti : solde, historique, habitudes, budgets et épargne.</p><label class="field"><span>Nouvelle devise</span><select id="currency-target">${Object.entries(E.currencies).filter(([c])=>c!==data.currency).map(([c,m])=>`<option value="${c}" ${available(c)?'':'disabled'}>${esc(m.label)}${available(c)?'':' — taux indisponible'}</option>`).join('')}</select></label><p class="notice">Taux de référence mensuels InforEuro — ${esc(E.exchangePolicy.period)} (Commission européenne). Référence comptable indicative, sans frais de change et sans cours en temps réel. <a href="https://commission.europa.eu/funding-tenders/procedures-guidelines-tenders/information-contractors-and-beneficiaries/exchange-rate-inforeuro_en" target="_blank" rel="noopener noreferrer">Source officielle</a>.</p><p class="help">Arrondi au centime pour EUR/USD/GBP/MAD/CAD/CHF, au franc entier pour XOF/XAF. Une sauvegarde locale sera conservée avant la conversion. Les conversions répétées peuvent cumuler des arrondis.</p><div id="form-error" class="notice error" role="alert"></div><div class="dialog-actions"><button type="button" class="button" data-action="close">Annuler</button><button type="button" class="button primary" data-action="currency-preview">Voir la conversion</button></div>`,'currency');
   }
   function currencyPreview(){
-    const to=$('#currency-target').value,next=E.convertCurrency(data,to),before=E.balance(data),after=E.balance(next),rate=E.exchangeRate(data.currency,to);
-    currencyPreviewState={to,snapshot,revision:cloud.record?.meta.revision||0};
-    dialog('Vérifier la conversion',`<p class="help">${esc(E.currencies[data.currency].label)} → ${esc(E.currencies[to].label)}</p><p><strong>${esc(E.formatMoney(before,data.currency))} → ${esc(E.formatMoney(after,to))}</strong></p><p class="help">Taux : 1 ${esc(data.currency)} ≈ ${esc(new Intl.NumberFormat('fr-FR',{maximumFractionDigits:8}).format(rate))} ${esc(to)}.</p><p class="notice">${data.currency==='USD'||to==='USD'?'Moyenne historique 2016–2025, valeur indicative.':'Parité fixe officielle euro/CFA.'} Ce changement convertit aussi les montants de ton historique et tes dépenses automatiques. Il ne change pas de l'argent auprès d'une banque.</p><p class="help">Les arrondis sont appliqués à chaque montant ; le solde initial est ajusté si nécessaire pour conserver le total converti affiché ci-dessus.</p><div id="form-error" class="notice error" role="alert"></div><div class="dialog-actions"><button type="button" class="button" data-action="currency-change">Retour</button><button type="button" class="button primary" data-action="currency-apply">Convertir mon budget</button></div>`,'currency-preview');
+    const asOf=E.today(),policyId=E.exchangePolicy.id,to=$('#currency-target').value,next=E.convertCurrency(data,to,asOf),before=E.balance(data,asOf),after=E.balance(next,asOf),rate=E.exchangeRate(data.currency,to);
+    currencyPreviewState={to,snapshot,revision:cloud.record?.meta.revision||0,asOf,policyId};
+    dialog('Vérifier la conversion',`<p class="help">${esc(E.currencies[data.currency].label)} → ${esc(E.currencies[to].label)}</p><p><strong>${esc(E.formatMoney(before,data.currency))} → ${esc(E.formatMoney(after,to))}</strong></p><p class="help">Taux : 1 ${esc(data.currency)} ≈ ${esc(new Intl.NumberFormat('fr-FR',{maximumFractionDigits:8}).format(rate))} ${esc(to)}.</p><p class="notice">Référence InforEuro — ${esc(E.exchangePolicy.period)}, valeur indicative. Ce changement convertit aussi les montants de ton historique et tes dépenses automatiques. Il ne change pas de l'argent auprès d'une banque.</p><p class="help">Les arrondis sont appliqués à chaque montant ; le solde initial est ajusté si nécessaire pour conserver le total converti affiché ci-dessus.</p><div id="form-error" class="notice error" role="alert"></div><div class="dialog-actions"><button type="button" class="button" data-action="currency-change">Retour</button><button type="button" class="button primary" data-action="currency-apply">Convertir mon budget</button></div>`,'currency-preview');
   }
   async function applyCurrency(button){
     const choice=currencyPreviewState;if(!choice||button.disabled)return;
     if(snapshot!==choice.snapshot||localStorage.getItem(KEY)!==snapshot)throw Error('Le budget a changé. Recommence l’aperçu avant de convertir.');
+    if(choice.policyId!==E.exchangePolicy.id)throw Error('Les taux ont changé. Recommence l’aperçu avant de convertir.');
     if(cloud.enabled&&(navigator.onLine===false||cloud.status!=='synced'||cloud.record?.meta.dirty||cloud.busy))throw Error('Attends que ton budget soit synchronisé avant de convertir.');
     // A failed backup must block conversion, never discard the previous amounts.
     localStorage.setItem(BACKUP+'-currency',JSON.stringify(data));
     button.disabled=true;
     try{
-      if(cloud.enabled)await cloud.convertCurrency(choice.to,choice.revision,E.today());
-      else{const next=E.convertCurrency(data,choice.to);if(!commit(d=>{for(const k of Object.keys(d))delete d[k];Object.assign(d,next);}))return;}
+      if(cloud.enabled)await cloud.convertCurrency(choice.to,choice.revision,choice.asOf,choice.policyId);
+      else{const next=E.convertCurrency(data,choice.to,choice.asOf);if(!commit(d=>{for(const k of Object.keys(d))delete d[k];Object.assign(d,next);}))return;}
       currencyPreviewState=null;close();render();notify('Ton budget a été converti. La copie précédente reste sur cet appareil.');soundFeedback.saved();
     }finally{button.disabled=false;}
   }
