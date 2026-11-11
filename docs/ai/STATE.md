@@ -17,9 +17,9 @@ Mis à jour le 11 novembre 2026. Branche de travail : `feat/clair-express`, base
 ## Vérifications et limites
 
 - Express : 33 suites Node ; Chromium avec comptes fictifs, huit codes devises, vues 320/390 px, standalone simulé et déconnexion/reconnexion. Preuves et limites : `EXPRESS_DELIVERY.md`.
-- Banque : étude et tarifs sourcés dans `BANKING_FEASIBILITY.md`. Aucune connexion gratuite durable vérifiée ; import/rapprochement restent une proposition à autoriser, aucun composant bancaire développé.
-- Ni compte réel ni iPhone/Safari physique testés. Aide/récupération/rappels sur Vercel : restriction d’origine connue, ne pas annoncer leur fonctionnement réel sans contrôle ciblé.
+- Banque : volet abandonné à la demande de l’utilisateur. Aucune connexion, aucun import ni rapprochement à développer. `BANKING_FEASIBILITY.md` reste une archive datée.
+- Ni compte réel ni iPhone/Safari physique testés. Rappels : correction d’origine Vercel préparée et testée, non publiée. Aide/récupération : restriction d’origine connue ; aucun fonctionnement réel annoncé sans contrôle ciblé.
 
 ## Reprise
 
-Examiner la PR29 en brouillon sur `feat/clair-express`. Ne pas fusionner ni publier sans accord explicite. Autorisation distincte nécessaire pour la migration serveur, la publication et toute phase D bancaire.
+Examiner la PR29 en brouillon sur `feat/clair-express`. Ne pas fusionner ni publier sans accord explicite. Publication des seules fonctions hors banque : accord explicite demandé ; migration serveur et rappels restent préparés. Le volet bancaire est annulé.

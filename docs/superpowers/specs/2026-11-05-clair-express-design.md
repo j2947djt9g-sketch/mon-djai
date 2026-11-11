@@ -80,3 +80,7 @@ Aucun test réel de banque, e-mail ou installation iPhone physique ne sera dédu
 ## Extension demandée le 11 novembre
 
 Ajouter MAD, CAD et CHF natifs en centimes à deux décimales, sans inventer de taux de conversion. Proposer une devise uniquement au nouveau budget depuis la région explicite des langues de l’appareil ; choix modifiable et indication claire de cette source, sans GPS ni recherche IP. Ne pas inférer un pays d’une langue seule et conserver la devise des budgets initialisés. Maintenir les huit codes dans le moteur, les suggestions, le profil, les rappels et la garde SQL préparée. La PR29 reste en brouillon, sans publication ni migration distante autorisée.
+
+## Périmètre confirmé : fonctions hors banque
+
+À la demande de l’utilisateur, abandonner la connexion bancaire, l’import et le rapprochement. Conserver Dépense Express, les raccourcis, la catégorisation historique, l’analyse des petites dépenses, les nouvelles devises et la suggestion régionale. Les passages bancaires ci-dessus décrivent une demande historique désormais annulée. Publication soumise à l’accord explicite initialement demandé.

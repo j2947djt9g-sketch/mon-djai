@@ -57,3 +57,7 @@
 - [ ] Fresh reviewer examines complete diff and evidence, grades blocking/important/minor findings; fix blockers and important defects.
 - [ ] Update compact STATE and MAP, prepare branch/PR and final report with actual tests/limitations and approval-required actions.
 - [ ] Leave main and public deployment unchanged; no automatic merge or promotion.
+
+## Mise à jour du périmètre
+
+Le volet bancaire est abandonné à la demande de l’utilisateur : aucune phase D à réaliser. Les tâches déjà achevées hors banque restent dans la PR29 ; préparer leur seule livraison. Les anciennes propositions d’intégration bancaire ci-dessus sont archivées, sans autorisation à solliciter.

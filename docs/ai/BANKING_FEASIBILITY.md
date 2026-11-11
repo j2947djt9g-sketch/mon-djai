@@ -1,4 +1,6 @@
-# Faisabilité bancaire — étude C, proposition D uniquement
+# Étude bancaire archivée — volet abandonné
+
+**Décision actuelle : le volet bancaire est abandonné à la demande de l’utilisateur.** Ce document est une archive de recherche, pas une feuille de route. Aucune connexion bancaire, aucun import ou rapprochement n’est prévu.
 
 Étude du **5 novembre 2026**, indépendante du développement Express. Sources officielles consultées à cette date. **Aucune mise en œuvre autorisée par ce document** : connexion bancaire, compte fournisseur, facturation et développement de la phase D attendent une validation explicite. Aucun compte bancaire connecté ni service activé pendant l’étude.
 

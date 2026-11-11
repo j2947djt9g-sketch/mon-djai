@@ -31,3 +31,5 @@ Tests sans comptes réels : test-subscriptions.cjs, test-push-server.cjs, verify
 ## Prérequis GBP/MAD/CAD/CHF — branche Express du 11 novembre 2026
 
 Avant une future publication avec GBP, MAD, CAD ou CHF, redéployer aussi `supabase/functions/clair-reminders` : son ordonnanceur doit accepter GBP, MAD, CAD et CHF et le handler formate le montant natif sans conversion. Le changement local est couvert par `test-push-server.cjs` ; aucun déploiement de fonction n’a été effectué ici. La garde SQL `express-compatibility.sql` reste également un prérequis serveur distinct.
+
+Le gestionnaire préparé accepte uniquement les origines exactes `https://j2947djt9g-sketch.github.io` et `https://clair-budget.vercel.app`. Les réponses reflètent l’origine acceptée avec `Vary: Origin` ; les autres origines restent refusées. Cela ne remplace pas le JWT et les contrôles de propriétaire. Publier le bundle complet après autorisation avant de vérifier l’activation et la réception réelles sur Vercel.
