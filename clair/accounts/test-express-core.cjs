@@ -10,7 +10,7 @@ test('default account consent belongs only to the supplied budget payload',()=>{
 test('amount only Express input prepares a dated expense without mutating the budget',()=>{
  const d=budget(),before=JSON.stringify(d),tx=C.prepareExpense?.(E,d,input());assert.equal(tx?.amountCents,300);assert.equal(tx.name,'Dépense Express');assert.equal(tx.date,'2026-11-05');assert.equal(tx.type,'expense');assert.equal(tx.categoryId,'non-classee');assert.deepEqual(copy(tx.express),{source:'express',createdAt:'2026-11-04T23:30:00.000Z',originalCurrency:'EUR',accountId:'current-budget',idempotencyKey:'express-1'});assert.equal(JSON.stringify(d),before);
  for(const [rawAmount,want] of [['0,50',50],['25',2500]])assert.equal(C.prepareExpense(E,d,input({rawAmount})).amountCents,want);
- for(const currency of ['EUR','USD','GBP','XOF','XAF']){const tx=C.prepareExpense(E,budget(true,currency),input());assert.equal(tx.amountCents,300);assert.equal(tx.express.originalCurrency,currency);}
+ for(const currency of ['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF']){const tx=C.prepareExpense(E,budget(true,currency),input());assert.equal(tx.amountCents,300);assert.equal(tx.express.originalCurrency,currency);}
 });
 test('Express rejects unconfirmed, unconfigured, nonpositive or unsafe input without writes',()=>{
  const d=budget(),before=JSON.stringify(d);assert.throws(()=>C.prepareExpense(E,budget(false),input()),/confirm|budget/i);const empty=E.empty();assert.throws(()=>C.prepareExpense(E,empty,input()),/configur|budget/i);

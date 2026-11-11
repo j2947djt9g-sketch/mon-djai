@@ -28,6 +28,6 @@ Le cron vérifie les rappels toutes les cinq minutes pendant l’heure de 9 h à
 
 Tests sans comptes réels : test-subscriptions.cjs, test-push-server.cjs, verify-subscriptions.cjs, verify-reminders.sql. Aucun paiement bancaire ni e-mail n’est envoyé par ces tests.
 
-## Prérequis GBP — branche Express du 5 novembre 2026
+## Prérequis GBP/MAD/CAD/CHF — branche Express du 11 novembre 2026
 
-Avant une future publication avec GBP, redéployer aussi `supabase/functions/clair-reminders` : son ordonnanceur doit accepter GBP et le handler formate le montant natif sans conversion. Le changement local est couvert par `test-push-server.cjs` ; aucun déploiement de fonction n’a été effectué ici. La garde SQL `express-compatibility.sql` reste également un prérequis serveur distinct.
+Avant une future publication avec GBP, MAD, CAD ou CHF, redéployer aussi `supabase/functions/clair-reminders` : son ordonnanceur doit accepter GBP, MAD, CAD et CHF et le handler formate le montant natif sans conversion. Le changement local est couvert par `test-push-server.cjs` ; aucun déploiement de fonction n’a été effectué ici. La garde SQL `express-compatibility.sql` reste également un prérequis serveur distinct.

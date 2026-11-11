@@ -7,9 +7,9 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
 const seed=currency=>({version:3,currency,initialized:true,setupDone:true,openingCents:100000,openingBalanceDate:'2026-11-01',transactions:[],rules:[],skipped:[],budgets:{},budgetOverrides:{},customCategories:[],savingsGoal:0,savingsSchema:1,savingsProjects:[],fixedExpenses:[],preferences:{theme:'light',wallpaper:'plain',photo:null,reminders:false}});
 (async()=>{await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin='http://127.0.0.1:'+server.address().port;
  const browser=await chromium.launch({headless:true,...(process.env.CLAIR_CHROME_PATH?{executablePath:process.env.CLAIR_CHROME_PATH}:{})});
- try{for(const [currency,width,standalone]of [['EUR',320,false],['EUR',390,true],['USD',390,false],['GBP',390,false],['XOF',390,false],['XAF',390,false]]){
+ try{for(const [currency,width,standalone]of [['EUR',320,false],['EUR',390,true],['USD',390,false],['GBP',390,false],['MAD',390,false],['CAD',390,false],['CHF',390,false],['XOF',390,false],['XAF',390,false]]){
   let remote={payload:seed(currency),revision:1,operation_id:'qa-seed',display_name:'QA'},writes=0;
-  const context=await browser.newContext({viewport:{width,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block',reducedMotion:'reduce'}),page=await context.newPage(),errors=[];
+  const context=await browser.newContext({viewport:{width,height:844},isMobile:true,hasTouch:true,locale:'ar-MA',serviceWorkers:'block',reducedMotion:'reduce'}),page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await context.route('**/*',async route=>{const url=new URL(route.request().url());if(url.origin===origin)return route.continue();
    if(url.hostname!=='hkssnbvktfscizojhftl.supabase.co')return route.abort();
@@ -22,6 +22,33 @@ const seed=currency=>({version:3,currency,initialized:true,setupDone:true,openin
   await page.addInitScript(({user,jwt,exp,standalone})=>{localStorage.setItem('clair-welcome-seen-v1','1');sessionStorage.setItem('clair-splash-v2','1');localStorage.setItem('clair-account-session-v1',JSON.stringify({access_token:jwt,refresh_token:'SYNTHETIC',expires_in:3600,expires_at:exp,token_type:'bearer',user}));if(standalone){Object.defineProperty(navigator,'standalone',{value:true});const original=window.matchMedia.bind(window);window.matchMedia=query=>query==='(display-mode: standalone)'?{matches:true,media:query,addEventListener(){},removeEventListener(){}}:original(query);}},{user,jwt,exp,standalone});
   await page.goto(origin+'/index.html');await page.locator('.balance-section').waitFor();
   const read=()=>page.evaluate(uid=>JSON.parse(localStorage.getItem('clair-account-budget-v1-'+uid)),uid);
+  assert.equal((await read()).currency,currency,'Device locale must not change an existing budget currency');
+  if(width===320){
+   const geometry=await page.locator('.overview-controls').evaluate(controls=>{
+    const original=controls.style.fontFamily;controls.style.fontFamily='Georgia, "Times New Roman", serif';
+    const buttons=[...controls.querySelectorAll('.overview-entry-actions .button')],previous=buttons.map(button=>button.style.fontFamily);
+    buttons.forEach(button=>{button.style.fontFamily='inherit';});
+    try{
+     const rect=el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,bottom:r.bottom};};
+     const help=controls.querySelector('.balance-help'),summary=help.querySelector('summary'),box=action=>rect(controls.querySelector('[data-action='+action+']'));
+     const measure=()=>({add:box('add'),express:box('express-open'),summary:rect(summary),help:rect(help),controls:rect(controls),scroll:document.documentElement.scrollWidth,width:innerWidth});
+     const closed=measure();summary.click();const opened=measure();summary.click();return {closed,opened,reclosed:measure()};
+    }
+    finally{controls.style.fontFamily=original;buttons.forEach((button,index)=>{button.style.fontFamily=previous[index];});}
+   });
+   for(const state of ['closed','reclosed']){
+    const g=geometry[state];
+    assert(Math.abs(g.add.y-g.express.y)<2&&Math.abs(g.summary.y-g.add.y)<2,'320px closed helper and both actions must share a row with a wide fallback font');
+    assert(g.add.height>=44&&g.express.height>=44&&g.summary.height>=44,'Home controls retain 44px touch height');
+    assert(g.add.width>=44&&g.express.width>=44&&g.summary.width>=44,'Home controls retain 44px touch width');
+    assert(g.scroll<=g.width+1,'Wide fallback font must not cause horizontal overflow');
+   }
+   assert(Math.abs(geometry.opened.help.width-geometry.opened.controls.width)<2,'Open help spans the complete controls row');
+   assert(geometry.opened.add.y>=geometry.opened.help.bottom-1,'Actions move below expanded help');
+   assert(geometry.opened.scroll<=geometry.opened.width+1,'Expanded help must not overflow');
+
+  }
+
   await page.locator('[data-action="express-open"]:visible').click();assert.equal((await read()).preferences.express,undefined);
   await page.getByRole('button',{name:'Utiliser mon budget Clair',exact:true}).click();await page.locator('#express-form').waitFor();
   assert.equal((await read()).transactions.length,0);const ticket=await page.locator('#express-form [name=requestId]').inputValue();

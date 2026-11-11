@@ -93,7 +93,7 @@ assert.deepEqual(clean(I.smallExpenseSummary(small,{asOf,thresholdCents:2500})),
 assert.equal(I.smallExpenseSummary(small,{asOf,thresholdCents:300}).totalCents,650);
 
 // Every supported currency retains native integer hundredths; CFA cannot contain fractional francs.
-for(const currency of ['EUR','USD','GBP','XOF','XAF']){
+for(const currency of ['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF']){
  const whole=budget([tx('a',300),tx('b',300)],currency);
  assert.equal(I.suggestCategory(whole,300,valid,options).categoryId,'alimentation',currency);
  assert.equal(I.smallExpenseSummary(whole,{asOf,thresholdCents:300}).currency,currency);

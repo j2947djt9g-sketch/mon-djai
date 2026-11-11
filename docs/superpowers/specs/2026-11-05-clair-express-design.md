@@ -76,3 +76,7 @@ Les suggestions sont recalculées depuis `data` courant. Les raccourcis sans his
 Tests de comportement avant implémentation ; conserver les preuves rouge→vert. Vérifier 0,50/3/25 EUR, les cinq codes monétaires, invalides, quota, doubles clics/Entrée, clé stable, correction/suppression, bascules A/B, ancien formulaire et ancienne action de correction, offline/reconnexion CAS, import/export des métadonnées, refus des conversions GBP sans taux, écran iPhone/standalone et contrôles existants.
 
 Aucun test réel de banque, e-mail ou installation iPhone physique ne sera déduit d’une simulation. Le rapprochement bancaire reste non implémenté et ses tests sont des critères proposés, pas des résultats annoncés.
+
+## Extension demandée le 11 novembre
+
+Ajouter MAD, CAD et CHF natifs en centimes à deux décimales, sans inventer de taux de conversion. Proposer une devise uniquement au nouveau budget depuis la région explicite des langues de l’appareil ; choix modifiable et indication claire de cette source, sans GPS ni recherche IP. Ne pas inférer un pays d’une langue seule et conserver la devise des budgets initialisés. Maintenir les huit codes dans le moteur, les suggestions, le profil, les rappels et la garde SQL préparée. La PR29 reste en brouillon, sans publication ni migration distante autorisée.

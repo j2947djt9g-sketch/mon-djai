@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
   // Read only the supplied budget. Amounts stay in its native integer hundredths.
-  const currencyCodes=new Set(['EUR','USD','GBP','XOF','XAF']);
+  const currencyCodes=new Set(['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF']);
   const builtInCategories=['alimentation','logement','transport','telephone','etudes','hygiene','vetements','famille','loisirs','abonnements','imprevus','autre','non-classee'];
   const safeId=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value)&&!['__proto__','constructor','prototype'].includes(value);
   const expenseCategory=value=>safeId(value)&&value!=='epargne'&&value!=='income';

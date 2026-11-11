@@ -2,7 +2,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const html=fs.readFileSync(__dirname+'/../index.html','utf8'),script=process.env.CLAIR_ENGINE_SCRIPT?fs.readFileSync(process.env.CLAIR_ENGINE_SCRIPT,'utf8'):[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)][0][1],ctx={window:{},Intl,Date};
 vm.createContext(ctx);vm.runInContext(script,ctx);const E=ctx.window.ClairEngine;
 const legacy=E.empty();delete legacy.currency;assert.equal(E.normalize(legacy).currency,'EUR');
-for(const code of ['EUR','USD','GBP','XOF','XAF']){
+for(const code of ['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF']){
  const d=E.empty();d.currency=code;d.initialized=d.setupDone=true;d.openingCents=10000000;
  const clean=E.normalize(JSON.parse(JSON.stringify(d)));assert.equal(clean.currency,code);assert.equal(clean.openingCents,d.openingCents);
  assert.equal(E.cents('1500',code),150000);assert.equal(E.inputAmount(150000,code),code.startsWith('X')?'1500':'1500,00');
@@ -10,4 +10,7 @@ for(const code of ['EUR','USD','GBP','XOF','XAF']){
  if(code.startsWith('X')){assert.throws(()=>E.cents('1,25',code));clean.openingCents=101;assert.throws(()=>E.validateCurrency(clean));}
  else assert.equal(E.cents('1,25',code),125);
 }
-assert.throws(()=>E.currencyCode('JPY'));console.log('PASS five currencies: parsing, formatting, integer CFA, legacy EUR and lossless backup round trips');
+assert.throws(()=>E.currencyCode('JPY'));console.log('PASS eight currencies: parsing, formatting, integer CFA, legacy EUR and lossless backup round trips');
+
+assert.equal(E.currencies.MAD.label,'Dirham marocain (MAD)');assert.equal(E.currencies.MAD.unit,'DH');assert.equal(E.currencies.MAD.digits,2);
+assert.equal(E.currencies.CAD.label,'Dollar canadien (CAD)');assert.equal(E.currencies.CAD.unit,'$CA');assert.equal(E.currencies.CHF.label,'Franc suisse (CHF)');assert.equal(E.currencies.CHF.unit,'CHF');

@@ -74,7 +74,7 @@ function fixture(){
  console.log('PASS Express: explicit first default-budget confirmation only');
 
  // A raw decimal must reach the real engine parser, and the consumed form cannot debit twice.
- for(const [currency,raw,cents] of [['EUR','0,50',50],['EUR','3',300],['EUR','25',2500],['USD','3.25',325],['GBP','3,25',325],['XOF','25',2500],['XAF','3',300]]){
+ for(const [currency,raw,cents] of [['EUR','0,50',50],['EUR','3',300],['EUR','25',2500],['USD','3.25',325],['GBP','3,25',325],['MAD','3,25',325],['CAD','3.25',325],['CHF','0,50',50],['XOF','25',2500],['XAF','3',300]]){
   const g=fixture();assert.equal(typeof g.t.openExpress,'function');g.t.setAccount('amount-'+currency,g.budget(currency,true));
   g.t.openExpress();const ticket=g.requestId();assert(ticket,'Each opening needs a stable request ticket');
   const entry=g.form({amount:raw,categoryId:'non-classee',requestId:ticket});await g.t.expressSubmit(entry);await g.t.expressSubmit(entry);
@@ -84,7 +84,7 @@ function fixture(){
   assert.equal(tx.date,g.E.dateAt(tx.express.createdAt));assert.equal(g.E.balance(g.t.data()),100000-cents);
   assert.equal(JSON.parse(g.storage.get(g.t.key())).transactions.length,1);
  }
- console.log('PASS Express: 0.50/3/25 EUR, USD/GBP decimals, whole XOF/XAF, metadata and no double debit');
+ console.log('PASS Express: 0.50/3/25 EUR, USD/GBP/MAD/CAD/CHF decimals, whole XOF/XAF, metadata and no double debit');
 
  for(const [currency,raw] of [['EUR',''],['EUR','0'],['EUR','-1'],['EUR','3,2,5'],['EUR','3.25x'],['EUR','1e2'],['EUR','0x10'],['EUR','Infinity'],['EUR','100000000.01'],['XOF','0,50'],['XAF','3.25']]){
   const g=fixture();g.t.setAccount('invalid',g.budget(currency,true));g.t.openExpress();const ticket=g.requestId(),before=g.storage.get(g.t.key());

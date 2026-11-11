@@ -1,11 +1,11 @@
 -- PREPARED ONLY: review and validate in a disposable PostgreSQL instance before applying.
 -- Apply after exchange.sql. No existing rows, RLS, grants or conversion rates change.
--- The native GBP guard preserves the atomic conversion operation capability.
+-- The native GBP/MAD/CAD/CHF guard preserves the atomic conversion operation capability.
 begin;
 create or replace function public.clair_guard_currency() returns trigger
 language plpgsql security invoker set search_path='' as $$
 begin
-  if coalesce(new.payload->>'currency','EUR') not in ('EUR','USD','GBP','XOF','XAF') then raise exception 'Unsupported Clair currency' using errcode='22023';end if;
+  if coalesce(new.payload->>'currency','EUR') not in ('EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF') then raise exception 'Unsupported Clair currency' using errcode='22023';end if;
   if TG_OP='UPDATE' and old.payload->>'initialized'='true' and new.payload->>'initialized'='true' and
     (coalesce(old.payload->>'currency','EUR')<>coalesce(new.payload->>'currency','EUR') or coalesce(old.payload->>'currencyRevision','0')<>coalesce(new.payload->>'currencyRevision','0'))
     and coalesce(current_setting('clair.currency_operation',true),'')<>new.operation_id::text then
