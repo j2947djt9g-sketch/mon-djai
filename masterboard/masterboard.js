@@ -1,35 +1,24 @@
 (function(){
   'use strict';
   const motion=window.matchMedia('(prefers-reduced-motion: reduce)');
-  const intro=document.querySelector('#intro'),introStarted=performance.now();let introLeaving=false,introWait=null,introImageWait=null,introExitWait=null,introFallback=null;
+  const intro=document.querySelector('#intro'),introStarted=performance.now();let introLeaving=false,introWait=null,introExitWait=null,introFallback=null;
   document.querySelector('main').inert=true;
   function removeIntro(){
-    for(const timer of [introWait,introImageWait,introExitWait,introFallback])clearTimeout(timer);
+    for(const timer of [introWait,introExitWait,introFallback])clearTimeout(timer);
     motion.removeEventListener?.('change',skipIntroForReducedMotion);intro?.remove();document.querySelector('main').inert=false;
   }
   function leaveIntro(){
     if(!intro?.isConnected||intro.classList.contains('leaving'))return;
-    clearTimeout(introImageWait);intro.classList.add('leaving');
+    intro.classList.add('leaving');
     intro.addEventListener('animationend',event=>{if(event.target===intro)removeIntro();});introExitWait=setTimeout(removeIntro,1300);
-  }
-  async function revealIntroImage(){
-    const panel=intro?.querySelector('.intro-after'),image=panel?.querySelector('img');
-    // An exact source asset is required. Never substitute or request an absent image.
-    if(!image?.getAttribute('src'))return false;
-    let decodeTimeout;
-    try{
-      if(!image.complete||!image.naturalWidth)await Promise.race([image.decode(),new Promise((_,reject)=>{decodeTimeout=setTimeout(()=>reject(Error('Image unavailable')),900);})]);
-      if(!intro.isConnected||!image.naturalWidth)return false;
-      intro.classList.add('image-stage');panel.hidden=false;introImageWait=setTimeout(leaveIntro,1800);return true;
-    }catch{return false;}finally{clearTimeout(decodeTimeout);}
   }
   function finishIntro(skip=false){
     if(!intro?.isConnected)return;
     if(skip||motion.matches){removeIntro();return;}
     if(introLeaving)return;introLeaving=true;
-    introWait=setTimeout(async()=>{if(!intro.isConnected)return;if(!await revealIntroImage())leaveIntro();},Math.max(0,4200-(performance.now()-introStarted)));
+    introWait=setTimeout(leaveIntro,Math.max(0,4200-(performance.now()-introStarted)));
   }
-  intro?.addEventListener('click',()=>{if(intro.classList.contains('image-stage'))leaveIntro();});
+  intro?.addEventListener('click',()=>finishIntro(true));
   function skipIntroForReducedMotion(event){if(event.matches)finishIntro(true);}
   motion.addEventListener?.('change',skipIntroForReducedMotion);
   introFallback=setTimeout(()=>finishIntro(),6000);

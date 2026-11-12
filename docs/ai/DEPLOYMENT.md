@@ -48,3 +48,9 @@ Après validation de la forme puis accord utilisateur, `ef2558c` est publié en 
 Atlas, profil Verre doux et capsule liquide avec rayon de 30 px/marge de 8 px ; SW v40. Moteur et modules compte/cloud/récupération/devises inchangés. Aucune modification Supabase ni fusion dans main. Le paquet de production conserve la configuration réelle ; aucune injection de budget fictif, bannière ou CSP d’aperçu.
 
 Parcours sur fichiers publics via HTTPS de confiance avec empreintes contrôlées : profil, grossissement/glissement et toucher ; Express EUR/MAD/XOF, confirmation, montant invalide, double soumission, hors connexion/reconnexion avec une seule dépense, correction/provenance. Sessions/budgets/transport Supabase fictifs uniquement dans les contextes de test ; aucun compte réel ni écriture backend. Limite Safari/iPhone physique inchangée. Détails : `VISUAL_DELIVERY.md` ; manifeste local `/workspace/clair-visual-work/production-manifest.json`.
+
+## Masterboard : publication demandée, autorisation serveur en attente
+
+La refonte finale et le paquet réel sont prêts : lettrage SVG lumineux, accueil Manrope auto-hébergé, aucune photo d’introduction, barre liquide et compte existant préservés. Le candidat complet est `/workspace/masterboard-design-work/production-candidate` et son manifeste voisin :67 fichiers, CLAIR identique à la production et redirection racine conservée, aucune fixture de démonstration. Ne pas publier le paquet d’aperçu à sa place.
+
+Le service `clair-masterboard` renvoie toujours OPTIONS403 pour l’origine Vercel. Le correctif exact est `MASTERBOARD_VERCEL_PROPOSAL.patch`, non appliqué. La publication Vercel a été demandée ; l’accord distinct sur Supabase reste nécessaire avant de terminer un accès fonctionnel. Aucun backend ni production changé pendant cette préparation ; détails et preuves dans `MASTERBOARD_DESIGN.md`.

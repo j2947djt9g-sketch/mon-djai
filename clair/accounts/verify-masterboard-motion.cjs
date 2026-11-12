@@ -6,7 +6,7 @@ const frozen=new Map(baseline?['index.html','masterboard.css','admin-ui.css','ma
 const server=http.createServer((req,res)=>{
  const relative=new URL(req.url,'http://localhost').pathname.replace(/\/$/,'/index.html').slice(1),file=path.resolve(root,relative);
  if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}
- try{res.setHeader('content-type',{'.html':'text/html;charset=utf-8','.js':'application/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'}[path.extname(file)]||'application/octet-stream');res.end(frozen.get(relative)||fs.readFileSync(file));}catch{res.writeHead(404).end();}
+ try{res.setHeader('content-type',{'.html':'text/html;charset=utf-8','.js':'application/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.webmanifest':'application/manifest+json'}[path.extname(file)]||'application/octet-stream');res.end(frozen.get(relative)||fs.readFileSync(file));}catch{res.writeHead(404).end();}
 });
 const admin='11111111-1111-4111-8111-111111111111',member='22222222-2222-4222-8222-222222222222';
 function fixture(){return {actor:{id:admin,email:'owner@example.invalid'},settings:{mode:'free',monthly_cents:199,payment_phone:''},today:'2026-11-12',users:[{id:admin,email:'owner@example.invalid',name:'Administrateur fictif',confirmed:true,is_admin:true,created_at:'2026-01-01',last_sign_in_at:null},{id:member,email:'camille@example.invalid',name:'Camille Martin',confirmed:true,is_admin:false,created_at:'2026-11-04',last_sign_in_at:null}],requests:[],messages:[],audit:[]};}
@@ -117,56 +117,45 @@ async function intro(browser,origin){
  for(const width of [320,390,1440]){
   const f=await open(browser,origin,{width,signedIn:false,skipIntro:false});try{
    assert.equal(await f.page.locator('.glass-nav-indicator').count(),0,'Signed-out page creates no liquid navigation');
+   assert.equal(await f.page.locator('.intro-wordmark').count(),1,'The entry uses one handwritten SVG wordmark');assert.equal(await f.page.locator('.intro-letters').count(),0,'The old falling text glyphs are removed');
+   assert.equal(await f.page.locator('#intro img,.intro-after').count(),0,'The entrance contains neither photo nor image stage');
    const samples=await f.page.evaluate(async()=>{
-    const host=document.querySelector('#intro'),row=host.querySelector('.intro-letters'),letters=[...row.children],animations=host.getAnimations({subtree:true}).filter(animation=>animation.effect?.target&&letters.includes(animation.effect.target));
-    if(animations.length!==letters.length)throw Error('Every intro glyph needs its own translation animation');animations.forEach(animation=>animation.pause());const result=[];
+    const host=document.querySelector('#intro'),wordmark=host.querySelector('.intro-wordmark'),strokes=[...wordmark.querySelectorAll('path[pathLength]')],dot=wordmark.querySelector('.intro-dot,circle'),nodes=[wordmark,...strokes,...(dot?[dot]:[])],animations=wordmark.getAnimations({subtree:true}),strokeAnimations=animations.filter(animation=>strokes.includes(animation.effect?.target));
+    if(strokes.length!==5||strokeAnimations.length!==5)throw Error('The five handwritten strokes each need their own draw animation');
+    if(!dot)throw Error('The handwritten wordmark retains its final dot');animations.forEach(animation=>animation.pause());const duration=Math.max(...animations.map(animation=>{const t=animation.effect.getTiming();return Number(t.delay)+Number(t.duration);})),result=[];
     for(const fraction of [0,.32,.58,.75,.9,1]){
-     for(const animation of animations){const t=animation.effect.getTiming();animation.currentTime=Number(t.delay)+Number(t.duration)*fraction;}
-     await new Promise(requestAnimationFrame);result.push({fraction,letters:letters.map(node=>{const s=getComputedStyle(node),m=new DOMMatrixReadOnly(s.transform),r=node.getBoundingClientRect();return {text:node.textContent,matrix:[m.m11,m.m12,m.m13,m.m14,m.m21,m.m22,m.m23,m.m24,m.m31,m.m32,m.m33,m.m34],width:r.width,height:r.height,layoutWidth:node.offsetWidth,layoutHeight:node.offsetHeight,x:r.x,y:r.y,right:r.right,opacity:Number(s.opacity)};})});
+     for(const animation of animations)animation.currentTime=duration*fraction;
+     await new Promise(requestAnimationFrame);const box=wordmark.getBoundingClientRect(),viewBox=wordmark.viewBox.baseVal;result.push({fraction,wordmark:{width:box.width,height:box.height,left:box.left,right:box.right,top:box.top,bottom:box.bottom,ratio:viewBox.width/viewBox.height},nodes:nodes.map(node=>{const s=getComputedStyle(node),m=new DOMMatrixReadOnly(s.transform),r=node.getBoundingClientRect();return {tag:node.tagName,matrix:[m.m11,m.m12,m.m13,m.m14,m.m21,m.m22,m.m23,m.m24,m.m31,m.m32,m.m33,m.m34,m.m41,m.m42,m.m43,m.m44],transform:node.getAttribute('transform'),width:r.width,height:r.height,x:r.x,y:r.y,opacity:Number(s.opacity)};}),strokes:strokes.map(node=>{const s=getComputedStyle(node);return {length:Number(node.getAttribute('pathLength')),offset:parseFloat(s.strokeDashoffset),dash:s.strokeDasharray,fill:s.fill,stroke:s.stroke,opacity:Number(s.opacity)};}),dotOpacity:Number(getComputedStyle(dot).opacity)});
     }
     window.__masterIntroAnimations=animations;return result;
    });
-   for(const sample of samples)for(const letter of sample.letters){const identity=[1,0,0,0,0,1,0,0,0,0,1,0];letter.matrix.forEach((value,i)=>close(value,identity[i],width+'px intro '+letter.text+' remains undistorted at '+sample.fraction,.001));close(letter.width,letter.layoutWidth,'Intro glyph width stays natural',1);close(letter.height,letter.layoutHeight,'Intro glyph height stays natural',1);}
-   const settled=samples.at(-1).letters;assert.equal(settled.map(letter=>letter.text).join(''),'CLAIR.');assert(settled.every(letter=>letter.x>=-1&&letter.right<=width+1&&letter.opacity>=.99),'Settled intro letters remain fully inside the viewport');
+   for(const sample of samples){
+    for(const [index,node]of sample.nodes.entries()){const identity=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];node.matrix.forEach((value,i)=>close(value,identity[i],width+'px handwritten '+node.tag+' remains undistorted at '+sample.fraction,.001));assert.equal(node.transform,null,'The handwritten strokes have no transform attributes');for(const field of ['x','y','width','height'])close(node[field],samples[0].nodes[index][field],width+'px handwritten geometry stays fixed while drawing',.25);}
+    close(sample.wordmark.width/sample.wordmark.height,sample.wordmark.ratio,'The handwritten SVG keeps its natural aspect ratio',.005);assert(sample.wordmark.left>=0&&sample.wordmark.right<=width&&sample.wordmark.top>=0&&sample.wordmark.bottom<=900,'The entire wordmark stays inside '+width+'px viewport');
+    for(const stroke of sample.strokes){assert.equal(stroke.length,1,'Draw strokes use normalized path length');assert.notEqual(stroke.dash,'none','Each handwritten stroke is progressively revealed');assert.equal(stroke.fill,'none','The wordmark uses drawn strokes');assert.notEqual(stroke.stroke,'none');assert(stroke.offset>=-.001&&stroke.offset<=1.001,'The normalized draw offset stays in range');}
+   }
+   const start=samples[0].strokes,end=samples.at(-1).strokes;assert(start.every(stroke=>stroke.offset>=.99),'All handwritten strokes start undrawn');assert(end.every(stroke=>stroke.offset<=.001&&stroke.opacity>=.99),'All handwritten strokes finish fully visible');assert(samples.at(-1).dotOpacity>=.99,'The final dot is fully visible');assert(samples.slice(1,-1).some(sample=>sample.strokes.some(stroke=>stroke.offset>.01&&stroke.offset<.99)),'The handwriting paints an intermediate stroke');
+   for(let index=1;index<samples.length;index++)for(let stroke=0;stroke<5;stroke++)assert(samples[index].strokes[stroke].offset<=samples[index-1].strokes[stroke].offset+.001,'Each handwriting stroke reveals progressively without reversing');
    if(output){fs.writeFileSync(path.join(output,'masterboard-intro-'+width+'.json'),JSON.stringify(samples,null,2));await f.page.locator('.intro-brand > p').evaluate(node=>{for(const animation of node.getAnimations()){animation.pause();const timing=animation.effect.getTiming();animation.currentTime=Number(timing.delay)+Number(timing.duration);}});await f.page.screenshot({path:path.join(output,'masterboard-intro-'+width+'.png')});}
    await f.page.evaluate(()=>window.__masterIntroAnimations.forEach(animation=>animation.play()));await f.page.keyboard.press('Escape');await f.page.locator('#intro').waitFor({state:'detached'});assert.equal(await f.page.locator('main').evaluate(node=>node.inert),false,'Skipping intro unlocks the page');f.check();
   }finally{await f.context.close();}
  }
- const f=await open(browser,origin,{motion:'reduce',signedIn:false});try{assert.equal(await f.page.locator('#intro').count(),0);assert.equal(await f.page.locator('main').evaluate(node=>node.inert),false);f.check();}finally{await f.context.close();}console.log('PASS Masterboard intro: computed glyph matrices and bounds stay undistorted at six drop times on 320/390/1440px; reduced motion and Escape unlock the page');
-}
-async function introImageStages(browser,origin){
- // This neutral geometric SVG tests only the image stage. It is not the user's pending illustration.
- const neutralSvg='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="260" viewBox="0 0 400 260"><rect width="400" height="260" rx="20" fill="#ddd"/><circle cx="200" cy="130" r="55" fill="#999"/></svg>');
- const observe=page=>page.evaluate(()=>{
-  const host=document.querySelector('#intro');window.__masterIntroStages=[];
-  new MutationObserver(()=>window.__masterIntroStages.push({time:performance.now(),image:host.classList.contains('image-stage'),leaving:host.classList.contains('leaving')})).observe(host,{attributes:true,attributeFilter:['class']});
- });
- for(const exit of ['automatic','Escape','reduced-motion']){
-  const f=await open(browser,origin,{signedIn:false,skipIntro:false});try{
-   const image=f.page.locator('#intro-after-image');assert.equal(await image.getAttribute('src'),null,'The source has no substitute for the unavailable original illustration');await observe(f.page);
-   await image.evaluate((node,source)=>{node.src=source;},neutralSvg);assert.equal(await f.page.locator('.intro-after').isVisible(),false,'The fixture stays hidden until the wordmark finishes');
-   await f.page.locator('#intro.image-stage').waitFor({state:'attached',timeout:7000});assert(await f.page.locator('.intro-brand').isHidden(),'The image stage hides the preceding logo');assert(await image.isVisible(),'A decoded image becomes visible after the logo');assert(await f.page.locator('main').evaluate(node=>node.inert),'The page stays inert while the image is shown');
-   const shape=await image.evaluate(node=>{const r=node.getBoundingClientRect();return {naturalWidth:node.naturalWidth,naturalHeight:node.naturalHeight,width:r.width,height:r.height,left:r.left,right:r.right,top:r.top,bottom:r.bottom,viewportWidth:innerWidth,viewportHeight:innerHeight,fit:getComputedStyle(node).objectFit};});
-   assert.equal(shape.naturalWidth,400);assert.equal(shape.naturalHeight,260);close(shape.width/shape.height,shape.naturalWidth/shape.naturalHeight,'The neutral fixture retains its natural aspect ratio',.005);assert.equal(shape.fit,'contain');assert(shape.left>=0&&shape.right<=shape.viewportWidth&&shape.top>=0&&shape.bottom<=shape.viewportHeight,'The entire neutral fixture fits inside the viewport');
-   if(output&&exit==='automatic')await f.page.screenshot({path:path.join(output,'masterboard-intro-neutral-fixture.png')});
-   if(exit==='Escape')await f.page.keyboard.press('Escape');else if(exit==='reduced-motion')await f.page.emulateMedia({reducedMotion:'reduce'});
-   await f.page.locator('#intro').waitFor({state:'detached',timeout:exit==='automatic'?5000:1000});assert.equal(await f.page.locator('main').evaluate(node=>node.inert),false,exit+' image exit unlocks the page');
-   if(exit==='automatic'){
-    const stages=await f.page.evaluate(()=>window.__masterIntroStages),shown=stages.find(stage=>stage.image&&!stage.leaving),leaving=stages.find(stage=>stage.leaving);assert(shown&&leaving,'The neutral image stage automatically enters the existing exit');assert(leaving.time-shown.time>=1700&&leaving.time-shown.time<=2700,'The neutral fixture remains visible for the intended 1800ms stage');
-   }
-   f.check();
-  }finally{await f.context.close();}
+ const automatic=await open(browser,origin,{signedIn:false,skipIntro:false});try{
+  await automatic.page.evaluate(()=>{
+   const host=document.querySelector('#intro'),main=document.querySelector('main');window.__masterIntroFlow=[];
+   const sample=()=>window.__masterIntroFlow.push({time:performance.now(),phase:host.isConnected?host.classList.contains('leaving')?'leaving':'wordmark':'ready',inert:main.inert,images:host.querySelectorAll('img,.intro-after').length,offsets:[...host.querySelectorAll('.intro-stroke')].map(node=>parseFloat(getComputedStyle(node).strokeDashoffset))});
+   sample();const observer=new MutationObserver(sample);observer.observe(host,{attributes:true,attributeFilter:['class']});observer.observe(main,{attributes:true,attributeFilter:['inert']});observer.observe(host.parentNode,{childList:true});
+  });
+  await automatic.page.locator('#intro').waitFor({state:'detached',timeout:6500});const flow=await automatic.page.evaluate(()=>window.__masterIntroFlow),phases=flow.map(sample=>sample.phase).filter((phase,index,all)=>index===0||phase!==all[index-1]);assert.deepEqual(phases,['wordmark','leaving','ready'],'The wordmark automatically exits directly to the page');assert(flow.filter(sample=>sample.phase!=='ready').every(sample=>sample.inert&&sample.images===0),'The photo-free entrance keeps main inert until it exits');assert(flow.find(sample=>sample.phase==='leaving').offsets.every(offset=>offset<=.001),'Automatic exit follows the completed handwriting');assert.equal(await automatic.page.locator('main').evaluate(node=>node.inert),false,'Automatic exit unlocks the page');assert.equal(await automatic.page.locator('.glass-nav-indicator').count(),0);
+  if(output){fs.writeFileSync(path.join(output,'masterboard-intro-automatic.json'),JSON.stringify(flow,null,2));await automatic.page.screenshot({path:path.join(output,'masterboard-home-390.png')});}automatic.check();
+ }finally{await automatic.context.close();}
+ const touch=await open(browser,origin,{signedIn:false,skipIntro:false});try{await touch.page.locator('.intro-wordmark').tap();await touch.page.locator('#intro').waitFor({state:'detached',timeout:1600});assert.equal(await touch.page.locator('main').evaluate(node=>node.inert),false,'Touching the wordmark unlocks the page');touch.check();}finally{await touch.context.close();}
+ for(const initial of [true,false]){
+  const f=await open(browser,origin,{motion:initial?'reduce':'no-preference',signedIn:false,skipIntro:false});try{if(!initial)await f.page.emulateMedia({reducedMotion:'reduce'});await f.page.locator('#intro').waitFor({state:'detached',timeout:1600});assert.equal(await f.page.locator('main').evaluate(node=>node.inert),false,'Reduced motion unlocks the page');assert.equal(await f.page.locator('.glass-nav-indicator').count(),0);f.check();}finally{await f.context.close();}
  }
- for(const source of ['missing','invalid']){
-  const f=await open(browser,origin,{signedIn:false,skipIntro:false});try{
-   const image=f.page.locator('#intro-after-image');assert.equal(await image.getAttribute('src'),null);await observe(f.page);
-   if(source==='invalid')await image.evaluate(node=>{node.src='/masterboard/__invalid_motion_fixture__.svg';});
-   await f.page.locator('#intro').waitFor({state:'detached',timeout:7500});assert.equal(await f.page.locator('main').evaluate(node=>node.inert),false,source+' illustration never blocks the page');const stages=await f.page.evaluate(()=>window.__masterIntroStages);assert(stages.every(stage=>!stage.image),source+' illustration skips the image stage');assert(stages.some(stage=>stage.leaving),source+' illustration retains the existing exit');f.check();
-  }finally{await f.context.close();}
- }
- console.log('PASS optional intro image: explicitly neutral SVG fixture keeps its aspect ratio, auto-exits and supports Escape/media-change; missing/invalid sources skip without blocking');
+ console.log('PASS Masterboard handwritten intro: five SVG strokes reveal progressively with fixed geometry on 320/390/1440px; no photos or image stage, automatic logo-to-page exit, signed-out page has no lens, touch/Escape and initial/dynamic reduced motion unlock entry');
 }
 (async()=>{
  if(output)fs.mkdirSync(output,{recursive:true});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let browser;
- try{browser=await chromium.launch({headless:true,...(process.env.CLAIR_CHROME_PATH?{executablePath:process.env.CLAIR_CHROME_PATH}:{})});const origin='http://127.0.0.1:'+server.address().port;if(!process.argv.includes('--intro-image-only')){await navigation(browser,origin);await lifecycle(browser,origin);await fallbacks(browser,origin);await intro(browser,origin);}await introImageStages(browser,origin);}finally{await browser?.close();server.close();}
+ try{browser=await chromium.launch({headless:true,...(process.env.CLAIR_CHROME_PATH?{executablePath:process.env.CLAIR_CHROME_PATH}:{})});const origin='http://127.0.0.1:'+server.address().port;if(!process.argv.includes('--intro-only')){await navigation(browser,origin);await lifecycle(browser,origin);await fallbacks(browser,origin);}await intro(browser,origin);}finally{await browser?.close();server.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
