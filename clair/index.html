@@ -608,6 +608,24 @@ html[data-category-art=ready] .category-art-vector{visibility:hidden}
  .bottom-nav{background:Canvas;border-color:ButtonText;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
  .bottom-nav button{color:ButtonText}.bottom-nav button.active,.bottom-nav button[aria-current=page]{color:HighlightText;background:Highlight;outline:1px solid Highlight;box-shadow:none}.glass-ripple{display:none}
 }
+/* One retained pill carries the selection between tabs; buttons keep focus and identity. */
+@media(max-width:720px){
+ .bottom-nav.glass-nav-motion{isolation:isolate}
+ .glass-nav-indicator{position:absolute;left:0;top:0;z-index:0;pointer-events:none;border-radius:34px;background:var(--glass-dock-pill);box-shadow:inset 0 1px 0 var(--glass-dock-pill-line),0 1px 3px #6f51720a;opacity:0;will-change:transform;transition:none}
+ .glass-nav-ready .glass-nav-indicator{transition:transform .36s cubic-bezier(.22,.8,.25,1),width .36s cubic-bezier(.22,.8,.25,1),height .2s ease,opacity .2s ease}
+ .bottom-nav.glass-nav-motion button{z-index:1;transition:color .22s ease,transform .16s ease}
+ .bottom-nav.glass-nav-motion button.active,.bottom-nav.glass-nav-motion button[aria-current=page]{background:transparent;box-shadow:none}
+ .bottom-nav.glass-nav-motion button .ui-icon{transform:translateY(0);transition:transform .24s cubic-bezier(.22,.8,.25,1),stroke-width .22s ease}
+ .bottom-nav.glass-nav-motion button.active .ui-icon,.bottom-nav.glass-nav-motion button[aria-current=page] .ui-icon{transform:translateY(-1px)}
+}
+@media(prefers-reduced-motion:reduce){
+ .glass-nav-ready .glass-nav-indicator,.bottom-nav.glass-nav-motion button,.bottom-nav.glass-nav-motion button .ui-icon{transition:none!important}
+ .bottom-nav.glass-nav-motion button .ui-icon{transform:none!important}
+}
+@media(forced-colors:active){
+ .bottom-nav.glass-nav-motion .glass-nav-indicator{display:none}
+ .bottom-nav.glass-nav-motion button.active,.bottom-nav.glass-nav-motion button[aria-current=page]{color:HighlightText;background:Highlight;outline:1px solid Highlight}
+}
 </style>
 </head>
 <body data-wall="plain">
@@ -1296,11 +1314,66 @@ html[data-category-art=ready] .category-art-vector{visibility:hidden}
 })(typeof window!=='undefined'?window:globalThis);
 
 /* Approved Verre doux: canonical accounts/glass-ui.js. */
-/* Verre doux: decorative press feedback only; existing actions keep their events. */
+/* Verre doux: navigation presentation and press feedback; existing actions keep their events. */
 (function(root){
  'use strict';
  const selector='.button,.bottom-nav button,.profile-link,.profile-links>button';
- const documents=new WeakSet(),presses=new WeakMap();
+ const documents=new WeakSet(),presses=new WeakMap(),navigation=new WeakMap();
+ function disposeNavigation(host,state){
+  state?.observer?.disconnect();
+  if(state?.resize&&typeof root.removeEventListener==='function')root.removeEventListener('resize',state.resize);
+  if(state?.frame!=null){if(typeof root.cancelAnimationFrame==='function')root.cancelAnimationFrame(state.frame);else root.clearTimeout?.(state.frame);}
+  navigation.delete(host);host.classList?.remove('glass-nav-motion','glass-nav-ready');
+ }
+ function positionIndicator(state,snap=false){
+  const {host,indicator}=state;
+  if(indicator.parentElement!==host||host.isConnected===false){disposeNavigation(host,state);return;}
+  const active=state.buttons.find(button=>button.getAttribute('aria-current')==='page'||button.classList.contains('active'));
+  if(!active){indicator.style.opacity='0';return;}
+  const width=active.offsetWidth,height=active.offsetHeight;
+  if(!width||!height){indicator.style.opacity='0';state.positioned=false;return;}
+  const instant=snap||!state.positioned;
+  if(instant)indicator.style.transition='none';
+  indicator.style.width=width+'px';indicator.style.height=height+'px';
+  indicator.style.transform='translate3d('+active.offsetLeft+'px,'+active.offsetTop+'px,0)';
+  indicator.style.opacity='1';state.positioned=true;
+  if(instant){
+   // Commit the initial/resized position before enabling transitions; no slide from zero.
+   indicator.getBoundingClientRect();
+   if(state.frame!=null){if(typeof root.cancelAnimationFrame==='function')root.cancelAnimationFrame(state.frame);else root.clearTimeout?.(state.frame);}
+   const ready=()=>{state.frame=null;if(indicator.parentElement===host){indicator.style.transition='';host.classList.add('glass-nav-ready');}};
+   state.frame=typeof root.requestAnimationFrame==='function'?root.requestAnimationFrame(ready):root.setTimeout(ready,0);
+  }
+ }
+ function renderNavigation(host,markup){
+  if(!host)return;
+  let state=navigation.get(host);
+  if(!markup){disposeNavigation(host,state);host.innerHTML='';return;}
+  const doc=host.ownerDocument;
+  if(!doc?.createElement||typeof host.querySelectorAll!=='function'||!host.classList){host.innerHTML=markup;return;}
+  const buffer=doc.createElement('div');buffer.innerHTML=markup;
+  const incoming=Array.from(buffer.children).filter(button=>button.matches('button[data-nav]'));
+  const key=incoming.map(button=>button.dataset.nav).join('|');
+  if(!incoming.length){disposeNavigation(host,state);host.innerHTML=markup;return;}
+  if(!state||state.key!==key||state.indicator.parentElement!==host||state.buttons.some(button=>button.parentElement!==host)){
+   disposeNavigation(host,state);host.innerHTML=markup;
+   const buttons=Array.from(host.querySelectorAll('button[data-nav]')).filter(button=>button.parentElement===host),indicator=doc.createElement('span');
+   indicator.className='glass-nav-indicator';indicator.setAttribute('aria-hidden','true');host.insertBefore(indicator,host.firstChild);
+   state={host,indicator,buttons,key,content:incoming.map(button=>button.innerHTML),positioned:false,frame:null};
+   navigation.set(host,state);host.classList.add('glass-nav-motion');positionIndicator(state,true);
+   state.resize=()=>positionIndicator(state,true);
+   if(typeof root.ResizeObserver==='function'){state.observer=new root.ResizeObserver(state.resize);state.observer.observe(host);}
+   else if(typeof root.addEventListener==='function')root.addEventListener('resize',state.resize,{passive:true});
+  }else{
+   for(let i=0;i<incoming.length;i++){
+    const button=state.buttons[i],next=incoming[i];
+    if(state.content[i]!==next.innerHTML){button.innerHTML=next.innerHTML;state.content[i]=next.innerHTML;}
+    button.classList.toggle('active',next.classList.contains('active'));
+    if(next.hasAttribute('aria-current'))button.setAttribute('aria-current',next.getAttribute('aria-current'));else button.removeAttribute('aria-current');
+   }
+   positionIndicator(state);
+  }
+ }
  function initClairGlassUI(){
   const doc=root.document;
   if(!doc||typeof doc.querySelectorAll!=='function'||typeof doc.createElement!=='function'||typeof doc.addEventListener!=='function'||!doc.documentElement?.classList||typeof root.setTimeout!=='function'||typeof root.clearTimeout!=='function')return false;
@@ -1326,7 +1399,7 @@ html[data-category-art=ready] .category-art-vector{visibility:hidden}
   documents.add(doc);return true;
  }
  root.initClairGlassUI=initClairGlassUI;
- root.ClairGlassUI=Object.freeze({init:initClairGlassUI});
+ root.ClairGlassUI=Object.freeze({init:initClairGlassUI,renderNavigation});
 })(typeof window!=='undefined'?window:globalThis);
 
 </script>
@@ -2464,11 +2537,11 @@ function paymentDetails(key){
     syncCompanionOwner();
     const profileButton=$('.profile-button');if(profileButton){profileButton.hidden=!!loadError||!!(cloud.enabled&&(accountResetStep||!cloud.user||!cloud.ready||cloud.status==='loading'));if(page==='profile')profileButton.setAttribute?.('aria-current','page');else profileButton.removeAttribute?.('aria-current');}
     if($('.header-notifications'))$('.header-notifications').hidden=profileButton?.hidden!==false;
-    if(cloud.enabled&&accountResetStep){applyPrefs();if(!((accountResetStep==='email'&&$('#account-forgot-form'))||(accountResetStep==='password'&&cloud.ready&&cloud.user&&$('#account-password-form'))))$('#page').innerHTML=accountLayout(recoveryView());$('.nav').innerHTML='';$('.bottom-nav').innerHTML='';$('#reminders').innerHTML='';$('#sync-alert').innerHTML='';$('#status-label').textContent='Récupération du compte';updateRecoveryButtons();return;}
-    if(cloud.enabled&&(!cloud.user||!cloud.ready||cloud.status==='loading')){applyPrefs();$('#page').innerHTML=(!cloud.ready||cloud.status==='loading')?startupWaiting():accountLayout(accountGate());$('.nav').innerHTML='';$('.bottom-nav').innerHTML='';$('#reminders').innerHTML='';$('#sync-alert').innerHTML='';$('#status-label').textContent=accountStatus();return;}
+    if(cloud.enabled&&accountResetStep){applyPrefs();if(!((accountResetStep==='email'&&$('#account-forgot-form'))||(accountResetStep==='password'&&cloud.ready&&cloud.user&&$('#account-password-form'))))$('#page').innerHTML=accountLayout(recoveryView());$('.nav').innerHTML='';window.ClairGlassUI.renderNavigation($('.bottom-nav'),'');$('#reminders').innerHTML='';$('#sync-alert').innerHTML='';$('#status-label').textContent='Récupération du compte';updateRecoveryButtons();return;}
+    if(cloud.enabled&&(!cloud.user||!cloud.ready||cloud.status==='loading')){applyPrefs();$('#page').innerHTML=(!cloud.ready||cloud.status==='loading')?startupWaiting():accountLayout(accountGate());$('.nav').innerHTML='';window.ClairGlassUI.renderNavigation($('.bottom-nav'),'');$('#reminders').innerHTML='';$('#sync-alert').innerHTML='';$('#status-label').textContent=accountStatus();return;}
     applyPrefs();
     $('.nav').innerHTML=navs.map(n=>`<button data-nav="${n.id}" class="${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'active':''}" ${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'aria-current="page"':''}><span aria-hidden="true">${icon(n.icon)}</span>${n.label}</button>`).join('');
-    $('.bottom-nav').innerHTML=navs.map(n=>`<button data-nav="${n.id}" class="${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'active':''}" ${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'aria-current="page"':''}><span aria-hidden="true">${icon(n.icon)}</span>${n.label}</button>`).join('');
+    window.ClairGlassUI.renderNavigation($('.bottom-nav'),navs.map(n=>`<button data-nav="${n.id}" class="${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'active':''}" ${(page===n.id||(n.id==='settings'&&['rules','budget'].includes(page)))?'aria-current="page"':''}><span aria-hidden="true">${icon(n.icon)}</span>${n.label}</button>`).join(''));
     $('#today-label').textContent=new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',timeZone:'Europe/Paris'}).format(new Date());
     if(loadError){$('#alert').innerHTML=`<div class="notice error">${esc(loadError)}</div>`;$('#page').innerHTML=`<section class="card"><h2>Préserver tes données</h2><p class="help">Télécharge les données brutes pour ne rien perdre, puis importe une sauvegarde valide ou recommence.</p><div class="actions"><button class="button" data-action="raw">Télécharger les données brutes</button><label class="button file">Importer une sauvegarde<input type="file" accept=".json,application/json" data-import></label><button class="button danger" data-action="reset">Recommencer</button></div></section>`;return;}
     $('#page').innerHTML=({home,rules,journal,budget,settings,profile}[page]||home)();if(page==='journal')journalResults();

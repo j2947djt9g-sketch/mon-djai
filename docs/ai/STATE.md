@@ -16,11 +16,11 @@ Mis à jour le 12 novembre 2026. Lire AGENTS puis cette page et MAP ; vérifier 
 
 ## Preuves et limites
 
-- Refonte : 34 suites Node ; catégories (22 saisies/huit devises, clavier, JSON, reset, images/CSS/JS absents), Express (9 configurations), journal (4 tailles), fluidité (4), maquettes (12 vues 320/390) verts. Relecture indépendante sans bloquant/important ; captures fictives avant/après dans la galerie.
+- Catégories/Express/devises, A, thèmes et hors connexion vérifiés ; revue indépendante et captures avant/après dans la galerie.
 - Production contrôlée inchangée après aperçu (30 ressources vérifiées, galerie mobile testée). Pas de Safari/iPhone physique, compte réel ou notification reçue testés. Aide/récupération : restriction d’origine déjà connue. Indexation Google non confirmée ; audits 3/5 non approuvés.
 
-CI `d137648` verte : workflow `43085823010`. A : 35 suites Node, 32 vues + 8 grands montants, 16 parcours profil et Express/nav/auth verts ; aperçu actualisé vérifié.
+CI157 sur `3ac89db` verte (`43169887491`). A : 35 suites Node et parcours profil/Express/nav/auth verts. Repère mobile glissant 360ms : six cas navigateur (positions intermédiaires, rapidité, focus, redimensionnement, mouvement réduit), aucune donnée modifiée.
 
 ## Reprise
 
-Continuer sur la branche visuelle sans écraser Express/devises. A est intégrée et approuvée ; ne pas redemander le choix. CI156 a atteint 10 min sans assertion en échec ; délai porté à 15 min, suivi PR30. Toute publication de production ou modification Supabase attend un accord explicite. Ne pas réappliquer `exchange.sql` ni les fixtures SQL en production.
+Continuer sur la branche visuelle sans écraser Express/devises. A est intégrée et approuvée ; ne pas redemander le choix. CI limitée à 15 min ; nouvelle passe suivie dans la PR30. Toute publication de production ou modification Supabase attend un accord explicite. Ne pas réappliquer `exchange.sql` ni les fixtures SQL en production.
