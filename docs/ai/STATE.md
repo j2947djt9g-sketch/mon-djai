@@ -19,7 +19,7 @@ Mis à jour le 12 novembre 2026. Lire AGENTS puis cette page et MAP ; vérifier 
 - Catégories/Express/devises, A, thèmes et hors connexion vérifiés ; revue indépendante et captures avant/après dans la galerie.
 - Production contrôlée inchangée après aperçu (30 ressources vérifiées, galerie mobile testée). Pas de Safari/iPhone physique, compte réel ou notification reçue testés. Aide/récupération : restriction d’origine déjà connue. Indexation Google non confirmée ; audits 3/5 non approuvés.
 
-CI157 sur `3ac89db` verte (`43169887491`). A : 35 suites Node et parcours profil/Express/nav/auth verts. Repère mobile glissant 360ms : six cas navigateur (positions intermédiaires, rapidité, focus, redimensionnement, mouvement réduit), aucune donnée modifiée.
+CI158 sur `77f3b4e` verte (`43173440085`). Goutte liquide : déformation, grossissement, reflets et glissement au doigt intégrés. 35 suites Node, neuf cas liquid-nav, six cas nav-motion, auth/nav/épargne verts ; aperçu Vercel vérifié, JSON inchangé. Relecture indépendante sans bloquant. Preuves/liens : `VISUAL_DELIVERY.md`.
 
 ## Reprise
 
