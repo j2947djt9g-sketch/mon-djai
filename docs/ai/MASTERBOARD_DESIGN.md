@@ -1,0 +1,54 @@
+# Masterboard — propositions de refonte, à valider
+
+Audit du 12 novembre 2026, branche `feat/masterboard-design-proposals`, base `c2b7f43`. Demande : proposer un design plus professionnel et des pistes d’amélioration à partir de la liste et des fiches mobiles. Aucune intégration dans le Masterboard réel, aucune publication de production, aucune opération sur un compte ni modification Supabase autorisée par cette demande de propositions.
+
+## Interface retrouvée
+
+- Sources : `masterboard/index.html`, `masterboard/masterboard.css`, `masterboard/masterboard.js`. README et tests Masterboard consultés.
+- Adresse actuelle vérifiée HTTP 200 : https://j2947djt9g-sketch.github.io/mon-djai/masterboard/ . https://clair-budget.vercel.app/masterboard/ renvoie 404 ; le Masterboard n’est pas encore hébergé à cette adresse Vercel.
+- HTML, CSS et JS publics correspondent exactement aux fichiers du dépôt (empreintes vérifiées).
+- Point d’entrée administrateur distinct, contrôle serveur de la liste d’administrateurs. Ne pas l’ajouter à la navigation publique de CLAIR ni affaiblir les droits en préparant son hébergement Vercel.
+
+## Constats vérifiés dans le code
+
+1. `.profile-toggle` : minimum de 218 px sur mobile, padding de 21 px, badges avec 22 px de marge, pied repoussé par `margin-top:auto`. Beaucoup de hauteur sans information supplémentaire.
+2. Nom absent affiché « Compte Clair » : des profils différents deviennent visuellement semblables. Afficher « Compte sans nom » et l’adresse disponible, sans inventer de nom ni modifier une donnée.
+3. Recherche et filtre empilés, libellés et séparations répétés : actions et comptes commencent bas. Remplacer les filtres courants par des puces accessibles, garder les options secondaires disponibles.
+4. Fiche quasi plein écran, identité verticale et grands blocs : les actions arrivent après plusieurs zones peu denses. En-tête compact, données utiles regroupées, action contextuelle selon la demande d’aide.
+5. Navigation anthracite très contrastée sur fond clair ; famille visuelle différente de CLAIR Verre doux. Capsule claire pour A ; navigation plus sobre et dense pour B. Préserver cibles de 44 px, contraste et marge basse.
+6. Le bouton « Faire sauter le mot de passe » représente une action sensible : `authorize-reset` vise une demande d’appareil, désactive l’ancien mot de passe et accorde 15 minutes au titulaire. Libellé proposé « Autoriser un nouveau mot de passe », explication précise et groupe distinct. Toutes les confirmations existantes restent nécessaires.
+
+## Deux directions visuelles proposées
+
+**A — Verre doux Administration (recommandée).** Fond gris lavande très léger, surfaces blanches, texte anthracite, violet réservé à la sélection et à l’action prioritaire. Liste compacte, états accès/e-mail distincts, fiche claire, capsule proche de CLAIR avec animation discrète. Plus de densité que l’app budget, peu d’effets décoratifs.
+
+**B — Console professionnelle.** Interface orientée support et priorités, navigation encre plus sobre et panneaux blancs, liste dense et panneau de détail sur ordinateur. Utile si le volume de comptes augmente ; moins chaleureuse que A.
+
+Maquettes interactives autonomes dans `masterboard/design-preview/`, jeu de six personnes fictives avec `example.invalid`. Aucun SDK, fetch, stockage, service worker, identifiant réel, envoi ou backend. Les actions sont explicatives et signalées comme maquettes. Captures de référence générées depuis le frontend réel avec un snapshot fictif : aucune image privée fournie par l’utilisateur n’est republiée.
+
+## Améliorations fonctionnelles à valider séparément
+
+- Prioriser les demandes en attente, puis les accès suspendus et messages à reprendre. Ne pas confondre suspension, e-mail non confirmé et connexion récente.
+- Trier par demande d’aide, inscription ou dernière connexion ; une dernière connexion n’est pas une mesure d’activité.
+- Afficher l’état d’e-mail dès la liste, expliquer la gratuité une seule fois. « Dernière connexion indisponible » au lieu d’un tiret ambigu.
+- Historique contextualisé dans la fiche : préparation de message, ouverture de messagerie, envoi marqué manuellement. Ne jamais annoncer « livré » sans preuve.
+- Simulations en accordéon secondaire : « Prolonger le test d’un mois », sans facturation réelle.
+- Fiche latérale sur ordinateur et vue dédiée sur mobile, conservation de la recherche/position au retour.
+- Prévoir une publication du Masterboard sur Vercel après validation, avec ses dépendances et les contrôles d’authentification. Aucun transfert ou changement d’URL effectué à ce stade.
+- Option à discuter : réserver l’introduction animée à la première ouverture ou la raccourcir ; le code prévoit une attente minimale d’environ 4,2 secondes avant de lever l’écran d’introduction. Préserver l’identité, accélérer les ouvertures répétées.
+- Corriger ensuite le passage du README qui décrit encore l’ancien parcours de récupération par lien/code ; l’action courante utilise le déblocage d’appareil.
+
+## Vérifications et limites
+
+Audit et revues UI/UX/actions sensibles en lecture seule ; aucun compte réel consulté. Avant : frontend Masterboard réel à 390 px, six comptes fictifs, seules requêtes snapshot interceptées. Chromium uniquement, aucun iPhone physique/Safari testé. Maquettes non intégrées : l’esthétique choisie et les pistes fonctionnelles nécessitent la validation de l’utilisateur avant modification de l’application réelle.
+
+
+## Aperçu livré pour validation
+
+https://clair-budget-4k8xd40uf-diabagateouattara601-7626.vercel.app/ — Vercel READY, preview `dpl_2qgvr9o8Lrb875y3k16mwqUvvR5P`, aucun alias de production. Paquet de 13 fichiers dont 12 publics, CSP sans connexion/formulaire/worker, robots noindex. Sources de travail basées sur `c2b7f43` (dirty=true). Comparaison A/B, boutons « Les comptes »/« Une fiche », essai en plein écran, captures avant/après fictives.
+
+Six vues Chromium vérifiées localement puis sur les ressources publiques avec HTTPS de confiance et empreintes contrôlées : A/B à 320/390/1440, recherche, filtres, fiche/retour, action sensible explicative, aucun stockage ni appel externe ni débordement horizontal. À 390 px : hauteur de carte de 113 px pour A et 101 px pour B, contre 218 px dans le Masterboard actuel. Galerie desktop/mobile, sélection A/B et changement Liste/Fiche vérifiés. Syntaxe et diff --check verts. Pas de tests de comptes réels ni d’iPhone physique.
+
+Relecture indépendante finale sans bloquant. Recommandation : apparence de A + ordre de priorité de B. À affiner lors de l’intégration : « E-mail » devient « À confirmer », noms/métadonnées un peu plus grands, haut de A allégé (deux titres/accroche repoussent encore la première carte), une seule commande retour sur mobile. Ces réserves sont des propositions de finition, pas des changements apportés au Masterboard réel.
+
+Les 12 ressources publiques de l’aperçu sont conformes au paquet ; CLAIR publié SHA1 `c52115e744a78bf07e86b7d805ad93a8c3489dff` et Masterboard GitHub Pages SHA1 `45af8244ce141883128f98667d5bec0a176d0ff6` vérifiés inchangés. Preuves locales sous `/workspace/masterboard-design-work/` (`verify.log`, `verify-live.log`, `captures/`) ; captures versionnées sous `masterboard/design-preview/captures/`. Agents : audit UI/UX, revue actions sensibles, création maquettes ; coordination/captures/vérification/livraison par l’agent principal. La prochaine étape est la validation de la direction avant toute intégration ou publication réelle.
