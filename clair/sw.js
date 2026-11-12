@@ -1,9 +1,10 @@
 /* Offline shell scoped to Clair only; financial data is not cached. */
 const BASE=new URL('./',self.location.href);
-const CACHE='clair-github-'+BASE.pathname+'v39';
-const ASSETS=['assets/mascotte/01-bienvenue.png','assets/mascotte/02-serenite.png','assets/mascotte/03-vigilance.png','assets/mascotte/04-prevision-tendue.png','assets/mascotte/05-solde-zero.png','assets/mascotte/06-solde-negatif-v2.webp','index.html','manifest.webmanifest','icons/icon.svg','icons/icon-180.png','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'].map(p=>new URL(p,BASE).href);
+const CACHE='clair-github-'+BASE.pathname+'v40';
+const ASSETS=['assets/categories/atlas-v1.webp','assets/mascotte/01-bienvenue.png','assets/mascotte/02-serenite.png','assets/mascotte/03-vigilance.png','assets/mascotte/04-prevision-tendue.png','assets/mascotte/05-solde-zero.png','assets/mascotte/06-solde-negatif-v2.webp','index.html','manifest.webmanifest','icons/icon.svg','icons/icon-180.png','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'].map(p=>new URL(p,BASE).href);
 const HOME=new URL('index.html',BASE).href;
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
+const ART=new URL('assets/categories/atlas-v1.webp',BASE).href;
+self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>Promise.all([c.addAll(ASSETS.filter(url=>url!==ART)),c.addAll([ART]).catch(()=>{})])).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('clair-github-'+BASE.pathname)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
  const u=new URL(e.request.url);

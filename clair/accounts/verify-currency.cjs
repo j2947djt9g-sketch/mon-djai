@@ -1,3 +1,4 @@
+const {chooseCategory}=require('./browser-category-picker.cjs');
 // Isolated signup and first-time budgets: intercepted HTTP, no real accounts or emails.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const root=path.resolve(__dirname,'..');
@@ -23,7 +24,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
   assert.deepEqual(await page.locator('#setup-currency option').evaluateAll(options=>options.map(option=>option.value).sort()),['CAD','CHF','EUR','GBP','MAD','USD','XAF','XOF']);assert.equal(await page.locator('#setup-currency').inputValue(),suggested,'Initial currency follows explicit device locale region or EUR fallback');await page.locator('[name="balance"]').fill('99');await page.locator('#setup-currency').selectOption(code);
   if(code!==suggested){assert.equal(await page.locator('[name="balance"]').inputValue(),'');assert.doesNotMatch(await page.locator('#currency-help').innerText(),/Devise suggérée/,'Manual override removes suggestion marker');}
   if(code.startsWith('X')){await page.locator('[name="balance"]').fill('100,50');await page.locator('#wizard-form button[type="submit"]').click();assert(await page.locator('#setup-currency').isVisible());assert.match(await page.locator('#form-error').innerText(),/entier/);}
-  await page.locator('[name="balance"]').fill('100000');await page.locator('#wizard-form button[type="submit"]').click();await page.locator('[name="meals"]').check();await page.locator('[name="habitName"]').fill('Transport quotidien');await page.locator('[name="habitCategoryId"]').selectOption('transport');
+  await page.locator('[name="balance"]').fill('100000');await page.locator('#wizard-form button[type="submit"]').click();await page.locator('[name="meals"]').check();await page.locator('[name="habitName"]').fill('Transport quotidien');await chooseCategory(page,page.locator('[name="habitCategoryId"]'),'transport');
   for(let day=0;day<7;day++)await page.locator('[name="day-'+day+'"]').uncheck();
   await page.locator('[name="day-1"]').check();await page.locator('[name="price-1"]').fill(code.startsWith('X')?'1500':'3,50');
   await page.locator('[data-action="wizard-back"]').click();assert.equal(await page.locator('#setup-currency').inputValue(),code);if(code!==suggested)assert.doesNotMatch(await page.locator('#currency-help').innerText(),/Devise suggérée/);assert.equal(await page.locator('[name="balance"]').inputValue(),code.startsWith('X')?'100000':'100000,00');
