@@ -575,6 +575,10 @@ html[data-category-art=ready] .category-art-vector{visibility:hidden}
 @keyframes clair-glass-ripple{to{transform:scale(1);opacity:0}}
 @media(max-width:720px){
  main{padding-bottom:calc(118px + env(safe-area-inset-bottom,0px))}
+ /* Keep the first savings gauge above the capsule without shrinking controls. */
+ .home-grid{margin-top:10px;gap:10px}
+ .home-grid .card{padding-block:10px}
+ .home-grid .section-head{margin-bottom:8px}
  .toast{bottom:calc(108px + env(safe-area-inset-bottom,0px))}
  .bottom-nav{--glass-dock-solid:#fbf8fd;--glass-dock-glass:linear-gradient(120deg,#ffffffcc,#f7f0fae8);--glass-dock-border:#ffffffe8;--glass-dock-shadow:0 7px 25px #5b3d7314,inset 0 1px 1px #fff;--glass-dock-ink:#6a607b;--glass-dock-active:#70558c;--glass-dock-pill:linear-gradient(140deg,#e1d8e9eb,#e9e1efeb);--glass-dock-pill-line:#f7f2fb;position:fixed;inset:auto auto calc(16px + env(safe-area-inset-bottom,0px)) 50%;transform:translateX(-50%);width:calc(100% - 28px);max-width:420px;height:76px;min-height:76px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:0;padding:7px;border:1px solid var(--glass-dock-border);border-radius:44px;background:var(--glass-dock-solid);box-shadow:var(--glass-dock-shadow);-webkit-backdrop-filter:none;backdrop-filter:none;z-index:5}
  .bottom-nav:empty{display:none}

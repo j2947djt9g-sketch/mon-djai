@@ -23,4 +23,4 @@ CI `d137648` verte : workflow `43085823010`. A : 35 suites Node, 32 vues + 8 gra
 
 ## Reprise
 
-Continuer sur la branche visuelle sans écraser Express/devises. A est intégrée et approuvée ; ne pas redemander le choix. Suivre la CI de la PR30. Toute publication de production ou modification Supabase attend un accord explicite. Ne pas réappliquer `exchange.sql` ni les fixtures SQL en production.
+Continuer sur la branche visuelle sans écraser Express/devises. A est intégrée et approuvée ; ne pas redemander le choix. CI156 a atteint 10 min sans assertion en échec ; délai porté à 15 min, suivi PR30. Toute publication de production ou modification Supabase attend un accord explicite. Ne pas réappliquer `exchange.sql` ni les fixtures SQL en production.
