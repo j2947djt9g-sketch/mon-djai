@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
- const {createHandler,messageFor,parisDate,dueState}=await import('../../supabase/functions/clair-masterboard/core.mjs');
+ const {APP_URL,createHandler,messageFor,parisDate,dueState}=await import('../../supabase/functions/clair-masterboard/core.mjs');
  const admin='11111111-1111-4111-8111-111111111111',uid='22222222-2222-4222-8222-222222222222',clock=new Date('2026-10-23T12:00:00Z');
  const owner={id:admin,email:'owner@example.invalid',email_confirmed_at:'2026-01-01',last_sign_in_at:clock.toISOString()};
  const user={id:uid,email:'member@example.invalid',email_confirmed_at:'2026-01-01'};
@@ -8,8 +8,23 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  const db={isAdmin:async id=>id===admin,admins:async()=>[admin],settings:async()=>settings,saveSettings:async p=>settings.payment_phone=p,profiles:async()=>[{user_id:uid,display_name:'<img src=x onerror=alert(1)>'}],subscriptions:async()=>[...subs.values()],subscription:async id=>subs.get(id),messages:async()=>[...mail.values()],message:async id=>mail.get(id),recentMailCount:async id=>[...mail.values()].filter(m=>m.user_id===id).length,insertMessage:async v=>mail.set(v.id,v),updateMessage:async(id,state)=>{mail.get(id).state=state},audit:async()=>logs,log:async(a,t,action)=>logs.push({action,target:t}),renew:async()=>{renewals++;return '2026-11-23'},setTestDate:async(id,date)=>subs.set(id,{user_id:id,test_until:date}),disableDevices:async()=>{}};
  const auth={user:async h=>h==='Bearer valid'?actor:null,users:async()=>[owner,user],target:async id=>[owner,user].find(x=>x.id===id),ban:async(id,ban)=>bans.push({id,ban}),remove:async id=>removals.push(id)};
  const handler=createHandler({db,auth,now:()=>clock});
+ assert.equal(APP_URL,'https://clair-budget.vercel.app/clair/','Recovery and reminder links use the published CLAIR URL');
+ for(const origin of ['https://clair-budget.vercel.app','https://j2947djt9g-sketch.github.io','http://localhost:3000','http://127.0.0.1:8080']){
+  const response=await handler(new Request('https://test.invalid/',{method:'OPTIONS',headers:{origin}}));
+  assert.equal(response.status,204,origin);assert.equal(response.headers.get('access-control-allow-origin'),origin);assert.equal(response.headers.get('vary'),'Origin');
+ }
+ for(const origin of ['https://evil.invalid','https://clair-budget.vercel.app.evil.invalid','https://clair-budget-other.vercel.app','http://clair-budget.vercel.app']){
+  const response=await handler(new Request('https://test.invalid/',{method:'OPTIONS',headers:{origin}}));
+  assert.equal(response.status,403,origin);assert.equal(response.headers.get('access-control-allow-origin'),null);
+ }
+ const anonymousVercel=await handler(new Request('https://test.invalid/',{method:'POST',headers:{origin:'https://clair-budget.vercel.app','content-type':'application/json'},body:JSON.stringify({action:'snapshot'})}));
+ assert.equal(anonymousVercel.status,401,'CORS approval never grants administrator access');
+ assert.equal(anonymousVercel.headers.get('access-control-allow-origin'),'https://clair-budget.vercel.app');
+
  const call=async(body,headers={authorization:'Bearer valid',origin:'https://j2947djt9g-sketch.github.io'})=>handler(new Request('https://test.invalid/clair-masterboard',{method:'POST',headers,body:JSON.stringify(body)}));
  assert.equal((await call({action:'snapshot'},{})).status,401);
+ assert.equal((await call({action:'snapshot'},{authorization:'Bearer valid',origin:'https://clair-budget.vercel.app'})).status,200,'An authenticated allowlisted admin can use the production origin');
+ actor={...user,user_metadata:{admin:true}};assert.equal((await call({action:'snapshot'},{authorization:'Bearer valid',origin:'https://clair-budget.vercel.app'})).status,403,'A forged metadata role never grants admin access on Vercel');actor=owner;
  actor={...user,user_metadata:{admin:true}};assert.equal((await call({action:'snapshot'})).status,403);actor=owner;
  assert.equal((await call({action:'snapshot'},{authorization:'Bearer valid',origin:'https://evil.invalid'})).status,403);
  let res=await call({action:'snapshot'}),s=await res.json();assert.equal(res.status,200);assert.equal(s.users.length,2);assert.equal(s.settings.mode,'free');assert(!JSON.stringify(s).includes('payload'));

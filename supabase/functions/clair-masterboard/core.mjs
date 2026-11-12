@@ -1,4 +1,4 @@
-export const APP_URL='https://j2947djt9g-sketch.github.io/mon-djai/clair/';
+export const APP_URL='https://clair-budget.vercel.app/clair/';
 export const parisDate=(now=new Date())=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
 export function dueState(until,today=parisDate()){
   if(!until)return {label:'Sans échéance de test',due:false};
@@ -22,7 +22,7 @@ const uuid=v=>typeof v==='string'&&/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/
 export function createHandler({db,auth,now=()=>new Date()}){
   return async req=>{
     const origin=req.headers.get('origin');
-    const allowed=!origin||origin==='https://j2947djt9g-sketch.github.io'||/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    const allowed=!origin||origin==='https://j2947djt9g-sketch.github.io'||origin==='https://clair-budget.vercel.app'||/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
     const headers={'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin',...(allowed&&origin?{'Access-Control-Allow-Origin':origin}:{}),'Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
     const answer=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
     try{
