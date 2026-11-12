@@ -1,16 +1,27 @@
 (function(){
   'use strict';
   const motion=window.matchMedia('(prefers-reduced-motion: reduce)');
-  const intro=document.querySelector('#intro'),introStarted=performance.now();let introLeaving=false;
+  const intro=document.querySelector('#intro'),introStarted=performance.now();let introLeaving=false,introWait=null,introExitWait=null,introFallback=null;
   document.querySelector('main').inert=true;
+  function removeIntro(){
+    for(const timer of [introWait,introExitWait,introFallback])clearTimeout(timer);
+    motion.removeEventListener?.('change',skipIntroForReducedMotion);intro?.remove();document.querySelector('main').inert=false;
+  }
+  function leaveIntro(){
+    if(!intro?.isConnected||intro.classList.contains('leaving'))return;
+    intro.classList.add('leaving');
+    intro.addEventListener('animationend',event=>{if(event.target===intro)removeIntro();});introExitWait=setTimeout(removeIntro,1300);
+  }
   function finishIntro(skip=false){
     if(!intro?.isConnected)return;
-    const remove=()=>{intro.remove();document.querySelector('main').inert=false;};
-    if(skip||motion.matches){remove();return;}
+    if(skip||motion.matches){removeIntro();return;}
     if(introLeaving)return;introLeaving=true;
-    setTimeout(()=>{if(!intro.isConnected)return;intro.classList.add('leaving');intro.addEventListener('animationend',e=>{if(e.target===intro)remove();});setTimeout(remove,1300);},Math.max(0,4200-(performance.now()-introStarted)));
+    introWait=setTimeout(leaveIntro,Math.max(0,4200-(performance.now()-introStarted)));
   }
-  setTimeout(()=>finishIntro(),6000);
+  intro?.addEventListener('click',()=>finishIntro(true));
+  function skipIntroForReducedMotion(event){if(event.matches)finishIntro(true);}
+  motion.addEventListener?.('change',skipIntroForReducedMotion);
+  introFallback=setTimeout(()=>finishIntro(),6000);
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&intro?.isConnected)finishIntro(true);});
   if(!window.supabase){document.body.dataset.session='ready';finishIntro(true);document.querySelector('#global-status').textContent='Connexion indisponible. Actualise la page.';return;}
   const URL='https://hkssnbvktfscizojhftl.supabase.co',KEY='sb_publishable_qJeSyD7E0cbi8V--qyJJkw_8M4oOKr8';
@@ -40,46 +51,75 @@
     finally{$('#refresh').disabled=false;}
   }
 function setHero(signedIn){
+  const previousAuth=document.body.dataset.auth;
   document.body.dataset.auth=signedIn?'on':'off';
+  $('#refresh').hidden=!signedIn;
+  if(previousAuth!==document.body.dataset.auth)syncLiquidNavigation();
   $('#hero-eyebrow').textContent=signedIn?'CLAIR, CÔTÉ COULISSES.':'L’ESSENTIEL, SIMPLEMENT.';
   $('#hero-title').innerHTML=signedIn?'Tout est là.':'Tout Clair,<br>en un regard.';
   $('#hero-description').innerHTML=signedIn?'Moins de bruit. Plus de clarté.<br>Tes comptes et leurs actions, au même endroit.':'Les comptes, les accès, les relances.<br>Un espace pour tout retrouver.';
 }
   function render(){
     const s=snapshot;
-    $('#stats').innerHTML=[['Comptes Clair',s.users.length,s.users.filter(u=>u.confirmed).length+' adresses confirmées','people','all','Voir les comptes'],['À relancer',s.users.filter(due).length,'Échéances de test','clock','due','Voir les comptes à relancer'],['Mails confirmés',s.messages.filter(m=>m.state==='confirmed_sent').length,'Sur les 100 derniers messages','mail','messages','Voir l’historique']].map(([title,n,detail,glyph,target,link],i)=>`<button class="stat ${i===0?'stat-main':''}" data-destination="${target}" aria-label="${link} : ${n}"><span class="stat-heading"><span>${title}</span>${icon(glyph)}</span><strong>${String(n).padStart(2,'0')}</strong><small>${detail}</small><span class="stat-link"><span class="stat-link-full">${link}</span><span class="stat-link-short" aria-hidden="true">Voir</span><span aria-hidden="true"> →</span></span></button>`).join('');
+    $('#stats').innerHTML=[['Comptes',s.users.length,s.users.filter(u=>u.confirmed).length+' adresses confirmées','people','all','Voir les comptes'],['À relancer',s.users.filter(due).length,'Échéances de test','clock','due','Voir les comptes à relancer'],['Envois marqués',s.messages.filter(m=>m.state==='confirmed_sent').length,'Sur les 100 derniers messages','mail','messages','Voir l’historique']].map(([title,n,detail,glyph,target,link],i)=>`<button class="stat ${i===0?'stat-main':''}" data-destination="${target}" aria-label="${link} : ${n}"><span class="stat-heading"><span>${title}</span>${icon(glyph)}</span><strong>${String(n).padStart(2,'0')}</strong><small>${detail}</small><span class="stat-link"><span class="stat-link-full">${link}</span><span class="stat-link-short" aria-hidden="true">Voir</span><span aria-hidden="true"> →</span></span></button>`).join('');
     renderUsers();renderHelp();
     $('#messages').innerHTML=s.messages.length?s.messages.map(m=>`<article class="mail-card"><div><span class="tag ${m.state==='confirmed_sent'?'':'neutral'}">${esc(states[m.state])}</span><h3>${esc(m.subject)}</h3><p>${esc(m.email)} · ${esc(day(m.created_at))}</p></div><button data-action="reopen" data-id="${esc(m.id)}">Reprendre le message ↗</button></article>`).join(''):'<p class="empty">Aucun message préparé. Ouvre le profil d’un compte, puis choisis « Préparer une relance ».</p>';
     $('#audit').innerHTML=s.audit.length?s.audit.map(a=>`<div class="audit-row"><span>${esc(auditNames[a.action]||a.action)}</span><time>${esc(day(a.created_at))}</time></div>`).join(''):'<p class="muted small">Les actions d’administration apparaîtront ici.</p>';
   }
+const helpReasons={email_missing:'Lien non reçu par e-mail',link_expired:'Lien expiré ou inutilisable',access_problem:'Problème de connexion'};
 function pendingHelp(email){return (snapshot.requests||[]).filter(r=>r.status==='pending'&&r.email.toLowerCase()===email.toLowerCase());}
 function renderHelp(){
  const requests=snapshot.requests||[],pending=requests.filter(r=>r.status==='pending');
  $('#help-count').textContent=String(pending.length);
- const reasons={email_missing:'Lien non reçu par e-mail',link_expired:'Lien expiré ou inutilisable',access_problem:'Problème de connexion'};
  $('#help-requests').innerHTML=requests.length?requests.map(r=>{
   const user=snapshot.users.find(u=>u.email.toLowerCase()===r.email.toLowerCase());
-  return `<article class="help-card"><span class="tag ${r.status==='pending'?'amber':''}">${r.status==='pending'?'À vérifier':r.status==='authorized'?'Réinitialisation autorisée':'Demande traitée'}</span><p>${esc(r.email)}</p><small>${esc(reasons[r.reason]||'Demande d’aide')} · ${esc(day(r.created_at))}</small><div>${user?`<button data-action="request-profile" data-user="${esc(user.id)}">Ouvrir le profil ↗</button>`:'<p class="field-hint">Vérifie cette adresse avec la personne avant toute action.</p>'}${r.status!=='closed'?`<button data-action="close-help" data-id="${esc(r.id)}">Marquer comme traitée</button>`:''}</div></article>`;
+  return `<article class="help-card"><span class="tag ${r.status==='pending'?'amber':''}">${r.status==='pending'?'À vérifier':r.status==='authorized'?'Réinitialisation autorisée':'Demande traitée'}</span><p>${esc(r.email)}</p><small>${esc(helpReasons[r.reason]||'Demande d’aide')} · ${esc(day(r.created_at))}</small><div>${user?`<button data-action="request-profile" data-user="${esc(user.id)}">Ouvrir le profil ↗</button>`:'<p class="field-hint">Vérifie cette adresse avec la personne avant toute action.</p>'}${r.status!=='closed'?`<button data-action="close-help" data-id="${esc(r.id)}">Marquer comme traitée</button>`:''}</div></article>`;
  }).join(''):'<p class="empty">Aucune demande pour le moment.</p>';
 }
 const mobileProfile=window.matchMedia('(max-width: 760px)');
+function syncLiquidNavigation(){
+ const host=$('.tabs');if(!host)return;
+ const buttons=Array.from(host.children).filter(node=>node.matches('button[data-tab]'));
+ const focused=host.contains(document.activeElement)?document.activeElement.closest('button[data-tab]')?.id:null;
+ for(const button of buttons){const selected=button.getAttribute('aria-selected')==='true';button.classList.toggle('active',selected);if(selected)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
+ const glass=window.ClairGlassUI;if(!glass?.renderNavigation)return;
+ const markup=buttons.map(button=>button.outerHTML).join('');
+ if(mobileProfile.matches&&document.body.dataset.auth==='on')glass.renderNavigation(host,markup);
+ else if(host.querySelector('.glass-nav-indicator')){glass.renderNavigation(host,'');host.innerHTML=markup;}
+ if(focused&&document.activeElement?.id!==focused)document.getElementById(focused)?.focus({preventScroll:true});
+}
+
 let profileAnimation=null,profileReturnId=null;
-function initialsFor(user){return (user.name||user.email).split(/\s+/).filter(Boolean).slice(0,2).map(n=>n[0]).join('').toUpperCase();}
+function displayName(user){return typeof user.name==='string'&&user.name.trim()?user.name.trim():'Compte sans nom';}
+function initialsFor(user){return displayName(user).split(/\s+/).filter(Boolean).slice(0,2).map(n=>n[0]).join('').toUpperCase();}
+function syncFilterChips(){
+ const filter=$('#filter').value;
+ const counts={all:snapshot.users.length,help:snapshot.users.filter(u=>pendingHelp(u.email).length).length,unconfirmed:snapshot.users.filter(u=>!u.confirmed).length,banned:snapshot.users.filter(u=>u.banned).length};
+ document.querySelectorAll('[data-filter-choice]').forEach(button=>{
+  const key=button.dataset.filterChoice;button.setAttribute('aria-pressed',String(filter===key));
+  const count=button.querySelector('[data-filter-count]');if(count)count.textContent=String(counts[key]??0);
+ });
+}
 function renderUsers(){
  if(!snapshot)return;
  const search=$('#search').value.trim().toLowerCase(),filter=$('#filter').value;
- const users=snapshot.users.filter(u=>(u.name+' '+u.email).toLowerCase().includes(search)&&(filter==='all'||filter==='due'&&due(u)||filter==='banned'&&u.banned||filter==='help'&&pendingHelp(u.email).length));
+ const users=snapshot.users.filter(u=>(displayName(u)+' '+u.email).toLowerCase().includes(search)&&(filter==='all'||filter==='due'&&due(u)||filter==='banned'&&u.banned||filter==='help'&&pendingHelp(u.email).length||filter==='unconfirmed'&&!u.confirmed));
  if(openProfileId&&!users.some(u=>u.id===openProfileId))closeProfile(false,false);
- $('#accounts-count').textContent=String(users.length).padStart(2,'0');
+ $('#accounts-count').textContent=String(users.length).padStart(2,'0');syncFilterChips();
  $('#users').innerHTML=users.length?users.map(u=>{
   const id=esc(u.id),open=u.id===openProfileId;
-  return '<article class="user-card" data-expanded="'+open+'"><button class="profile-toggle" id="profile-'+id+'" data-profile="'+id+'" aria-expanded="'+open+'" aria-controls="profile-drawer" aria-haspopup="dialog"><span class="card-person"><span class="avatar" aria-hidden="true">'+esc(initialsFor(u))+'</span><span class="profile-identity"><span class="user-name">'+esc(u.name||'Compte Clair')+'</span><span class="user-email">'+esc(u.email)+'</span></span></span><span class="card-badges"><span class="profile-status '+(u.banned?'suspended':'')+'"><i class="status-dot"></i>'+(u.banned?'Suspendu':'Accès gratuit')+'</span>'+(u.is_admin?'<span class="admin-label">ADMIN</span>':'')+(pendingHelp(u.email).length?'<span class="tag amber">Demande d’aide</span>':'')+'</span><span class="card-foot"><span>'+esc(u.test_until?label(u):'Espace personnel')+'</span><span class="card-open">Voir le profil '+icon('chevron','profile-chevron')+'</span></span></button></article>';
+  return '<article class="user-card" data-expanded="'+open+'"><button class="profile-toggle" id="profile-'+id+'" data-profile="'+id+'" aria-expanded="'+open+'" aria-controls="profile-drawer" aria-haspopup="dialog"><span class="card-person"><span class="avatar" aria-hidden="true">'+esc(initialsFor(u))+'</span><span class="profile-identity"><span class="user-name">'+esc(displayName(u))+'</span><span class="user-email">'+esc(u.email)+'</span></span></span><span class="card-badges"><span class="profile-status '+(u.banned?'suspended':'')+'"><i class="status-dot"></i>'+(u.banned?'Suspendu':'Accès gratuit')+'</span>'+(!u.confirmed?'<span class="tag amber">E-mail à confirmer</span>':'')+(u.is_admin?'<span class="admin-label">ADMIN</span>':'')+(pendingHelp(u.email).length?'<span class="tag amber">Aide demandée</span>':'')+(u.test_until?'<span class="tag '+(due(u)?'amber':'')+'">'+esc(label(u))+'</span>':'')+'</span><span class="card-chevron" aria-hidden="true">'+icon('chevron','profile-chevron')+'</span></button></article>';
  }).join(''):'<p class="empty">Aucun compte ne correspond à cette recherche.</p>';
  if(openProfileId)renderProfile();
 }
+function profileHelp(user,requests){
+ if(!requests.length)return '';
+ return '<section class="profile-help-card" aria-labelledby="profile-help-title"><div class="profile-help-heading"><span>'+icon('help')+'</span><div><span class="section-kicker">DEMANDE EN ATTENTE</span><h3 id="profile-help-title">'+(requests.length===1?'Une aide à examiner':requests.length+' demandes à examiner')+'</h3></div></div><p class="request-body">'+(user.confirmed?'Consulte le motif et l’appareil avant d’autoriser une action.':'L’adresse n’est pas confirmée. Une demande d’appareil peut être examinée pour aider le titulaire à récupérer son accès.')+'</p><details class="profile-help-details"><summary>Examiner '+(requests.length===1?'la demande':'les demandes')+' '+icon('chevron')+'</summary><div>'+requests.map(r=>'<article class="profile-help-request"><strong>'+esc(helpReasons[r.reason]||'Demande d’aide')+'</strong><p class="request-meta">'+esc(day(r.created_at))+(r.device_label?' · '+esc(r.device_label):'')+'</p><button type="button" data-action="close-help" data-id="'+esc(r.id)+'">Marquer comme traitée</button></article>').join('')+'</div></details></section>';
+}
 function renderProfile(){
- const u=snapshot?.users.find(u=>u.id===openProfileId);if(!u)return;const id=esc(u.id);
- $('#profile-content').innerHTML='<section class="drawer-identity"><span class="avatar" aria-hidden="true">'+esc(initialsFor(u))+'</span><h2 id="profile-title">'+esc(u.name||'Compte Clair')+'</h2><p class="drawer-email">'+esc(u.email)+'</p><div class="profile-summary"><span class="tag '+(u.banned?'red':'success')+'">'+(u.banned?'Compte suspendu':'Accès gratuit')+'</span><span class="tag">'+(u.confirmed?'E-mail confirmé':'E-mail à confirmer')+'</span>'+(u.is_admin?'<span class="tag">Administrateur</span>':'')+'</div></section><div class="profile-details-inner"><h3 class="profile-section-heading"><span>'+icon('people')+'</span>Les informations du compte</h3><dl class="profile-facts"><div><dt>Inscrit le</dt><dd>'+esc(day(u.created_at))+'</dd></div><div><dt>Dernière connexion</dt><dd>'+esc(day(u.last_sign_in_at))+'</dd></div><div><dt>Échéance de test</dt><dd>'+esc(day(u.test_until))+' <span class="tag '+(due(u)?'amber':'')+'">'+esc(label(u))+'</span></dd></div></dl><h3 class="profile-section-heading"><span>'+icon('mail')+'</span>Relances et connexion</h3><div class="profile-main-actions"><button class="action-tile primary" data-action="reminder" data-user="'+id+'">'+icon('mail')+'<span><strong>Préparer une relance</strong><small>Un message prêt à envoyer dans Gmail</small></span></button><button class="action-tile" data-action="reset" data-user="'+id+'">'+icon('key')+'<span><strong>Faire sauter le mot de passe</strong><small>La personne choisira le nouveau dans Clair</small></span></button></div><details class="test-tools" data-user="'+id+'" '+(openTestTools.has(u.id)?'open':'')+'><summary>'+icon('clock')+'Outils de simulation et d’aide</summary><div class="test-actions"><button data-action="renew" data-user="'+id+'">Simuler 1 mois payé</button><button data-action="date" data-user="'+id+'">Tester l’échéance</button><button data-action="recovery" data-user="'+id+'">Envoyer le guide de connexion</button></div></details>'+(u.is_admin?'<p class="protected-account">'+icon('shield')+'Ton compte administrateur est protégé.</p>':'<section class="account-management"><h3>Gérer l’accès à Clair</h3><div><button data-action="'+(u.banned?'restore':'suspend')+'" data-user="'+id+'">'+icon(u.banned?'play':'pause')+(u.banned?'Rétablir le compte':'Suspendre le compte')+'</button><button class="danger" data-action="delete" data-user="'+id+'">'+icon('trash')+'Supprimer</button></div></section>')+'</div>';
+ const u=snapshot?.users.find(u=>u.id===openProfileId);if(!u)return;const id=esc(u.id),requests=pendingHelp(u.email),devices=requests.filter(r=>r.device_unlock_pending);
+ const resetReason=u.banned?'Rétablis d’abord l’accès au compte.':!devices.length?'Aucune demande d’appareil en attente.':'';
+ $('#profile-content').innerHTML='<section class="drawer-identity"><span class="avatar" aria-hidden="true">'+esc(initialsFor(u))+'</span><div class="drawer-person"><h2 id="profile-title">'+esc(displayName(u))+'</h2><p class="drawer-email">'+esc(u.email)+'</p></div><div class="profile-summary"><span class="tag '+(u.banned?'red':'success')+'">'+(u.banned?'Compte suspendu':'Accès gratuit')+'</span><span class="tag '+(u.confirmed?'':'amber')+'">'+(u.confirmed?'E-mail confirmé':'E-mail à confirmer')+'</span>'+(u.is_admin?'<span class="tag">Administrateur</span>':'')+'</div></section><div class="profile-details-inner">'+profileHelp(u,requests)+'<section class="profile-facts-section"><h3 class="profile-section-heading">Repères du compte</h3><dl class="profile-facts"><div><dt>Inscription</dt><dd>'+esc(day(u.created_at))+'</dd></div><div><dt>Dernière connexion</dt><dd>'+esc(u.last_sign_in_at?day(u.last_sign_in_at):'Non disponible')+'</dd></div><div><dt>Accès actuel</dt><dd>'+(u.banned?'Suspendu':'Phase gratuite')+'</dd></div><div><dt>Échéance de test</dt><dd>'+esc(u.test_until?day(u.test_until):'Aucune définie')+(u.test_until?' <span class="tag '+(due(u)?'amber':'')+'">'+esc(label(u))+'</span>':'')+'</dd></div></dl></section><section class="routine-actions"><h3 class="profile-section-heading">Aider cette personne</h3><div class="profile-main-actions"><button class="action-tile" data-action="recovery" data-user="'+id+'">'+icon('mail')+'<span><strong>Préparer un guide de connexion</strong><small>Un message à relire avant de l’envoyer</small></span></button><button class="action-tile" data-action="reminder" data-user="'+id+'">'+icon('clock')+'<span><strong>Préparer une relance de test</strong><small>Simulation uniquement, aucun paiement dû</small></span></button></div></section><details class="test-tools" data-user="'+id+'" '+(openTestTools.has(u.id)?'open':'')+'><summary>'+icon('clock')+'Outils de simulation</summary><p class="field-hint">Aucun paiement réel ni blocage automatique.</p><div class="test-actions"><button data-action="renew" data-user="'+id+'">Prolonger le test d’un mois</button><button data-action="date" data-user="'+id+'">Choisir une échéance de test</button></div></details><section class="sensitive-access"><h3 class="profile-section-heading"><span>'+icon('shield')+'</span>Accès sensibles</h3><p class="field-hint">Ces actions changent l’accès au compte et conservent leurs confirmations.</p><button class="action-tile" data-action="reset" data-user="'+id+'" '+(resetReason?'disabled aria-describedby="reset-availability"':'')+'>'+icon('key')+'<span><strong>Autoriser un nouveau mot de passe</strong><small>Sur l’appareil demandé uniquement</small></span></button><p class="reset-availability" id="reset-availability">'+esc(resetReason||'L’ancien mot de passe sera désactivé. L’appareil autorisé disposera de 15 minutes pour en choisir un nouveau.')+'</p>'+(u.is_admin?'<p class="protected-account">'+icon('shield')+'Ton compte administrateur est protégé.</p>':'<section class="account-management"><h4>Gérer l’accès à Clair</h4><div><button data-action="'+(u.banned?'restore':'suspend')+'" data-user="'+id+'">'+icon(u.banned?'play':'pause')+(u.banned?'Rétablir le compte':'Suspendre le compte')+'</button><button class="danger" data-action="delete" data-user="'+id+'">'+icon('trash')+'Supprimer le compte</button></div></section>')+'</section></div>';
 }
 function syncProfileDialog(){
  const drawer=$('#profile-drawer'),wasOpen=drawer.open;profileAnimation?.cancel();profileAnimation=null;drawer.inert=false;
@@ -100,6 +140,7 @@ function closeProfile(restoreFocus=true,animate=true){
 }
 function resizeProfile(){
  $('.tabs').setAttribute('aria-orientation',mobileProfile.matches?'horizontal':'vertical');
+ syncLiquidNavigation();
  const drawer=$('#profile-drawer');if(!drawer.open||!openProfileId)return;
  drawer.close();if(mobileProfile.matches)drawer.showModal();else drawer.show();drawer.setAttribute('aria-modal',String(mobileProfile.matches));
 }
@@ -132,7 +173,7 @@ mobileProfile.addEventListener('change',resizeProfile);
 function resetDialog(user){
  const requests=(snapshot.requests||[]).filter(r=>r.device_unlock_pending&&r.status==='pending'&&r.email.toLowerCase()===user.email.toLowerCase());
  if(!requests.length){modal('<span class="section-kicker">DÉBLOCAGE DANS CLAIR</span><h2 id="modal-title">Il manque la demande de son appareil.</h2><p>La personne ouvre Clair et appuie sur « Demander un déblocage administrateur ». Sa demande apparaîtra ici. Tu pourras ensuite faire sauter son ancien mot de passe ; elle choisira le nouveau directement dans son application.</p><p>Aucun lien ni code à transmettre. Ses dépenses et son historique restent conservés.</p>');return;}
- modal(`<span class="section-kicker">DÉBLOCAGE DANS CLAIR</span><h2 id="modal-title">Faire sauter le mot de passe</h2><p>L’ancien mot de passe sera désactivé. La personne choisira le nouveau directement dans Clair sur l’appareil que tu autorises. Son historique reste conservé.</p><form id="authorize-reset-form"><label for="unlock-request">Appareil à débloquer</label><select id="unlock-request">${requests.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.device_label)+' · '+esc(day(r.created_at))+'</option>').join('')}</select><label for="reset-confirm-email">Recopie ${esc(user.email)}</label><input id="reset-confirm-email" type="email" autocomplete="off" required><p class="field-hint">En validant, tu confirmes que cette demande et cet appareil appartiennent au titulaire du compte.</p><div class="dialog-actions"><button type="submit" class="primary">Faire sauter le mot de passe</button></div><p class="field-hint">Connexion administrateur de moins de 15 minutes requise. Le titulaire dispose ensuite de 15 minutes pour choisir son nouveau mot de passe.</p></form>`);
+ modal(`<span class="section-kicker">DÉBLOCAGE DANS CLAIR</span><h2 id="modal-title">Autoriser un nouveau mot de passe</h2><p>L’ancien mot de passe sera désactivé. La personne choisira le nouveau directement dans Clair sur l’appareil que tu autorises. Son historique reste conservé.</p><form id="authorize-reset-form"><label for="unlock-request">Appareil à débloquer</label><select id="unlock-request">${requests.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.device_label)+' · '+esc(day(r.created_at))+'</option>').join('')}</select><label for="reset-confirm-email">Recopie ${esc(user.email)}</label><input id="reset-confirm-email" type="email" autocomplete="off" required><p class="field-hint">En validant, tu confirmes que cette demande et cet appareil appartiennent au titulaire du compte.</p><div class="dialog-actions"><button type="submit" class="primary">Autoriser un nouveau mot de passe</button></div><p class="field-hint">Connexion administrateur de moins de 15 minutes requise. Le titulaire dispose ensuite de 15 minutes pour choisir son nouveau mot de passe.</p></form>`);
  const input=$('#reset-confirm-email');
  input.oninput=()=>{input.setCustomValidity('');$('.dialog-error').textContent='';};
  $('#authorize-reset-form').onsubmit=async e=>{
@@ -151,6 +192,7 @@ function showView(name,scroll=true){
  closeProfile(false,false);
  document.querySelectorAll('[data-tab]').forEach(t=>{const selected=t.dataset.tab===name;t.setAttribute('aria-selected',String(selected));t.tabIndex=selected?0:-1;});
  document.querySelectorAll('.view').forEach(v=>v.hidden=v.id!==name+'-view');
+ syncLiquidNavigation();
  if(scroll)document.getElementById(name+'-view').scrollIntoView({behavior:motion.matches?'auto':'smooth',block:'start'});
 }
 function clearBoard(){
@@ -160,6 +202,7 @@ function clearBoard(){
  $('#identity').textContent='';$('#phone').value='';$('#password').value='';$('#modal').close();setHero(false);
 }
   async function handleBoardClick(e){
+    const filterChoice=e.target.closest('[data-filter-choice]');if(filterChoice){$('#filter').value=filterChoice.dataset.filterChoice;renderUsers();return;}
     const destination=e.target.closest('[data-destination]');if(destination){const target=destination.dataset.destination;if(target==='messages')showView('messages');else{$('#search').value='';$('#filter').value=target;renderUsers();showView('accounts');}return;}
     const profile=e.target.closest('[data-profile]');if(profile){toggleProfile(profile.dataset.profile);return;}
     const button=e.target.closest('[data-action]');if(!button||busy)return;
@@ -182,7 +225,7 @@ function clearBoard(){
   $('#logout').onclick=()=>leave().catch(e=>toast(e.message,true));
   $('#refresh').onclick=()=>refresh().catch(e=>toast(e.message,true));
   $('#close-modal').onclick=()=>$('#modal').close();$('#search').oninput=renderUsers;$('#filter').onchange=renderUsers;
-  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>showView(b.dataset.tab));
+  $('.tabs').addEventListener('click',event=>{const button=event.target.closest('button[data-tab]');if(button?.parentElement===$('.tabs'))showView(button.dataset.tab);});
   $('.tabs').addEventListener('keydown',e=>{const keys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'];if(!keys.includes(e.key))return;e.preventDefault();const tabs=[...document.querySelectorAll('[data-tab]')],i=tabs.indexOf(document.activeElement);const next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(['ArrowRight','ArrowDown'].includes(e.key)?1:-1)+tabs.length)%tabs.length;showView(tabs[next].dataset.tab,false);tabs[next].focus();});
   $('#trial-details').onclick=()=>showView('settings');
   $('#password-toggle').onclick=()=>{const visible=$('#password').type==='password';$('#password').type=visible?'text':'password';$('#password-toggle').setAttribute('aria-pressed',String(visible));$('#password-toggle').setAttribute('aria-label',visible?'Masquer le mot de passe':'Afficher le mot de passe');};
