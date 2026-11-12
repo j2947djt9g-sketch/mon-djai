@@ -1,0 +1,37 @@
+/* Approved A: Verre doux. Profile colors stay scoped in profile.css. */
+:where(.button,.bottom-nav button,.profile-link,.profile-links>button){position:relative;isolation:isolate;overflow:hidden;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .16s ease,box-shadow .16s ease,filter .16s ease}
+.button,.button.small{min-height:44px;border-radius:16px}
+:where(.button,.bottom-nav button,.profile-link,.profile-links>button):active,.glass-pressed{transform:scale(.975)}
+.glass-ripple{position:absolute;z-index:-1;display:block;pointer-events:none;border-radius:50%;background:currentColor;opacity:.11;transform:scale(0);animation:clair-glass-ripple .52s ease-out forwards}
+@keyframes clair-glass-ripple{to{transform:scale(1);opacity:0}}
+@media(max-width:720px){
+ main{padding-bottom:calc(118px + env(safe-area-inset-bottom,0px))}
+ .toast{bottom:calc(108px + env(safe-area-inset-bottom,0px))}
+ .bottom-nav{--glass-dock-solid:#fbf8fd;--glass-dock-glass:linear-gradient(120deg,#ffffffcc,#f7f0fae8);--glass-dock-border:#ffffffe8;--glass-dock-shadow:0 7px 25px #5b3d7314,inset 0 1px 1px #fff;--glass-dock-ink:#6a607b;--glass-dock-active:#70558c;--glass-dock-pill:linear-gradient(140deg,#e1d8e9eb,#e9e1efeb);--glass-dock-pill-line:#f7f2fb;position:fixed;inset:auto auto calc(16px + env(safe-area-inset-bottom,0px)) 50%;transform:translateX(-50%);width:calc(100% - 28px);max-width:420px;height:76px;min-height:76px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:0;padding:7px;border:1px solid var(--glass-dock-border);border-radius:44px;background:var(--glass-dock-solid);box-shadow:var(--glass-dock-shadow);-webkit-backdrop-filter:none;backdrop-filter:none;z-index:5}
+ .bottom-nav:empty{display:none}
+ .bottom-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:none;width:100%;height:60px;min-width:0;min-height:44px;margin:0;padding:6px 4px;border:0;border-radius:34px;background:transparent;color:var(--glass-dock-ink);font-size:12px;font-weight:600;line-height:1.15;white-space:nowrap}
+ .bottom-nav button>span:not(.glass-ripple){display:grid;place-items:center;width:26px;height:26px;font-size:26px;line-height:1;pointer-events:none}
+ .bottom-nav button .ui-icon{width:26px;height:26px;stroke-width:1.75;pointer-events:none}
+ .bottom-nav button.active,.bottom-nav button[aria-current=page]{color:var(--glass-dock-active);background:var(--glass-dock-pill);box-shadow:inset 0 1px 0 var(--glass-dock-pill-line),0 1px 3px #6f51720a}
+ .bottom-nav button.active .ui-icon,.bottom-nav button[aria-current=page] .ui-icon{stroke-width:2}
+ .bottom-nav button:focus-visible{outline:3px solid var(--accent,#8e76d3);outline-offset:2px}
+ body[data-wall=photo] .bottom-nav{background:rgba(253,250,255,.97)}
+ html[data-theme=dark] .bottom-nav{--glass-dock-solid:#251e31;--glass-dock-glass:linear-gradient(120deg,#2b2238ed,#21192ef2);--glass-dock-border:#ded0f52e;--glass-dock-shadow:0 8px 28px #0005,inset 0 1px 1px #ffffff12;--glass-dock-ink:#d4c6e3;--glass-dock-active:#f1e7ff;--glass-dock-pill:linear-gradient(140deg,#534167,#443451);--glass-dock-pill-line:#e8d4ff1a}
+ html[data-theme=dark] body[data-wall=photo] .bottom-nav{background:rgba(37,30,49,.97)}
+}
+@supports (backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px)){
+ @media(max-width:720px){.bottom-nav{background:var(--glass-dock-glass);-webkit-backdrop-filter:blur(24px) saturate(1.3);backdrop-filter:blur(24px) saturate(1.3)}}
+}
+@media(max-width:720px) and (prefers-color-scheme:dark){
+ html[data-theme=auto] .bottom-nav{--glass-dock-solid:#251e31;--glass-dock-glass:linear-gradient(120deg,#2b2238ed,#21192ef2);--glass-dock-border:#ded0f52e;--glass-dock-shadow:0 8px 28px #0005,inset 0 1px 1px #ffffff12;--glass-dock-ink:#d4c6e3;--glass-dock-active:#f1e7ff;--glass-dock-pill:linear-gradient(140deg,#534167,#443451);--glass-dock-pill-line:#e8d4ff1a}
+ html[data-theme=auto] body[data-wall=photo] .bottom-nav{background:rgba(37,30,49,.97)}
+}
+@media(prefers-reduced-motion:reduce){
+ :where(.button,.bottom-nav button,.profile-link,.profile-links>button){transition:none}
+ :where(.button,.bottom-nav button,.profile-link,.profile-links>button):active,.glass-pressed{transform:none}
+ .glass-ripple{display:none;animation:none}
+}
+@media(forced-colors:active){
+ .bottom-nav{background:Canvas;border-color:ButtonText;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+ .bottom-nav button{color:ButtonText}.bottom-nav button.active,.bottom-nav button[aria-current=page]{color:HighlightText;background:Highlight;outline:1px solid Highlight;box-shadow:none}.glass-ripple{display:none}
+}
