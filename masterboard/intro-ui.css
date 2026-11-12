@@ -1,0 +1,83 @@
+/* Keep the entrance wordmark legible throughout its staggered fall. */
+.intro-brand {
+  width: calc(100% - 48px);
+  max-width: 760px;
+}
+
+.intro-letters {
+  gap: .025em;
+  max-width: 100%;
+  margin-inline: auto;
+  color: #f9f7fc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: clamp(72px, 21vw, 176px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0;
+  white-space: nowrap;
+  perspective: none;
+  transform-style: flat;
+}
+
+.intro-letters > span,
+.intro-letters > i {
+  flex: 0 0 auto;
+  animation-name: intro-glyph-drop;
+  transform: none;
+  transform-origin: center;
+  backface-visibility: visible;
+  filter: none;
+  text-shadow: 0 4px 18px #0003;
+  will-change: transform, opacity;
+}
+
+.intro-letters > i {
+  color: #c9b4e8;
+  font-style: normal;
+  text-shadow: 0 4px 18px #0003;
+}
+
+.intro-brand > p {
+  margin-top: clamp(24px, 3vw, 34px);
+  color: #d3cadf;
+  font-size: clamp(12px, 1.4vw, 14px);
+  line-height: 1.5;
+  letter-spacing: .085em;
+}
+
+@keyframes intro-glyph-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-70vh);
+    animation-timing-function: cubic-bezier(.4, 0, .8, .4);
+  }
+  14% {
+    opacity: 1;
+  }
+  64% {
+    opacity: 1;
+    transform: translateY(0);
+    animation-timing-function: ease-out;
+  }
+  82% {
+    transform: translateY(-.08em);
+    animation-timing-function: ease-in;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro {
+    display: none;
+  }
+}
+
+/* Optional original illustration follows the wordmark, at its natural aspect ratio. */
+.intro-after{display:grid;place-items:center;width:100%;padding:28px}
+.intro-after img{display:block;max-width:min(86vw,460px);max-height:calc(100dvh - 100px);width:auto;height:auto;object-fit:contain}
+.intro.image-stage .intro-brand{display:none}
+.intro.leaving .intro-after{opacity:0;transition:opacity .2s ease}
+@media(prefers-reduced-motion:reduce){.intro.leaving .intro-after{transition:none}}

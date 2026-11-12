@@ -33,10 +33,19 @@ Tests never generate links for real accounts or send real mail. Run `test-assist
 
 ## Approved A — Verre doux Administration
 
-Direction A was approved on 12 November 2026. `admin-ui.css` extends the existing presentation with a compact account directory, a clear mobile navigation capsule and a grouped account sheet. The existing HTML IDs, delegated actions, dialog lifecycle, installation and introduction remain.
+Direction A was approved on 12 November 2026. `admin-ui.css` extends the existing presentation with a compact account directory, a clear mobile navigation capsule and a grouped account sheet. The existing HTML IDs, delegated actions, dialog lifecycle and installation remain. The entrance refinement is described below.
 
 Quick filter chips drive the existing `#filter` control; test-expiry filtering remains under “Autres filtres”. Missing display names use “Compte sans nom”, without inferring or changing a person’s name. Access, address confirmation and pending support are separate states.
 
 The account sheet uses only the loaded snapshot. Pending requests are matched by email without case sensitivity; inspecting a request is read-only, and closing it still requires an explicit action. Password authorization is grouped under sensitive access and unavailable when the account is suspended or no pending device is linked. An unconfirmed address alone does not disable the existing recovery flow. The global audit stays in settings because the snapshot does not expose a reliable per-account target.
 
 Check `verify-masterboard-design.cjs` for 320/390/768/1440 layouts, escaped/long identities, 44px controls, text contrast, contextual support, guard availability, explicit request closing, refresh/focus/logout and no private directory caching. Tests use synthetic data only. A production publication requires separate approval; current preparation/preview details are in `docs/ai/MASTERBOARD_DESIGN.md`.
+
+
+## Entrance and shared liquid navigation refinement
+
+`intro-ui.css` keeps actual system-font letterforms without solid extrusion layers, perspective or nonuniform scaling. Each glyph falls by translation/opacity only; spacing keeps the shapes distinct. Escape and reduced motion still unlock the page. The original illustration requested after the logo has an optional 1.8-second stage with decode/error/skip safeguards; **the original file is still missing**, so `#intro-after-image` intentionally has no src. No substitute image is shipped. It becomes active only after an importable original image is supplied.
+
+The mobile navigation reuses **the unchanged `../clair/accounts/glass-ui.js` engine**. `motion-ui.css` scopes optics to Masterboard at 760px, without importing the full Clair stylesheet. Tabs keep their roles, IDs, selected state and keyboard navigation; the adapter updates native attributes before rendering, uses delegated clicks, preserves logical focus and tears down decoration on desktop/logout. Motion reduction/high contrast retain usable native controls.
+
+Package the shared glass engine alongside Masterboard, its SDK and icon dependencies. `verify-masterboard-motion.cjs` checks spring/rapid retarget, registered magnification, trusted touch/cancel/vertical gestures, lifecycle, ARIA/keyboard/fallbacks and glyph geometry. Image-stage checks use a neutral geometric test fixture only, never the requested illustration. The public preview remains fictional and publication/backend changes still require approval.
