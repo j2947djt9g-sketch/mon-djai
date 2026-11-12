@@ -19,7 +19,7 @@ Mis à jour le 12 novembre 2026. Lire AGENTS puis cette page et MAP ; vérifier 
 - Catégories/Express/devises, A, thèmes et hors connexion vérifiés ; revue indépendante et captures avant/après dans la galerie.
 - Production contrôlée inchangée après aperçu (30 ressources vérifiées, galerie mobile testée). Pas de Safari/iPhone physique, compte réel ou notification reçue testés. Aide/récupération : restriction d’origine déjà connue. Indexation Google non confirmée ; audits 3/5 non approuvés.
 
-CI158 sur `77f3b4e` verte (`43173440085`). Goutte liquide : déformation, grossissement, reflets et glissement au doigt intégrés. 35 suites Node, neuf cas liquid-nav, six cas nav-motion, auth/nav/épargne verts ; aperçu Vercel vérifié, JSON inchangé. Relecture indépendante sans bloquant. Preuves/liens : `VISUAL_DELIVERY.md`.
+CI159 sur `fda0fbf` verte (`43211808828`). Goutte affinée en capsule : rayons circulaires, marge uniforme de 8 px, effet liquide conservé. Six vues géométriques et neuf cas liquid-nav verts ; test Node ciblé vert, JSON inchangé, revue sans bloquant. Nouvel aperçu Vercel et 30 ressources vérifiés ; liens/preuves : `VISUAL_DELIVERY.md`.
 
 ## Reprise
 

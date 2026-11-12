@@ -33,7 +33,10 @@
   const room=Math.max(0,Math.min(state.x-1,host.clientWidth-state.x-state.width-1));
   const stretch=Math.min(1+.3*speed,1+room*2/state.width),squash=1-.11*speed,skew=direction*speed*3.5;
   droplet.style.transform='scale('+stretch+','+squash+') skewX('+skew+'deg)';
-  droplet.style.borderRadius=speed>.01?(50-direction*speed*5)+'% '+(50+direction*speed*5)+'% '+(50-direction*speed*4)+'% '+(50+direction*speed*4)+'% / '+(50+speed*7)+'% '+(50-speed*7)+'% '+(50+speed*4)+'% '+(50-speed*4)+'%':'50% / 50%';
+  // Circular end caps follow the dock's inset curve; percentages create an oval.
+  // Compensate stretch/squash so the moving capsule keeps rounded, full-height ends.
+  const radius=state.height/2,horizontalRadius=radius*squash/stretch;
+  droplet.style.borderRadius=speed>.01?horizontalRadius.toFixed(2)+'px / '+radius+'px':radius+'px';
  }
  function scheduleMotion(state){
   if(state.frame!=null)return;

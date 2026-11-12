@@ -52,7 +52,27 @@ async function semantics(page){
  assert(await page.evaluate(()=>window.__liquidOriginalIndicator===document.querySelector('.glass-nav-indicator')&&window.__liquidOriginalButtons.every((button,i)=>button===document.querySelectorAll('.bottom-nav > button[data-nav]')[i])),'Optics preserve the original controls and focus identity');
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'The droplet never creates horizontal overflow');
 }
+async function capsuleShape(page,label){
+ const shape=await page.evaluate(()=>{
+  const host=document.querySelector('.bottom-nav'),drop=host.querySelector('.glass-nav-droplet'),bar=host.getBoundingClientRect(),lens=drop.getBoundingClientRect(),style=getComputedStyle(drop),radii=[style.borderTopLeftRadius,style.borderTopRightRadius,style.borderBottomRightRadius,style.borderBottomLeftRadius];
+  return {radii,height:lens.height,top:lens.top-bar.top,bottom:bar.bottom-lens.bottom,left:lens.left-bar.left,right:bar.right-lens.right,current:host.querySelector('[aria-current=page]')?.dataset.nav,barRadius:Math.min(parseFloat(getComputedStyle(host).borderTopLeftRadius),bar.height/2)};
+ });
+ for(const corner of shape.radii){assert(!corner.includes('%'),label+' uses circular capsule corners rather than an ellipse');for(const radius of corner.split(' ').map(parseFloat))close(radius,shape.height/2,label+' capsule end radius matches half its height',.6);}
+ close(shape.top,shape.bottom,label+' top and bottom dock insets match',.6);
+ if(shape.current==='home'||shape.current==='settings')close(shape[shape.current==='home'?'left':'right'],shape.top,label+' exterior dock inset matches vertical insets',.6);
+ close(shape.barRadius-shape.height/2,shape.top,label+' capsule and dock curves are concentric',.6);
+ return shape;
+}
+async function shapeCases(browser,origin){
+ for(const width of [320,390,700])for(const theme of ['light','dark']){
+  const f=await open(browser,origin,{width,theme});try{
+   await f.page.waitForTimeout(settle);if(output)await f.page.locator('.bottom-nav').screenshot({path:path.join(output,'liquid-capsule-'+width+'-'+theme+'.png')});
+   const shape=await capsuleShape(f.page,width+'px '+theme);await f.page.locator('.bottom-nav > [data-nav=settings]').click();await f.page.waitForTimeout(settle);await capsuleShape(f.page,width+'px '+theme+' right edge');assert.deepEqual(f.errors,[]);console.log('PASS capsule '+width+'px '+theme+': '+JSON.stringify(shape));
+  }finally{await f.context.close();}
+ }
+}
 async function refraction(page,label){
+ await capsuleShape(page,label);
  const optics=await page.evaluate(()=>{
   const host=document.querySelector('.bottom-nav'),outer=host.querySelector('.glass-nav-indicator'),box=outer.getBoundingClientRect(),center={x:box.left+box.width/2,y:box.top+box.height/2},copies=[...outer.querySelectorAll('.glass-nav-lens-item')],buttons=[...host.querySelectorAll(':scope > button[data-nav]')];
   return {center,items:buttons.map((button,i)=>{const original=button.querySelector('svg').getBoundingClientRect(),copy=copies[i]?.querySelector('svg')?.getBoundingClientRect();return {original:{x:original.left+original.width/2,y:original.top+original.height/2,width:original.width,height:original.height},copy:copy?{x:copy.left+copy.width/2,y:copy.top+copy.height/2,width:copy.width,height:copy.height}:null};}),rim:getComputedStyle(outer.querySelector('.glass-nav-droplet'),'::after').backgroundImage};
@@ -125,7 +145,7 @@ async function delayedCancellation(browser,origin){
 }
 async function reducedMotion(browser,origin){
  const f=await open(browser,origin,{motion:'reduce'});try{
-  const before=await f.read(),trace=await frameTrace(f.page,'settings');aligned(trace,'Reduced motion');close(trace.immediate.x,trace.target.x,'Reduced motion snaps on click');for(const frame of trace.frames){close(frame.x,trace.target.x,'Reduced motion has no intermediate spring');neutral(frame,'Reduced motion');}
+  const before=await f.read(),trace=await frameTrace(f.page,'settings');aligned(trace,'Reduced motion');await capsuleShape(f.page,'Reduced motion capsule');close(trace.immediate.x,trace.target.x,'Reduced motion snaps on click');for(const frame of trace.frames){close(frame.x,trace.target.x,'Reduced motion has no intermediate spring');neutral(frame,'Reduced motion');}
   await f.page.locator('.bottom-nav > [data-nav="home"]').click();const [home,,settings]=await boxes(f.page),initial=await snapshot(f.page),pointer=await begin(f.page,'touch',home);for(let i=1;i<=6;i++){await pointer.move({x:home.x+(settings.x-home.x)*i/6,y:home.y});const frame=await snapshot(f.page);neutral(frame,'Reduced drag');close(frame.x,initial.x,'Reduced drag preview stays still');assert.equal(frame.current,'home');}await pointer.end();const final=await snapshot(f.page);assert.equal(final.current,'settings');neutral(final,'Reduced release');await idle(f.page,'Reduced motion');assert.equal(await f.read(),before);assert.deepEqual(f.errors,[]);console.log('PASS reduced motion: no spring, deformation or drag preview, immediate release and bounded idle');
  }finally{await f.context.close();}
 }
@@ -137,4 +157,4 @@ async function visualDemo(browser,origin){
   await f.page.locator('.bottom-nav > [data-nav=home]').click();await f.page.waitForTimeout(settle);console.log('PASS synthetic liquid visual demonstration');
  }finally{await f.context.close();}
 }
-(async()=>{if(output)fs.mkdirSync(output,{recursive:true});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin='http://127.0.0.1:'+server.address().port;let browser;try{browser=await chromium.launch({headless:true,...(process.env.CLAIR_CHROME_PATH?{executablePath:process.env.CLAIR_CHROME_PATH}:{})});if(process.argv.includes('--demo'))await visualDemo(browser,origin);else if(process.argv.includes('--touch-only'))await interactions(browser,origin,['touch']);else{await opticalCases(browser,origin);await interactions(browser,origin);await lifecycle(browser,origin);await delayedCancellation(browser,origin);await reducedMotion(browser,origin);}}finally{await browser?.close();server.close();}})().catch(error=>{console.error(error);process.exitCode=1;});
+(async()=>{if(output)fs.mkdirSync(output,{recursive:true});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin='http://127.0.0.1:'+server.address().port;let browser;try{browser=await chromium.launch({headless:true,...(process.env.CLAIR_CHROME_PATH?{executablePath:process.env.CLAIR_CHROME_PATH}:{})});if(process.argv.includes('--shape-only'))await shapeCases(browser,origin);else if(process.argv.includes('--demo'))await visualDemo(browser,origin);else if(process.argv.includes('--touch-only'))await interactions(browser,origin,['touch']);else{await opticalCases(browser,origin);await interactions(browser,origin);await lifecycle(browser,origin);await delayedCancellation(browser,origin);await reducedMotion(browser,origin);}}finally{await browser?.close();server.close();}})().catch(error=>{console.error(error);process.exitCode=1;});
