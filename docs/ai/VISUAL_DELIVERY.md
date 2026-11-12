@@ -1,6 +1,6 @@
 # CLAIR — illustrations et refonte A « Verre doux »
 
-Travail des 11–12 novembre 2026 sur `feat/clair-category-illustrations`, base `bb8d9f1` de `feat/clair-express`. Ne pas repartir de `main` (ancien produit). Aucune publication de production ni modification Supabase autorisée pour cette mission.
+Travail des 11–12 novembre 2026 sur `feat/clair-category-illustrations`, base `bb8d9f1` de `feat/clair-express`. Ne pas repartir de `main` (ancien produit). Publication en production autorisée le 12 novembre après validation de la capsule ; Supabase inchangé. Les sections ci-dessous conservent les preuves successives ; voir la livraison publiée en fin de rapport.
 
 ## Réalisé
 
@@ -83,3 +83,14 @@ Vérification géométrique ajoutée à `verify-liquid-nav.cjs` : quatre coins, 
 **Aperçu actuel READY** : https://clair-budget-9m6x4fqvg-diabagateouattara601-7626.vercel.app/clair/ ; déploiement `dpl_GqEEEK6ot4b8GRyvRFeYVgz22XNp`, preview sans alias, paquet de travail basé sur `fda0fbf` (dirty=true). 30 fichiers publics conformes, rayon 30 px et glissement/grossissement mesurés sur l’aperçu, CSP/données fictives conservées. Production SHA1 toujours `81dd1f98c12b10a33a0411e84755bf8d075acb21` avant/après. Aucun changement Supabase ni publication en production.
 
 Captures fictives avant/après : `/workspace/clair-visual-work/capsule-before/`, `capsule-after/` (dont `liquid-public-bar.png`) ; journaux `capsule-{red,shape,liquid,live}.log`. Limite Safari/iPhone physique inchangée. Fichiers de cette correction : `glass-ui.js`, copie inline `clair/index.html`, `verify-liquid-nav.cjs`, STATE et ce rapport.
+
+
+## Livraison de production autorisée et vérifiée (12 novembre)
+
+Accord utilisateur après validation de la capsule : refonte A, profil et illustrations publiés sur https://clair-budget.vercel.app/ → `/clair/`. Source `ef2558c723ef11813c64d8333e8463c7d80a406a` ; CI160 entièrement verte (`43216389904`). Déploiement **`dpl_9uaKUPU5YM3eiPTEitqidJ7hb2ts`**, READY, cible production ; alias public et alias équipe présents, aucune erreur d’alias. URL du déploiement : https://clair-budget-j6z2tzqv3-diabagateouattara601-7626.vercel.app/ .
+
+53 fichiers de paquet : 52 ressources publiques conformes aux blobs Git et la configuration Vercel. Maquettes/tests/docs/SQL exclus, aide/reset/SDK et SW v40 inclus. Relecture indépendante sans bloquant ; moteur inline et modules sensibles identiques à `dd7c852`. Aucun budget fictif, bannière ou configuration d’aperçu injecté dans le paquet de production. HTML publié SHA1 `c52115e744a78bf07e86b7d805ad93a8c3489dff`, Git `d65d99b795a97f78bec720c4d4f877ad761b6b42`.
+
+Contrôles après publication : 52 ressources publiques vérifiées par taille et empreinte, racine redirigée vers l’app, `vercel.json` non servi. Parcours Chromium 390 : profil, formes/grossissement/ressort, changement rapide, clavier, glissement tactile et annulations ; JSON financier inchangé. Express EUR/MAD/XOF : confirmation du budget, raccourci, montant invalide, double soumission, hors connexion/reconnexion (une dépense), correction et provenance. Vérifications sur ressources HTTPS publiques avec contrôle d’empreintes, sessions/budgets/Supabase synthétiques isolés ; aucun appel de compte réel ni écriture backend. Aucun Safari/iPhone physique ni notification reçue testé.
+
+Preuves locales : `production-public-{assets,visual,express}.log`, captures/vidéo `production-screenshots/` et manifeste `production-manifest.json` sous `/workspace/clair-visual-work/`. Aucun changement Supabase ni fusion dans main ; PR30 reste ouverte sur la branche de travail. Retour disponible : ancienne production `dd7c852`, `dpl_BcrZig2Kb3zVyuegxXPLN9Qbj8TU`. Cette publication est effectuée ; les mentions antérieures d’attente d’accord décrivent les étapes précédentes.

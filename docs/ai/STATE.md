@@ -4,23 +4,18 @@ Mis à jour le 12 novembre 2026. Lire AGENTS puis cette page et MAP ; vérifier 
 
 ## Repères stables
 
-- **Publication : Vercel uniquement**, https://clair-budget.vercel.app/ → `/clair/`, projet `clair-budget`. Paquet manuel sans publication GitHub automatique : `DEPLOYMENT.md`.
-- Cible `clair/index.html`, autres apps hors périmètre. JS/CSS statiques canoniques sous `clair/accounts/`, copies identiques embarquées. JSON v3, centimes entiers, dates Europe/Paris, révisions/propriétaire, aucun double débit.
-- Production source `dd7c852`, déploiement `dpl_BcrZig2Kb3zVyuegxXPLN9Qbj8TU`, HTML Git `6cf9fb3c1c2e7a80417c6f35b29d36432b837ae8`, SHA1 brute `81dd1f98c12b10a33a0411e84755bf8d075acb21`.
+- **Production : Vercel uniquement**, https://clair-budget.vercel.app/ → `/clair/`, projet `clair-budget`. Publication manuelle, sans lien Git automatique : `DEPLOYMENT.md`.
+- Cible `clair/index.html`, autres apps hors périmètre. JS/CSS canoniques sous `clair/accounts/`, copies identiques embarquées. JSON v3, centimes entiers, dates Europe/Paris, révisions/propriétaire, aucun double débit.
+- Source publiée **`ef2558c`**, branche `feat/clair-category-illustrations`, déploiement **`dpl_9uaKUPU5YM3eiPTEitqidJ7hb2ts`** READY production. HTML Git `d65d99b795a97f78bec720c4d4f877ad761b6b42`, SHA1 brute `c52115e744a78bf07e86b7d805ad93a8c3489dff`.
 
 ## Trois changements récents
 
-1. Branche **`feat/clair-category-illustrations`**, base `bb8d9f1` de `feat/clair-express` : atlas original 16 illustrations, renderer/sélecteur progressif, historique/paiements/enveloppes/Express, secours vectoriel et SW v40. Moteur/cloud inchangés. Détails : `VISUAL_DELIVERY.md`.
-2. `clair/design-preview/` contient trois maquettes interactives A Verre doux / B Express / C Contraste avec accueil, profil lisible et barre flottante/effets de toucher. **A validée par l’utilisateur le 11 novembre** ; données fictives, aucun backend. A intégrée : `glass-ui.js/.css`, profil clair/photo lisible et unités monétaires entières ; copies inline maintenues. Aperçu A Vercel READY + PR30 brouillon : liens dans `VISUAL_DELIVERY.md`. Aucun accord pour production ou Supabase dans cette mission.
-3. Express, huit devises et conversion InforEuro novembre 2026 v2 restent publiés. Migration v2 et rappels v3 déjà autorisés/appliqués : ne pas les rejouer. PR29 ouverte ; `main` ancien `dc376fb`, fusion refusée par contrôle automatique faute d’accord distinct. Ne pas contourner. Banque abandonnée : aucune connexion/import/rapprochement à développer.
+1. **Publication autorisée par l’utilisateur le 12 novembre**, après validation de l’effet et de la forme : A Verre doux, profil lisible clair/sombre/photo, atlas original 16 illustrations et capsule liquide. Rayon circulaire de 30 px, marge de 8 px, ressort/grossissement/reflets et glissement au doigt, mouvement réduit. SW v40. Sources, preuves et fichiers : `VISUAL_DELIVERY.md`. PR30 ouverte vers `feat/clair-express`, aucune fusion dans main.
+2. CI160 sur `ef2558c` **entièrement verte** (`43216389904`), dont 35 suites Node et navigateurs/SQL isolés. Paquet de 53 fichiers : 52 publics identiques aux sources et configuration Vercel ; empreintes et redirection vérifiées. Capsule/profil/toucher et Express EUR/MAD/XOF (double soumission, hors connexion/reconnexion, correction) passent sur fichiers publics, avec budgets et transport Supabase fictifs isolés.
+3. Express, huit devises et conversion InforEuro novembre 2026 v2 conservés. Moteur/auth/cloud/récupération identiques à `dd7c852` ; aucune modification Supabase pour cette publication. Migrations v2/rappels v3 déjà appliqués : ne pas les rejouer. Banque abandonnée, aucun import/rapprochement à développer.
 
-## Preuves et limites
+## Limites et reprise
 
-- Catégories/Express/devises, A, thèmes et hors connexion vérifiés ; revue indépendante et captures avant/après dans la galerie.
-- Production contrôlée inchangée après aperçu (30 ressources vérifiées, galerie mobile testée). Pas de Safari/iPhone physique, compte réel ou notification reçue testés. Aide/récupération : restriction d’origine déjà connue. Indexation Google non confirmée ; audits 3/5 non approuvés.
+Aucun Safari/iPhone physique, compte réel ou notification reçue testé. Indexation Google non confirmée ; audits 3/5 non approuvés. Aide/récupération : restriction d’origine connue, fichiers/SDK présents et inchangés.
 
-CI159 sur `fda0fbf` verte (`43211808828`). Goutte affinée en capsule : rayons circulaires, marge uniforme de 8 px, effet liquide conservé. Six vues géométriques et neuf cas liquid-nav verts ; test Node ciblé vert, JSON inchangé, revue sans bloquant. Nouvel aperçu Vercel et 30 ressources vérifiés ; liens/preuves : `VISUAL_DELIVERY.md`.
-
-## Reprise
-
-Continuer sur la branche visuelle sans écraser Express/devises. A est intégrée et approuvée ; ne pas redemander le choix. CI limitée à 15 min ; nouvelle passe suivie dans la PR30. Toute publication de production ou modification Supabase attend un accord explicite. Ne pas réappliquer `exchange.sql` ni les fixtures SQL en production.
+Retour disponible : production précédente `dd7c852`, `dpl_BcrZig2Kb3zVyuegxXPLN9Qbj8TU`. `main` reste ancien `dc376fb` ; fusion précédemment refusée faute d’accord distinct : ne pas contourner. Continuer sur la branche visuelle sans écraser Express/devises. Nouvelle publication, fusion main ou modification Supabase : suivre les instructions/accords de la session. Maquettes et budgets fictifs uniquement dans les aperçus ; ne pas publier le paquet de démo en production.
