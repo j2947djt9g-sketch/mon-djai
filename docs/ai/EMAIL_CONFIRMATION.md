@@ -82,4 +82,12 @@ Audits code/logs, agents service Auth, UI confirmation, tests navigateur, QA SMT
 
 Aperçu Vercel READY : https://clair-budget-haz2o32t7-diabagateouattara601-7626.vercel.app/clair/ (`dpl_3Z7RPPEpJJYhe8Jas3XUPkjvgFNv`, cible preview, aucun alias production). Vérification publique390/1440 : signup,60s, double renvoi, correction, expiration, aucun débordement/erreur JS/appel externe ; ressources chargées comparées aux empreintes du paquet. PR32 en brouillon : https://github.com/j2947djt9g-sketch/mon-djai/pull/32 ; branche https://github.com/j2947djt9g-sketch/mon-djai/tree/fix/clair-email-confirmation. Code revu `4673b2a`, aucune fusion. L’aperçu est explicitement fictif, sans compte ni envoi réel, connexions externes bloquées, service worker et indexation désactivés. Il ne doit jamais devenir le paquet de production.
 
-Restent soumis à accord : configuration Auth production, éventuel fournisseur SMTP/coût, publication Vercel réelle et envoi réel de validation. Aucun changement Supabase ou de production réalisé par cette mission.
+## Autorisation conditionnelle et préflight du 13 novembre
+
+L’utilisateur a répondu « Oui » à la publication Vercel **après vérification des réglages Supabase**. Accord enregistré : ne pas redemander la permission de publier une fois cette condition satisfaite. Cela n’autorise aucun abonnement SMTP, fusion main ou changement des comptes.
+
+Préflight du 13 novembre2026 à10:46UTC : email actif, inscription active, autoconfirm false. Trois GET avec jeton délibérément invalide, sans adresse et redirect manual : défaut, destination Vercel `/clair/` et destination Vercel `?auth=confirmation` retournent tous303 vers GitHub. **Condition non satisfaite : aucune publication production lancée.** Les68 fichiers du candidat réel sont à nouveau conformes au manifeste, Masterboard/config préservés ; aucun envoi ni compte modifié.
+
+Les outils actifs ont été revérifiés : aucun outil AuthConfig/SMTP ou navigateur de dashboard connecté. Une intervention humaine dans Authentication → URL Configuration et Email → SMTP Settings est nécessaire, selon les étapes ci-dessus. Relever le statut SMTP personnalisé, corriger/vérifier les destinations, puis refaire les probes sans envoi ; publier ensuite dans le cadre de l’accord existant. Une réception réelle restera à vérifier avant clôture.
+
+Preuve expurgée : `/workspace/clair-auth-email-work/publication-preflight-auth.json`. Candidat prêt sous `production-candidate/`, source `4673b2a`, code CI167 vert ; ne pas utiliser l’aperçu fictif. Configuration Auth/SMTP et publication inchangées. Les coûts éventuels SMTP et l’envoi réel de validation ne sont pas engagés.
