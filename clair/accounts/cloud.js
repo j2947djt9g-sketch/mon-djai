@@ -42,7 +42,14 @@
         }
       });
       const authEpoch=this.epoch;
+      let initializationError=null;
+      if(typeof this.client.auth.initialize==='function'){
+        try{const initialized=await this.client.auth.initialize();initializationError=initialized?.error||null;}
+        catch(error){initializationError=error;}
+      }
       const {data,error}=await this.client.auth.getSession();
+      // getSession may still return an older cached session after a failed link.
+      this.hooks.authInitialized?.({error:initializationError||error||null,session:data?.session||null});
       if(authEpoch!==this.epoch){if(this.authTransition)await this.attach(this.authTransition.user);return;}
       if(error){this.error='La session n’a pas pu être restaurée.';this.ready=true;this.status='signed-out';this.emit();return;}
       await this.attach(data.session?.user||null);

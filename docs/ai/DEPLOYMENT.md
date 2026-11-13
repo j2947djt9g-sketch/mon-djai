@@ -1,16 +1,16 @@
 # Clair — repères de publication, à lire seulement pour déployer
 
-**Production : Vercel**, projet `clair-budget`. CLAIR conservé à `ef2558c` ; Masterboard `0cdda26` publié le 12 novembre 2026.
+**Production : Vercel**, projet `clair-budget`. CLAIR `4673b2a` publié le 13 novembre2026 ; Masterboard `0cdda26` conservé.
 
 | Élément | Valeur |
 |---|---|
-| Dépôt / source publiée | `j2947djt9g-sketch/mon-djai`, `feat/clair-category-illustrations`, commit `ef2558c` |
+| Dépôt / source publiée | `j2947djt9g-sketch/mon-djai`, `fix/clair-email-confirmation`, code `4673b2a` |
 | Adresse publique | https://clair-budget.vercel.app/ |
 | Application servie | `/clair/` |
 | Projet Vercel | `clair-budget`, `prj_LQXscKEX44lvgBR4O8Fru9RVWjKE` |
 | Équipe Vercel | `team_6GfJ1WkSTn5lXj3kWsLF9FeN` |
-| Dernière production vérifiée | `dpl_GkcCqU5PwryuaBr3pywqJ3vmvErM` |
-| Empreinte Git du HTML publié | `d65d99b795a97f78bec720c4d4f877ad761b6b42` |
+| Dernière production vérifiée | `dpl_B2gMeLCaX4uJK6VSzXnVchNZ8S7g` |
+| Empreinte Git du HTML publié | `aec2ca69cf14f59cb40b24feccbc2e81c6d976ca` |
 
 La PR29 reste ouverte : fusion dans `main` refusée par le contrôle automatique faute d’un accord jugé distinct. `main` reste `dc376fb` et ne représente pas le produit publié. Ne pas republier cet ancien code. Retour disponible : `dd7c852`, `dpl_BcrZig2Kb3zVyuegxXPLN9Qbj8TU`. PR30 reste ouverte ; cette publication autorisée ne fusionne aucune branche.
 
@@ -60,3 +60,13 @@ Le paquet de 67 fichiers conserve les 53 anciens fichiers de production identiqu
 Retour frontend immédiat : `dpl_9uaKUPU5YM3eiPTEitqidJ7hb2ts` (CLAIR identique, Masterboard alors absent de Vercel). La fonction précédente est v3 ; son correctif v4 est additif. Aucune fusion dans main. Détails, captures et preuves complémentaires dans `MASTERBOARD_DESIGN.md`.
 
 Contrôle après publication vert :66 ressources publiques conformes,53 anciens fichiers conservés, photo404, accueil390/1440 et liens/fontes/SVG sans erreur ; rapport `masterboard-production-verification.json` dans le workdir. Aucun compte réel connecté ni POST de compte effectué.
+
+## Confirmation e-mail publiée (13 novembre2026)
+
+Après nouvelle confirmation explicite utilisateur, production `dpl_B2gMeLCaX4uJK6VSzXnVchNZ8S7g` READY : deux alias habituels, racine307 vers `/clair/`. Source code4673b2a, CI167 verte, SW41. Paquet réel68fichiers :63anciens identiques,4modifiés (`clair/index.html`, `clair/sw.js`, `clair/accounts/{account-ui,cloud}.js`) et ajout `clair/accounts/auth-email.js`. Masterboard et configuration Vercel identiques à la production précédente ; aucune promotion de l’aperçu fictif. HTML SHA1 brute `707aef7283ab62e73e7d4b31f61ad08740d151cb` ; empreinte Git dans le tableau courant. Aucune fusion main.
+
+67ressources publiques vérifiées taille/SHA1 via TLS de confiance ; vercel.json consommé par Vercel et vérifié localement. Parcours public390/1440 avec SDK officiel et Auth simulée : confirmation, renvoi60s/double clic, correction sans mot de passe, compte non confirmé et expiration distincte récupération ; aucune erreur navigateur ni requête Auth réelle de ces contrôles. Preuves/captures : `/workspace/clair-auth-email-work/production-public-smoke/`, `email-production-release.json`.
+
+Avant publication, compte test créé avec autorisation : réception iCloud et ouverture du lien rapportées par le destinataire, activation vérifiée en base et connexion SDK distincte200, clôture de cette seule session204 ; aucun budget modifié par le test. Configuration Site URL/redirects corrigée humainement, email confirmation toujours obligatoire. SMTP effectif/quotas non inspectés : cette preuve ne garantit pas tous les destinataires. Aucun fournisseur payant/secret/RLS/migration/reset activé ou modifié. Rapport `EMAIL_CONFIRMATION.md`.
+
+Retour frontend : `dpl_GkcCqU5PwryuaBr3pywqJ3vmvErM` (CLAIR ef2558c/SW40, même Masterboard). Ne pas annuler les URL Supabase Vercel corrigées. Contrôle runtime de cette production sur15min : aucun groupe error/fatal retourné ; app statique, ce contrôle ne remplace ni les erreurs navigateur ni les logs Supabase. Aucun drain configuré, aucune nouvelle observabilité activée.
