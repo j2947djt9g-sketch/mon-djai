@@ -1,25 +1,57 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto').webcrypto;
 const html=fs.readFileSync(__dirname+'/../index.html','utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
-function context(storage=new Map(),initialTime=Date.now()){
+function context(storage=new Map(),initialTime=Date.now(),hash='',search=''){
  const nodes=new Map(),requests=[],replies=[];let clock=initialTime,observeRequest=null;
  const node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',value:'',style:{},dataset:{},disabled:false,open:false,showModal(){this.open=true},close(){this.open=false},addEventListener(){},scrollIntoView(){},focus(){}});return nodes.get(s)};
  const query=s=>{
-  if(['#account-form','#account-forgot-form','#account-password-form','#account-loading'].includes(s)&&!node('#page').innerHTML.includes('id="'+s.slice(1)+'"'))return null;
+  if(['#account-form','#account-forgot-form','#account-password-form','#account-loading','#account-confirmation-form','#account-confirmation-resend'].includes(s)&&!node('#page').innerHTML.includes('id="'+s.slice(1)+'"'))return null;
   if(s==='#account-form input[name="email"]'&&!node('#page').innerHTML.includes('id="account-form"'))return null;
   return node(s);
  };
- const client={auth:{signInWithPassword:async p=>{requests.push(p);observeRequest?.();return replies.shift()},signUp:async p=>{requests.push(p);return replies.shift()},resetPasswordForEmail:async()=>({}),updateUser:async()=>({})}};
+ const client={auth:{signInWithPassword:async p=>{requests.push(p);observeRequest?.();return replies.shift()},signUp:async p=>{requests.push(p);return replies.shift()},resend:async p=>{requests.push({resend:p});return replies.shift()},resetPasswordForEmail:async()=>({}),updateUser:async()=>({})}};
  const DateMock=class extends Date{static now(){return clock}};
- const sandbox={Intl,Date:DateMock,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{origin:'https://example.test',protocol:'https:',href:'https://example.test/clair/',pathname:'/clair/'},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:query,addEventListener(){}},supabase:{createClient:()=>client},CLAIR_ACCOUNT_CONFIG:{url:'https://test.supabase.co',key:'sb_publishable_test'},FormData:class{constructor(form){this.values=form.values}get(k){return this.values[k]??null}}};
+ const sandbox={Intl,Date:DateMock,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{origin:'https://example.test',protocol:'https:',href:'https://example.test/clair/'+search+hash,pathname:'/clair/',hash,search},history:{replaceState(){sandbox.location.hash=''}},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:query,addEventListener(){}},supabase:{createClient:()=>client},CLAIR_ACCOUNT_CONFIG:{url:'https://test.supabase.co',key:'sb_publishable_test'},FormData:class{constructor(form){this.values=form.values}get(k){return this.values[k]??null}}};
  sandbox.window=sandbox;sandbox.addEventListener=()=>{};
- vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
- let ui=scripts[3];const boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);
- ui=ui.slice(0,boot)+'window.test={cloud,render,accountGate,accountCard,accountSubmit,accountAction,accountStatus,legacyBudget,transferLegacy,updateLoginButtons,setData(d){data=d},getData(){return data;}};})();';vm.runInContext(ui,sandbox);const t=sandbox.test;
+ vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts.find(code=>code.includes('root.ClairCloud')),sandbox);vm.runInContext(fs.readFileSync(__dirname+'/auth-email.js','utf8'),sandbox);
+ let ui=scripts.find(code=>code.includes('function accountSubmit('));
+ ui=ui.replace(/  \/\* ---------- Compte et synchronisation ---------- \*\/[\s\S]*?(?=  \/\* ---------- Apparence ---------- \*\/)/,fs.readFileSync(__dirname+'/account-ui.js','utf8')+'\n');
+ const boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);
+ ui=ui.slice(0,boot)+'window.test={cloud,render,accountGate,accountCard,accountSubmit,accountAction,accountStatus,legacyBudget,transferLegacy,updateLoginButtons,accountConfirmationActive,accountConfirmationView,updateConfirmationButtons,confirmation:()=>accountConfirmation,setData(d){data=d},getData(){return data;}};})();';vm.runInContext(ui,sandbox);const t=sandbox.test;
  t.cloud.ready=true;t.cloud.status='signed-out';
  const form={id:'account-form',dataset:{mode:'login'},values:{email:'a@example.test',password:'wrong'},querySelector:()=>node('#submit'),reset(){}};
  return {t,sandbox,node,requests,replies,storage,form,nextAuthRequest:()=>new Promise(resolve=>{observeRequest=()=>{observeRequest=null;resolve()}}),now:()=>clock,advance:ms=>clock+=ms,error:()=>node('#account-error').textContent,wrong:()=>{replies.push({data:{session:null,user:null},error:{code:'invalid_credentials',status:400}});return t.accountSubmit(form)}};
 }
+function checkAmbiguousConfirmationCallbacks(){
+ const hash='#type=signup&access_token=ACCOUNT-B&refresh_token=REFRESH-B';
+ const oldA={id:'cached-account-a',email:'a@example.test',email_confirmed_at:'2026-11-13'};
+ for(const [fragment,search] of [
+   [hash,'?auth=confirmation&access_token='],
+   [hash+'&access_token=','?auth=confirmation'],
+   [hash,'?auth=confirmation&refresh_token='],
+   [hash,'?auth=confirmation&access_token=FIRST&access_token=']
+ ]){
+   const cached=context(new Map(),Date.now(),fragment,search);cached.t.cloud.user=oldA;cached.t.cloud.status='synced';
+   cached.t.cloud.hooks.authInitialized({error:null,session:{user:oldA}});cached.t.cloud.hooks.status();
+   assert.equal(cached.t.confirmation().step,'expired','Empty effective SDK credentials must never confirm cached account A');
+   assert.doesNotMatch(cached.t.accountConfirmationView(),/est confirmée/);assert.equal(cached.requests.length,0);
+ }
+ const merged=context(new Map(),Date.now(),'#type=signup&refresh_token=REFRESH-B','?auth=confirmation&access_token=ACCOUNT-B');
+ merged.t.cloud.user=oldA;merged.t.cloud.hooks.authInitialized({error:null,session:{user:oldA}});merged.t.cloud.hooks.status();
+ assert.equal(merged.t.confirmation().step,'done','The helper recognizes effective credentials merged across hash and query');
+ console.log('PASS ambiguous or empty effective SDK callback credentials cannot confirm cached account A');
+}
+async function checkSuspendedSignin(){
+ const suspended=context();suspended.replies.push({data:{session:null,user:null},error:{code:'user_banned',status:403}});
+ await suspended.t.accountSubmit(suspended.form);
+ assert.match(suspended.error(),/compte est suspendu/i);assert.match(suspended.error(),/administrateur/);assert.match(suspended.error(),/rétablissement/);
+ assert.equal(suspended.t.accountConfirmationActive(),false);assert.equal(suspended.node('#submit').disabled,false);
+ assert.equal(suspended.requests.length,1);assert(![...suspended.storage.keys()].some(key=>key.startsWith('clair-login-attempts-v2-')),'Suspension must not count as an incorrect password');
+ await suspended.wrong();assert.match(suspended.error(),/2 essais/,'invalid_credentials keeps its existing retry counter');
+ console.log('PASS suspended signin explains administrator restoration without confirmation or failed-password count');
+}
 (async()=>{
+ if(process.argv.includes('--ambiguous-callback-only')){checkAmbiguousConfirmationCallbacks();return;}
+ if(process.argv.includes('--suspension-only')){await checkSuspendedSignin();return;}
  const a=context(),{t,node,storage}=a;
  const legacy=a.sandbox.ClairEngine.empty();legacy.initialized=legacy.setupDone=true;legacy.openingCents=1700;storage.set('clair-github-money-v3',JSON.stringify(legacy));
  t.render();assert(!node('#page').innerHTML.includes('17,00'));assert(node('#page').innerHTML.includes('account-form'));
@@ -72,9 +104,47 @@ function context(storage=new Map(),initialTime=Date.now()){
  console.log('PASS verified recovery clears a second tab pause; failed storage writes keep an in-memory pause');
 
  const c=context();await c.t.accountAction('account-mode');c.replies.push({data:{session:null,user:{}}});c.form.dataset.mode='signup';c.form.values={email:'a@example.test',password:'twelve-character-password',displayName:'  El-Hadj  '};await c.t.accountSubmit(c.form);
- assert.equal(c.requests.at(-1).options.data.display_name,'El-Hadj');const confirmation=c.t.accountGate();assert.match(confirmation,/confirmation/);assert.match(confirmation,/clique/i);assert.match(confirmation,/indésirables/);
+ assert.equal(c.requests.at(-1).options.data.display_name,'El-Hadj');const confirmation=c.t.accountConfirmationView();assert.match(confirmation,/confirmation/);assert.match(confirmation,/clique/i);assert.match(confirmation,/indésirables/);
  c.t.cloud.user={id:'user-a',email:'a@example.test'};c.t.cloud.displayName='<img src=x onerror=alert(1)>';assert(c.t.accountCard().includes('&lt;img'));assert(!c.t.accountCard().includes('<img src=x'));
  c.storage.set('clair-local-owner-v1','user-b');assert.equal(c.t.legacyBudget(),null);
  console.log('PASS signup confirmation gives link/spam instructions, escaped profile text and local budget ownership');
+
+ const e=context();e.replies.push({data:{session:null,user:null},error:{code:'email_not_confirmed',status:400}});await e.t.accountSubmit(e.form);
+ assert(e.t.accountConfirmationActive());assert.match(e.t.accountConfirmationView(),/a@example.test/);assert.doesNotMatch(e.t.accountConfirmationView(),/administrateur/);
+ await e.t.accountAction('account-confirmation-edit');assert.match(e.t.accountGate(),/data-mode="login"/);assert.match(e.t.accountGate(),/value="a@example.test"/);
+ c.t.cloud.user=null;await c.t.accountAction('account-confirmation-edit');assert.match(c.t.accountGate(),/data-mode="signup"/);assert.match(c.t.accountGate(),/name="password"[^>]*value=""/);
+ console.log('PASS confirmation correction preserves origin and clears password');
+
+ const sent=context();sent.form.dataset.mode='signup';sent.form.values={email:'<user>@example.test',password:'twelve-character-password',displayName:'Clair'};
+ sent.replies.push({data:{session:null,user:{identities:[]}},error:null});await sent.t.accountSubmit(sent.form);
+ assert.match(sent.t.accountConfirmationView(),/&lt;user&gt;@example.test/);assert.match(sent.t.accountConfirmationView(),/demande a été acceptée/);assert.doesNotMatch(sent.t.accountConfirmationView(),/e-mail a été envoyé/i);
+ assert.equal(sent.node('#account-confirmation-resend').disabled,true);await sent.t.accountAction('account-confirmation-resend');assert.equal(sent.requests.length,1,'Signup starts the cooldown without a second signup');
+ sent.advance(60000);sent.replies.push({error:{status:429,code:'over_email_send_rate_limit'}});await sent.t.accountAction('account-confirmation-resend');
+ assert.equal(sent.requests.length,2);assert.equal(sent.requests[1].resend.type,'signup');assert.equal(sent.t.confirmation().accepted,false);assert.doesNotMatch(sent.t.accountConfirmationView(),/demande a été acceptée/);
+ assert.equal(sent.node('#account-confirmation-resend').disabled,true);
+ sent.advance(60000);let releaseConfirmation;sent.replies.push(new Promise(resolve=>{releaseConfirmation=resolve}));const resend=sent.t.accountAction('account-confirmation-resend');
+ for(let i=0;i<30&&sent.requests.length<3;i++)await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(sent.requests.length,3);await sent.t.accountAction('account-confirmation-resend');assert.equal(sent.requests.length,3);releaseConfirmation({error:null});await resend;
+ assert.equal(sent.t.confirmation().accepted,true);assert.match(sent.t.accountConfirmationView(),/demande a été acceptée/);
+ const reload=context(sent.storage,sent.now());reload.replies.push({data:{session:null,user:null},error:{code:'email_not_confirmed'}});reload.form.values.email='<user>@example.test';await reload.t.accountSubmit(reload.form);assert.equal(reload.node('#account-confirmation-resend').disabled,true,'Cooldown survives reload');
+ assert(![...sent.storage.values()].some(value=>value.includes('<user>')||value.includes('twelve-character-password')));
+ console.log('PASS obfuscated signup stays neutral, resend never signs up again, provider failure clears acceptance, cooldown/reload and duplicate protection');
+ const callback='#type=signup&access_token=test-access&refresh_token=test-refresh';
+ const confirmed=context(new Map(),Date.now(),callback);confirmed.t.cloud.ready=false;confirmed.t.cloud.user={id:'verified-user',email_confirmed_at:'2026-11-13'};
+ confirmed.t.cloud.hooks.authInitialized({error:null,session:{user:confirmed.t.cloud.user}});assert.equal(confirmed.t.confirmation().step,'checking');
+ confirmed.t.cloud.ready=true;confirmed.t.cloud.hooks.status();assert.equal(confirmed.t.confirmation().step,'done');
+ confirmed.t.cloud.user={id:'switched-user',email_confirmed_at:'2026-11-13'};confirmed.t.cloud.hooks.status();assert.equal(confirmed.t.confirmation().step,'expired');
+ for(const [hash,outcome] of [
+   [callback,{error:{code:'otp_expired'},session:{user:{id:'old-a',email_confirmed_at:'2026-11-13'}}}],
+   [callback,{error:null,session:{user:{id:'old-a'}}}],
+   ['#type=signup&token_hash=unsupported',{error:null,session:{user:{id:'old-a',email_confirmed_at:'2026-11-13'}}}],
+   ['#type=signup&error_code=otp_expired',{error:null,session:{user:{id:'old-a',email_confirmed_at:'2026-11-13'}}}]
+ ]){
+   const invalid=context(new Map(),Date.now(),hash);invalid.t.cloud.user=outcome.session.user;invalid.t.cloud.hooks.authInitialized(outcome);invalid.t.cloud.hooks.status();assert.equal(invalid.t.confirmation().step,'expired');assert.doesNotMatch(invalid.t.accountConfirmationView(),/est confirmée/);
+ }
+ const unknown=context(new Map(),Date.now(),'#error_code=otp_expired');assert.equal(unknown.t.confirmation().step,'unknown');assert.match(unknown.t.accountConfirmationView(),/Confirmer mon adresse/);assert.match(unknown.t.accountConfirmationView(),/Récupérer mon mot de passe/);assert.doesNotMatch(unknown.t.accountConfirmationView(),/administrateur/);
+ console.log('PASS confirmation callback waits for cloud.ready, matches verified user, rejects invalid/stale sessions and preserves ambiguous link choice');
+ checkAmbiguousConfirmationCallbacks();
+ await checkSuspendedSignin();
  console.log('ALL ACCOUNT UI CHECKS PASSED');
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -22,12 +22,13 @@ function context(){
 const form=(id,values)=>({id,dataset:{mode:'signup'},values,reset(){this.resetCount=(this.resetCount||0)+1},querySelector:()=>({disabled:false})});
 const values={currentPassword:'current password phrase',password:'new long password phrase',passwordConfirm:'new long password phrase'};
 async function main(){
- for(const reply of [{error:{code:'user_already_exists'}},{error:{code:'email_exists'}},{data:{session:null,user:{identities:[]}}},{data:{session:null,user:{identities:[{id:'new'}]}}}]){
+ for(const reply of [{error:{code:'user_already_exists'}},{error:{code:'email_exists'}},{data:{session:null,user:{identities:[]}},error:null},{data:{session:null,user:{identities:[{id:'new'}]}},error:null}]){
   const a=context();await a.t.accountAction('account-mode');a.signupReply(reply);await a.t.accountSubmit(form('account-form',{email:'  A@EXAMPLE.INVALID ',password:'long password phrase',displayName:'A'}));
-  const view=a.t.accountGate();assert.match(view,/data-action="account-login"/);assert.match(view,/data-action="account-forgot"/);assert.match(view,/a@example.invalid/);assert.doesNotMatch(view,/id="account-form"/);
-  if(reply.error)assert.match(view,/déjà associée/);else{assert.match(view,/Si cette adresse/);assert.doesNotMatch(view,/adresse e-mail est déjà associée/)}
+  const view=a.node('#page').innerHTML;assert.equal(a.t.state().email,'a@example.invalid');
+  if(reply.error){assert.match(a.node('#account-error').textContent,/déjà associée/);assert.match(view,/data-action="account-mode"/);assert.match(view,/id="account-form"/);}
+  else{assert.match(view,/a@example.invalid/);assert.match(view,/data-action="account-confirmation-login"/);assert.match(view,/data-action="account-confirmation-resend"/);assert.match(view,/Si cette adresse/);assert.doesNotMatch(view,/adresse e-mail est déjà associée|id="account-form"/);}
   assert.equal(a.calls.signup[0].email,'a@example.invalid');assert.equal(a.calls.update.length,0);
-  await a.t.accountAction('account-login');assert.equal(a.t.state().mode,'login');assert.match(a.t.accountGate(),/value="a@example.invalid"/);
+  await a.t.accountAction(reply.error?'account-mode':'account-confirmation-login');assert.equal(a.t.state().mode,'login');assert.match(a.t.accountGate(),/value="a@example.invalid"/);
   await a.t.accountAction('account-forgot');assert.equal(a.t.state().email,'a@example.invalid');assert.equal(a.t.state().step,'email');
  }
  console.log('PASS duplicate, obscured and new signup responses: login/recovery options, normalized retained email, honest account-existence wording');

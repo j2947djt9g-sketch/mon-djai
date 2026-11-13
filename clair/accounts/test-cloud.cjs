@@ -130,6 +130,15 @@ const budget=n=>{const d=E.empty();d.initialized=d.setupDone=true;d.openingCents
  const strippedRaw=JSON.parse(expressB.storage.get(expressB.cloud.key()));strippedRaw._cloud.dirty=true;strippedRaw._cloud.operationId=crypto.randomUUID();delete strippedRaw.transactions[0].express;
  const strippedExpress=device('express-provenance',new Map([[expressB.cloud.key(),JSON.stringify(strippedRaw)]]));await strippedExpress.init();assert.equal(strippedExpress.cloud.status,'conflict');assert.throws(()=>strippedExpress.cloud.resolve(false),/Express/);assert.equal(rows.get('express-provenance').payload.transactions[0].express.idempotencyKey,'express-1');
  const expressOther=device('express-unrelated');await expressOther.init();assert.equal(expressOther.cloud.record,null);console.log('PASS Express provenance: lost-response retry, second-device consent and metadata, same-revision old caches, protected conflict resolution and account isolation');
+ const callbackCached=device('callback-cached');let callbackOutcome=null;callbackCached.cloud.hooks.authInitialized=outcome=>callbackOutcome=outcome;
+ callbackCached.client.auth.initialize=async()=>({error:{code:'otp_expired'}});await callbackCached.init();
+ assert.equal(callbackOutcome?.error?.code,'otp_expired','The SDK callback error must survive getSession returning an older cached session');
+ assert.equal(callbackOutcome.session.user.id,'callback-cached');assert.equal(callbackCached.writes.length,0);
+ const callbackSwitch=device('callback-first');let finishInitialization;callbackSwitch.client.auth.initialize=()=>new Promise(resolve=>finishInitialization=resolve);
+ const callbackOpening=callbackSwitch.init();await Promise.resolve();const callbackLatest={id:'callback-latest',email:'latest@example.invalid',user_metadata:{}};
+ callbackSwitch.setUser(callbackLatest);callbackSwitch.authEvent('SIGNED_IN',{user:callbackLatest});finishInitialization({error:null});await callbackOpening;
+ assert.equal(callbackSwitch.cloud.user.id,'callback-latest');assert.equal(callbackSwitch.writes.length,0);
+ console.log('PASS Auth callback initialization: provider errors remain explicit beside cached sessions; a session switch during initialization keeps the latest account without writing budgets');
  console.log('PASS: all scripts parse; reviewed engine with savings metadata parses');
 })().catch(e=>{console.error(e);process.exitCode=1});
 

@@ -22,9 +22,10 @@ function context(hash=''){
    document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:query,addEventListener(){}},
    supabase:{createClient:()=>client},CLAIR_ACCOUNT_CONFIG:{url:'https://test.supabase.co',key:'sb_publishable_test'},
    FormData:class{constructor(f){this.values=f.values}get(k){return this.values[k]??null}}};
- s.window=s;s.addEventListener=()=>{};vm.createContext(s);vm.runInContext(scripts[0],s);vm.runInContext(process.argv[2]?fs.readFileSync(process.argv[2],'utf8'):scripts[2],s);
- const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);
- vm.runInContext(scripts[3].slice(0,boot)+'window.test={cloud,render,recoveryView,accountAction,accountSubmit,accountMessage,updateRecoveryButtons,state:()=>({step:accountResetStep,email:accountResetEmail}),setData:d=>{data=d;}};})();',s);
+ s.window=s;s.addEventListener=()=>{};vm.createContext(s);vm.runInContext(scripts[0],s);vm.runInContext(process.argv[2]?fs.readFileSync(process.argv[2],'utf8'):scripts.find(code=>code.includes('root.ClairCloud')),s);vm.runInContext(fs.readFileSync(__dirname+'/auth-email.js','utf8'),s);
+ let ui=scripts.find(code=>code.includes('function accountSubmit('));ui=ui.replace(/  \/\* ---------- Compte et synchronisation ---------- \*\/[\s\S]*?(?=  \/\* ---------- Apparence ---------- \*\/)/,fs.readFileSync(__dirname+'/account-ui.js','utf8')+'\n');
+ const boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);
+ vm.runInContext(ui.slice(0,boot)+'window.test={cloud,render,recoveryView,accountAction,accountSubmit,accountMessage,updateRecoveryButtons,accountConfirmationActive,accountConfirmationView,state:()=>({step:accountResetStep,email:accountResetEmail}),setData:d=>{data=d;}};})();',s);
  const t=s.test;t.cloud.ready=true;t.cloud.status='signed-out';
  return {s,t,node,query,client,calls,mailError:e=>mailError=e,passwordError:e=>passwordError=e,delayMail:p=>mailWait=p,delayPassword:p=>passwordWait=p,advance:ms=>clock+=ms};
 }
@@ -47,7 +48,7 @@ async function main(){
  const offline=context();offline.t.render();await offline.t.accountAction('account-forgot');offline.s.navigator.onLine=false;offline.mailError({name:'AuthRetryableFetchError'});await offline.t.accountSubmit(form('account-forgot-form',{email:'test@example.invalid'}));assert.match(offline.node('#account-error').textContent,/Internet/);assert.equal(offline.calls.mail.length,0);
  const pending=context();pending.t.render();await pending.t.accountAction('account-forgot');let releaseMail;pending.delayMail(new Promise(r=>releaseMail=r));const sending=pending.t.accountSubmit(form('account-forgot-form',{email:'test@example.invalid'}));await Promise.resolve();assert.equal(pending.node('#account-reset-send').disabled,true);await pending.t.accountSubmit(form('account-forgot-form',{email:'test@example.invalid'}));assert.equal(pending.calls.mail.length,1);releaseMail();await sending;assert.equal(pending.node('#account-reset-resend').disabled,true);
  console.log('PASS: rate limit/network failure shown on the active screen');
- const expired=context('#error=access_denied&error_code=otp_expired');expired.t.render();assert.match(expired.node('#page').innerHTML,/Ce lien ne fonctionne plus/);await expired.t.accountAction('account-reset-edit');assert.equal(expired.s.location.hash,'');
+ const expired=context('#error=access_denied&error_code=otp_expired');expired.t.render();assert.equal(expired.t.state().step,null);assert(expired.t.accountConfirmationActive());assert.match(expired.t.accountConfirmationView(),/Ce lien est inutilisable/);await expired.t.accountAction('account-forgot');assert.equal(expired.t.state().step,'email');expired.t.cloud.hooks.authInitialized({error:{code:'otp_expired'},session:null});assert.equal(expired.s.location.hash,'');
  const invalid=context('#type=recovery');invalid.t.cloud.user={id:'unrelated-user'};invalid.t.cloud.hooks.status();assert.equal(invalid.t.state().step,'expired');await invalid.t.accountSubmit(form('account-password-form',{password:'long enough password'}));assert.equal(invalid.calls.password.length,0);
  console.log('PASS: expired/incomplete links and unrelated sessions do not change a password');
  const valid=context('#type=recovery'),v=valid.t,user={id:'valid-user',email:'test@example.invalid'};v.cloud.user=user;v.cloud.hooks.recovery(user);v.cloud.status='synced';v.cloud.hooks.status();

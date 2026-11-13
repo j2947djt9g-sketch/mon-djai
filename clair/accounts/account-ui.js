@@ -1,17 +1,26 @@
   /* ---------- Compte et synchronisation ---------- */
   window.CLAIR_ACCOUNT_CONFIG=location.protocol==='file:'?null:(window.CLAIR_ACCOUNT_CONFIG===undefined?{"url":"https://hkssnbvktfscizojhftl.supabase.co","key":"sb_publishable_qJeSyD7E0cbi8V--qyJJkw_8M4oOKr8"}:window.CLAIR_ACCOUNT_CONFIG);
-  const recoveryParams=new URLSearchParams((location.hash||'').slice(1));
-  const recoveryQuery=new URLSearchParams(location.search||'');
-  const recoveryError=recoveryParams.get('error_code')||recoveryQuery.get('error_code')||recoveryParams.get('error')||recoveryQuery.get('error');
-  let accountMode='login',accountBusy=false,accountRecovery=recoveryParams.get('type')==='recovery',accountStarted=false;
+  const authCallback=window.ClairAuthEmail.callback(location);
+  const recoveryError=authCallback.kind==='recovery'&&authCallback.hasError;
+  let accountMode='login',accountBusy=false,accountRecovery=authCallback.kind==='recovery',accountStarted=false;
   let startupController=null;
-  let accountResetStep=accountRecovery?'checking':recoveryError?'expired':null;
+  let accountResetStep=accountRecovery?(recoveryError?'expired':'checking'):null;
   let accountResetEmail='',accountRecoveryUserId=null,accountDeferredSetup=false;
+  let accountConfirmation=authCallback.kind==='confirmation'?{step:authCallback.hasError||!authCallback.hasCredentials?'expired':'checking',email:'',origin:'login',accepted:false}:
+    authCallback.kind==='unknown'?{step:'unknown',email:'',origin:'login',accepted:false}:null;
+  let accountAuthOutcome=null;
   let accountSignupResult=null,accountChangeUserId=null,accountChangeNonceRequired=false,accountChangeResendUntil=0;
+  let accountEmailService=null;
+  function emailAuth(){return accountEmailService||(accountEmailService=window.ClairAuthEmail.create({auth:cloud.client.auth,now:()=>Date.now()}));}
   const cloud=new window.ClairCloud(window.CLAIR_ACCOUNT_CONFIG,{
     normalize: value=>E.normalize(value),
     status:()=>{
+      const confirmationStep=accountConfirmation?.step;updateConfirmationCallback(true);
       startupController?.refresh();
+      if(accountConfirmationActive()){
+        if(confirmationStep!==accountConfirmation.step||!$('#account-confirmation-form'))render();
+        updateConfirmationButtons();return;
+      }
       if(accountResetStep){
         if(cloud.ready&&cloud.status!=='loading'&&
           (accountResetStep==='checking'||(accountResetStep==='password'&&cloud.user?.id!==accountRecoveryUserId)))
@@ -24,8 +33,13 @@
       if(!cloud.user||!cloud.ready||cloud.status==='loading'||$('#account-form')||$('#account-loading')||$('#startup-loading'))render();
       else renderAccountStatus();
     },
-    recovery:user=>{accountRecovery=true;accountRecoveryUserId=user?.id||null;accountResetStep='password';close();},
-    opened:()=>{if(!accountResetStep){catchUp();queuePushSync();}},
+    authInitialized:({error,session})=>{
+      accountAuthOutcome={error:!!error,userId:session?.user?.id||null,emailConfirmed:!!session?.user?.email_confirmed_at};
+      window.ClairAuthEmail.cleanCallback(location,history);
+      updateConfirmationCallback();render();
+    },
+    recovery:user=>{if(accountConfirmationActive())return;accountRecovery=true;accountRecoveryUserId=user?.id||null;accountResetStep='password';close();},
+    opened:()=>{if(!accountResetStep&&!accountConfirmationActive()){catchUp();queuePushSync();}},
     enter:(user,record)=>{
       close();guide=null;wizard=null;undo=null;recovery=null;page='home';
       KEY=cloud.key(user.id);BACKUP=KEY+'-backup';REMINDED=KEY+'-reminded';PUSH_KEY=KEY+'-push';
@@ -37,16 +51,77 @@
       // Default metadata in a save acknowledgement is not a remote budget edit.
       const changed=JSON.stringify(E.normalize(next))!==JSON.stringify(E.normalize(data));
       if(changed){close();wizard=null;undo=null;}
-      data=next;snapshot=raw;loadError=null;if(accountResetStep)return;render();catchUp();
+      data=next;snapshot=raw;loadError=null;if(accountResetStep||accountConfirmationActive())return;render();catchUp();
       if(changed&&data.initialized)notify('Budget actualisé depuis ton compte.');
     },
     empty:()=>{
-      if(accountResetStep||startupController?.active){accountDeferredSetup=true;return;}
+      if(accountResetStep||accountConfirmationActive()||startupController?.active){accountDeferredSetup=true;return;}
       const legacy=legacyBudget();
       if(legacy?.initialized)dialog('Retrouver ton budget actuel',`<p>Ce navigateur contient déjà ${legacy.transactions.length} opérations. Tu peux les transférer vers ton compte.</p><p class="help">Le compte connecté : ${esc(cloud.user.email)}.</p><div class="actions"><button class="button primary" data-action="account-import">Transférer mon budget</button><button class="button" data-action="account-start-empty">Commencer un nouveau budget</button></div>`,'account-import');
       else if(!data.initialized)beginSetup();
     }
   });
+  function accountConfirmationActive(){return !!accountConfirmation;}
+  function updateConfirmationCallback(fromStatus=false){
+    if(!accountConfirmation||!['checking','done'].includes(accountConfirmation.step)||!accountAuthOutcome||!cloud.ready)return;
+    const valid=authCallback.kind==='confirmation'&&authCallback.hasCredentials&&authCallback.hasImplicitCredentials&&!authCallback.hasError&&
+      !accountAuthOutcome.error&&accountAuthOutcome.userId&&accountAuthOutcome.emailConfirmed&&cloud.user?.id===accountAuthOutcome.userId;
+    if(valid)accountConfirmation.step='done';
+    else if(accountAuthOutcome.error||!accountAuthOutcome.userId||!accountAuthOutcome.emailConfirmed||!authCallback.hasImplicitCredentials||authCallback.hasError||accountConfirmation.step==='done'||(fromStatus&&cloud.status!=='loading'))accountConfirmation.step='expired';
+  }
+  async function beginConfirmation(email,origin,accepted=false){
+    accountConfirmation={step:'waiting',email:window.ClairAuthEmail.normalizeEmail(email),origin,accepted};
+    accountResetEmail=accountConfirmation.email;
+    await emailAuth().prepare(accountConfirmation.email);
+    if(accepted)await emailAuth().markRequested(accountConfirmation.email);
+    render();updateConfirmationButtons();$('#account-confirmation-title')?.focus({preventScroll:true});
+  }
+  function accountConfirmationView(){
+    const state=accountConfirmation;if(!state)return '';
+    const error='<p id="account-error" class="help negative" role="alert"></p>';
+    let title='Confirme ton adresse e-mail',body='';
+    if(state.step==='checking'){
+      title='Vérification du lien…';body='<p class="muted" role="status">Un instant, nous vérifions la confirmation de ton adresse.</p>';
+    }else if(state.step==='done'){
+      title='Ton adresse e-mail est confirmée';body='<p class="muted" role="status">Tu peux maintenant accéder à ton espace Clair.</p><button class="button primary" data-action="account-confirmation-finish">Accéder à mon budget</button>';
+    }else if(state.step==='unknown'){
+      title='Ce lien est inutilisable';body='<p class="muted">Ce lien a expiré, a déjà été utilisé ou est incomplet. Choisis le lien dont tu as besoin.</p><div class="recovery-actions"><button class="button primary" data-action="account-confirmation-request">Confirmer mon adresse e-mail</button><button class="button" data-action="account-forgot">Récupérer mon mot de passe</button><button class="link" data-action="account-confirmation-login">Retour à la connexion</button></div>';
+    }else{
+      if(state.step==='expired'){title='Ce lien de confirmation ne fonctionne plus';body='<p class="muted">Il a expiré, a déjà été utilisé ou est incomplet. Demande un nouveau lien de confirmation.</p>';}
+      else body='<p class="muted">Pour activer ton compte, ouvre l’e-mail de confirmation de Clair et clique sur le lien reçu.</p>';
+      body+=(state.email?'<p class="recovery-email">'+esc(state.email)+'</p>':'')+
+        '<p id="account-confirmation-accepted" class="help" role="status">'+(state.accepted?'Ta demande a été acceptée. Si cette adresse peut recevoir une confirmation, tu recevras un lien.':'')+'</p>'+
+        '<p class="help">Aucun message ? Vérifie les courriers indésirables et l’adresse saisie. Une demande acceptée ne garantit pas la réception d’un e-mail.</p>'+error+
+        (state.email?'<button class="button primary" id="account-confirmation-resend" data-action="account-confirmation-resend">Renvoyer le lien de confirmation</button>':'<form id="account-confirmation-form">'+field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="email" autocapitalize="none" spellcheck="false"')+'<button class="button primary" id="account-confirmation-resend" type="submit">Envoyer le lien de confirmation</button></form>')+
+        '<p id="account-confirmation-wait" class="help" role="status"></p><div class="recovery-actions"><button class="link" data-action="account-confirmation-edit">Corriger mon adresse</button><button class="link" data-action="account-confirmation-login">Me connecter</button></div>';
+    }
+    return '<section class="card account-card account-confirmation" aria-labelledby="account-confirmation-title"><h1 id="account-confirmation-title" tabindex="-1">'+title+'</h1>'+body+'</section>';
+  }
+  function updateConfirmationButtons(){
+    if(!accountConfirmation)return;
+    const wait=accountConfirmation.email&&accountEmailService?emailAuth().waitSeconds(accountConfirmation.email):0;
+    const button=$('#account-confirmation-resend');
+    if(button){button.disabled=accountBusy||wait>0;button.textContent=accountBusy?'Demande en cours…':wait?'Renvoyer dans '+wait+' s':'Renvoyer le lien de confirmation';}
+    const hint=$('#account-confirmation-wait');if(hint)hint.textContent=wait?'Attends une minute entre deux demandes de confirmation.':'';
+  }
+  async function resendConfirmation(email){
+    const state=accountConfirmation;if(!state)return;
+    state.email=window.ClairAuthEmail.normalizeEmail(email);accountResetEmail=state.email;
+    state.accepted=false;
+    const accepted=$('#account-confirmation-accepted');if(accepted)accepted.textContent='';
+    await emailAuth().prepare(state.email);updateConfirmationButtons();
+    const response=await emailAuth().resend(state.email);
+    if(accountConfirmation!==state)return;
+    if(response.error!==null||response.accepted!==true)throw Error(window.ClairAuthEmail.message(response.error));
+    state.accepted=true;state.step='waiting';render();updateConfirmationButtons();
+  }
+  function finishConfirmation(mode){
+    if(accountBusy)return;
+    const state=accountConfirmation;
+    if(mode)accountMode=mode==='edit'?state?.origin||'login':mode;
+    accountConfirmation=null;close();render();
+    if(cloud.user){catchUp();if(accountDeferredSetup){accountDeferredSetup=false;cloud.hooks.empty();}}
+  }
   function legacyBudget(){
     try{const owner=localStorage.getItem('clair-local-owner-v1');if(owner&&owner!==cloud.user?.id)return null;const raw=localStorage.getItem(LOCAL_KEY)||localStorage.getItem(OLD_KEY);return raw?E.normalize(JSON.parse(raw)):null;}catch{return null;}
   }
@@ -72,7 +147,7 @@
   function accountGate(){
     if(!cloud.ready||cloud.status==='loading')return '<section class="card" id="account-loading"><h1>Ouverture de ton compte…</h1><p class="help">Ta copie locale est conservée.</p></section>';
     const signup=accountMode==='signup';
-    if(signup&&accountSignupResult)return `<section class="card account-card"><div class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><defs><linearGradient id="brand-auth-1-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b4dff"/><stop offset="1" stop-color="#6528d7"/></linearGradient><linearGradient id="brand-auth-1-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f0ff"/><stop offset="1" stop-color="#d7c3ff"/></linearGradient><linearGradient id="brand-auth-1-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e9ddff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#brand-auth-1-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="#fff"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#brand-auth-1-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#brand-auth-1-edge)"/></svg></div>${mascot(1,'Retrouvons ton espace.')}<h1 id="account-confirmation-title" tabindex="-1">${accountSignupResult==='exists'?'Tu as déjà un compte.':'Confirme ton adresse e-mail.'}</h1><p class="muted">${accountSignupResult==='exists'?'Cette adresse e-mail est déjà associée à un compte. Connecte-toi ou récupère ton mot de passe.':'Pour terminer la création d’un nouveau compte, ouvre l’e-mail de confirmation de Clair et clique sur le lien reçu.'}</p><p class="recovery-email">${esc(accountResetEmail)}</p>${accountSignupResult==='exists'?'':'<ol class="signup-confirmation-steps" role="status"><li>Ouvre ta boîte mail et cherche le message de Clair.</li><li>Clique sur le lien de confirmation dans ce mail.</li><li>Reviens ici pour te connecter à ton compte.</li></ol><p class="help">Aucun message ? Vérifie les courriers indésirables et l’adresse saisie. Si cette adresse correspond déjà à un compte, connecte-toi ou récupère ton mot de passe.</p>'}<p id="account-error" class="help negative" role="alert"></p><div class="recovery-actions"><button class="button primary" data-action="account-login">Me connecter</button><button class="button" data-action="account-forgot">Mot de passe oublié ?</button><details class="settings-more account-support-options"><summary>Besoin d’aide pour te connecter ?</summary><p><a class="link" href="help.html">Demander de l’aide à l’administrateur ↗</a></p></details><button class="link" data-action="account-signup-edit">Corriger mon adresse</button></div></section>`;
+    if(accountConfirmationActive())return accountConfirmationView();
     return `<section class="card account-card"><div class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><defs><linearGradient id="brand-auth-2-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b4dff"/><stop offset="1" stop-color="#6528d7"/></linearGradient><linearGradient id="brand-auth-2-fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6f0ff"/><stop offset="1" stop-color="#d7c3ff"/></linearGradient><linearGradient id="brand-auth-2-edge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e9ddff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#brand-auth-2-violet)"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c-7 4-11 11-11 19v32c0 8 4 15 11 19l32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0l-98-58c-19-11-29-29-29-51v-83c0-22 10-40 29-51Z" fill="#fff"/><path d="M284 97c14-8 29-7 44 2l64 40c12 7 15 20 8 31l-33 49c-7 11-19 14-30 7l-39-23c-9-5-18-5-27 0l-44 26c17-33 24-98 57-132Z" fill="url(#brand-auth-2-fold)"/><path d="m227 299 32 19c7 4 15 4 22 0l58-34c10-6 22-3 28 7l30 46c7 11 4 24-8 31l-84 49c-18 11-38 11-56 0-22-17-21-77-22-118Z" fill="url(#brand-auth-2-edge)"/></svg></div>${mascot(signup?1:0,signup?"Préparons ton espace, à ton rythme.":"Heureuse de te retrouver.")}<h1>${signup?"Créons ton espace.":"Ton budget, partout."}</h1><p class="muted">Le même compte sur ton téléphone et ton ordinateur.</p><form id="account-form" data-mode="${accountMode}">${signup?field('Ton prénom','displayName','','text','required maxlength="64" autocomplete="given-name"'):''}${field('Adresse e-mail','email',accountResetEmail,'email','required maxlength="254" autocomplete="username"')}${field('Mot de passe','password','','password',`required minlength="${signup?12:1}" maxlength="128" autocomplete="${signup?'new-password':'current-password'}"`)}<button class="link account-password-visibility" type="button" data-action="account-entry-toggle" aria-pressed="false">Afficher le mot de passe</button>${signup?'<p class="help">12 caractères minimum. Après l’inscription, ouvre le mail de confirmation et clique sur le lien reçu pour activer ton compte.</p>':''}<p id="account-error" class="help negative" role="alert"></p>${signup?'':'<p id="account-login-wait" class="help" role="status" aria-live="polite"></p>'}<button class="button primary" type="submit">${signup?'Créer mon compte':'Me connecter'}</button></form><div class="actions"><button class="link" data-action="account-mode">${signup?'J’ai déjà un compte':'Créer un compte'}</button>${!signup?'<button class="link" data-action="account-forgot">Mot de passe oublié ?</button><details class="settings-more account-support-options"><summary>Besoin d’aide pour te connecter ?</summary><p><a class="link" href="help.html">Demander de l’aide à l’administrateur ↗</a></p></details>':''}</div><p class="help">${esc(cloud.error||'Chaque compte possède son propre budget.')}</p></section>`;
   }
   function accountCard(){
@@ -266,9 +341,7 @@
     if(hint)hint.textContent=wait>60?'Une pause est en cours. Après cinq demandes, attends trente minutes. Le déblocage administrateur reste accessible.':wait?'Attends une minute entre deux demandes de lien.':'Cinq demandes maximum, puis une pause de trente minutes.';
   }
   function clearRecoveryAddress(){
-    if(!accountRecovery&&!recoveryError)return;
-    // The SDK has already consumed the return from Auth. Never store its URL tokens.
-    try{const search=new URLSearchParams(location.search||'');for(const key of ['error','error_code','error_description'])search.delete(key);history.replaceState(null,'',location.pathname+(search.size?'?'+search.toString():''));}catch{}
+    if(accountAuthOutcome)window.ClairAuthEmail.cleanCallback(location,history);
   }
   function finishRecovery(){
     if(accountBusy)return;
@@ -312,7 +385,7 @@
         if(signup){
           const name=String(f.get('displayName')||'').trim();if(!name||name.length>64||password.length<12)throw Error('Indique ton prénom et un mot de passe d’au moins 12 caractères.');
           accountResetEmail=email;
-          response=await cloud.client.auth.signUp({email,password,options:{data:{display_name:name},emailRedirectTo:location.origin+location.pathname}});
+          response=await emailAuth().signup({email,password,displayName:name});
         }else{
           passwordLogin=true;accountResetEmail=email;
           if(navigator.onLine===false)throw Error('Vérifie ta connexion Internet, puis réessaie.');
@@ -320,18 +393,20 @@
           response=await cloud.client.auth.signInWithPassword({email,password});
         }
         if(response.error){
-          if(signup&&['user_already_exists','email_exists'].includes(response.error.code)){accountSignupResult='exists';render();return;}
+          if(signup&&['user_already_exists','email_exists'].includes(response.error.code))throw Error('Cette adresse est déjà associée à un compte. Connecte-toi ou récupère ton mot de passe.');
+          if(!signup&&response.error.code==='user_banned')throw Error('Ce compte est suspendu. Contacte l’administrateur pour demander son rétablissement.');
           if(!signup&&response.error.code==='invalid_credentials')throw Error(recordLoginFailure());
-          if(signup&&(response.error.code==='over_email_send_rate_limit'||response.error.status===429))throw Error('Le service e-mail ne peut pas envoyer la confirmation pour le moment. Réessaie plus tard ou contacte l’administrateur.');
+          if(signup)throw Error(window.ClairAuthEmail.message(response.error));
           if(response.error.status===429)throw Error('Trop de tentatives. Attends un moment avant de réessayer.');
-          if(response.error.code==='email_not_confirmed')throw Error('Ton adresse e-mail n’est pas encore confirmée. Ouvre le mail de confirmation de Clair et clique sur le lien reçu. Vérifie aussi les indésirables.');
+          if(response.error.code==='email_not_confirmed'){form.reset?.();await beginConfirmation(email,'login');return;}
           throw Error('Connexion indisponible. Vérifie ta connexion Internet et réessaie.');
         }
         await clearLoginAttempts(email);
         try{localStorage.removeItem('clair-auth-attempts-v1');}catch{}
-        if(signup&&!response.data.session){accountSignupResult='confirmation';render();$('#account-confirmation-title')?.focus({preventScroll:true});return;}
+        if(signup&&!response.data.session){form.reset?.();await beginConfirmation(email,'signup',response.error===null);return;}
         await cloud.attach(response.data.user||response.data.session?.user);
       }
+      if(form.id==='account-confirmation-form')await resendConfirmation(email);
       if(form.id==='account-forgot-form')await sendRecovery(email);
       if(form.id==='account-change-password-form')await changePassword(form,f,password);
       if(form.id==='account-password-form'){
@@ -354,7 +429,7 @@
         accountResetStep='done';accountRecovery=false;accountRecoveryUserId=null;render();focusRecovery();
       }
     }catch(error){accountMessage(error.message||'La connexion n’a pas abouti.');}
-    finally{accountBusy=false;if(button)button.disabled=passwordLogin&&loginWaitSeconds()>0;updateRecoveryButtons();updateLoginButtons();}
+    finally{accountBusy=false;if(button)button.disabled=passwordLogin&&loginWaitSeconds()>0;updateRecoveryButtons();updateLoginButtons();updateConfirmationButtons();}
   }
   function transferLegacy(){
     const legacy=legacyBudget();if(!legacy){notify('Aucun ancien budget à transférer sur cet appareil.');return;}
@@ -374,6 +449,16 @@
     dialog('Deux copies de ton budget',`<p>Choisis celle à conserver pour tous tes appareils. Télécharge les deux copies avant de choisir si tu souhaites les comparer.</p><div class="actions"><button class="button" data-action="account-export-device">Sauvegarder cette copie</button>${cloud.conflict.remote?'<button class="button" data-action="account-export-online">Sauvegarder la copie en ligne</button>':''}</div><div class="actions"><button class="button primary" data-action="account-keep-device">Garder cet appareil</button>${cloud.conflict.remote?'<button class="button" data-action="account-keep-online">Garder la copie en ligne</button>':''}</div>`,'account-conflict');
   }
   async function accountAction(action){
+    if(action==='account-confirmation-resend'){
+      if(accountBusy||!accountConfirmation)return;accountBusy=true;accountMessage('');updateConfirmationButtons();
+      try{await resendConfirmation(accountConfirmation.email);}catch(error){accountMessage(error.message);}finally{accountBusy=false;updateConfirmationButtons();}return;
+    }
+    if(action==='account-confirmation-request'){
+      if(accountBusy)return;accountConfirmation={step:'expired',email:'',origin:'login',accepted:false};render();return;
+    }
+    if(action==='account-confirmation-edit'||action==='account-confirmation-login'||action==='account-confirmation-finish'){
+      finishConfirmation(action==='account-confirmation-edit'?'edit':action==='account-confirmation-login'?'login':null);return;
+    }
     if(action==='account-entry-toggle'){
       const input=$('#account-form input[name="password"]'),button=$('[data-action="account-entry-toggle"]');
       if(input&&button){const show=input.type==='password';input.type=show?'text':'password';button.textContent=show?'Masquer le mot de passe':'Afficher le mot de passe';button.setAttribute('aria-pressed',String(show));}
@@ -397,7 +482,7 @@
     if(action==='account-forgot'||action==='account-reset-edit'){
       if(accountBusy)return;
       if(action==='account-forgot')accountResetEmail=$('#account-form input[name="email"]')?.value?.trim()||accountResetEmail;
-      accountResetStep='email';close();clearRecoveryAddress();render();updateRecoveryButtons();focusRecovery();
+      accountConfirmation=null;accountResetStep='email';close();clearRecoveryAddress();render();updateRecoveryButtons();focusRecovery();
     }
     if(action==='account-reset-back'||action==='account-reset-finish'){
       if(action==='account-reset-back')accountMode='login';
@@ -428,4 +513,4 @@
     }
   }
 
-  setInterval(()=>{updateRecoveryButtons();updateLoginButtons();},1000);
+  setInterval(()=>{updateRecoveryButtons();updateLoginButtons();updateConfirmationButtons();},1000);
