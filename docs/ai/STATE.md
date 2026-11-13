@@ -16,6 +16,8 @@ Mis à jour le 13 novembre 2026. Lire AGENTS puis STATE et MAP ; vérifier branc
 
 ## Limites et prochaine action
 
-Auth distant : destination GitHub par défaut, retours Vercel refusés (303 invalid-link probes) ; pas une preuve de non-livraison. Logs2 mail.send sans erreur SMTP observée ; SMTP actuel inaccessible/inconnu. Aucun e-mail de production reçu testé. Réception locale seule prouvée, aucun iPhone/Safari physique. Récupération assistée : restrictions d’origine/destinations GitHub connues, non modifiées.
+URL Supabase corrigées par l’utilisateur, vérifiées13nov11:18UTC : défaut/callback/index/reset acceptés sur Vercel ; confirmation obligatoire active. SMTP/template production à vérifier ; aucun fournisseur selon utilisateur.
 
-Aperçu Vercel fictif READY,390/1440 vérifié ; [PR32 en brouillon](https://github.com/j2947djt9g-sketch/mon-djai/pull/32) : `EMAIL_CONFIRMATION.md`. Ne jamais promouvoir le paquet de démo. Publication autorisée après vérification Supabase, accord conservé. Préflight13nov10:46UTC : Vercel refusé, retour GitHub, SMTP inconnu. Attendre correction/vérification dashboard URL/SMTP, puis publier sans redemander accord. Envoi réel à organiser. Aucun compte/mot de passe/SQL/RLS/budget modifié. `main` ancien `dc376fb`, aucune fusion autorisée ; retour production CLAIR seul `dpl_9uaKUPU5YM3eiPTEitqidJ7hb2ts`.
+Un compte test créé après accord explicite : signup SDK/helper13nov11:36UTC HTTP200, compte non confirmé,1mail.send,0budget. Un seul envoi. Réception iCloud et lien demandés à l’utilisateur, non vérifiés. Mot de passe privé600 horsrepo, aucune PII dans les docs. Puis vérifier activation/connexion sans budget. Détails : `EMAIL_CONFIRMATION.md`.
+
+[PR32](https://github.com/j2947djt9g-sketch/mon-djai/pull/32) brouillon, code CI167 vert. Publication conditionnelle autorisée, accord conservé : attendre SMTP/template puis publier candidat réel68fichiers sans redemander. Ne jamais promouvoir la démo. Récupération assistée : restrictions GitHub préexistantes. Aucun iPhone physique, compte existant/mot de passe/budget/RLS modifié ni fusion main autorisée.
