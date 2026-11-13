@@ -69,8 +69,8 @@ The login screen counts only `invalid_credentials`: two wrong passwords remain r
 
 This is a browser UX guard, not a server-wide account lock: other browsers, cleared storage, or direct Auth API requests can bypass it. Supabase's independent server limits remain active. The existing five-request recovery quota is unchanged, and delivery still requires a configured mail sender.
 
-## Confirmation e-mail — correctif préparé le 13 novembre2026
+## Confirmation e-mail — correctif publié le 13 novembre2026
 
 `auth-email.js` centralise inscription, renvoi, destination Vercel et reconnaissance/nettoyage des callbacks après initialisation SDK. `account-ui.js` sépare confirmation, récupération et suspension ; correction d’adresse sans réutiliser le mot de passe, délai60s et verrou de renvoi, acceptation conditionnelle sans promesse de livraison. Copies inline à maintenir dans `clair/index.html`.
 
-Tests : `test-auth-email.cjs`, `test-confirmation-sdk.cjs`, `test-account-ui.cjs`, `test-cloud.cjs`, `verify-auth-entry.cjs`. Destination Supabase actuelle encore GitHub, SMTP inconnu, configuration et publication production en attente d’accord. Procédure et limites : [EMAIL_CONFIRMATION.md](../../docs/ai/EMAIL_CONFIRMATION.md).
+Tests : `test-auth-email.cjs`, `test-confirmation-sdk.cjs`, `test-account-ui.cjs`, `test-cloud.cjs`, `verify-auth-entry.cjs`. Destinations Supabase Vercel vérifiées après correction humaine ; parcours réel reçu/activé/connecté sur une adresse iCloud et correctif publié sur Vercel après accord. SMTP effectif/quotas inconnus ; tests publics390/1440 à Auth simulée verts. Procédure et limites : [EMAIL_CONFIRMATION.md](../../docs/ai/EMAIL_CONFIRMATION.md).

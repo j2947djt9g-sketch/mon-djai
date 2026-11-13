@@ -1,6 +1,6 @@
 # Confirmation e-mail — audit et correctif préparé
 
-13 novembre 2026. Branche `fix/clair-email-confirmation`, base `1f541b7`. **Production et Supabase inchangés.** Aucun compte supprimé, mot de passe réinitialisé, budget/RLS/projet remplacé. La panne de réception en production n’est pas déclarée résolue.
+13 novembre 2026. Branche `fix/clair-email-confirmation`, base `1f541b7`. **Correctif publié en production sur Vercel après accord explicite.** URL Supabase corrigées par l’utilisateur, un compte test créé sur autorisation. Aucun compte existant supprimé, mot de passe réinitialisé, budget/RLS/projet remplacé. Parcours réel validé pour une adresse iCloud ; fournisseur/quotas globaux non inspectés. Les sections suivantes conservent la chronologie du diagnostic.
 
 ## Diagnostic : preuves et limites
 
@@ -113,3 +113,15 @@ Le13novembre, le destinataire confirme réception et ouverture du lien CLAIR («
 Le candidat68 a été revérifié indépendamment : source4673b2a/CI167,63fichiers inchangés/4modifiés/1ajout, Masterboard/config préservés, aucun adaptateur/noindex/CSP de démo/secret. L’accord antérieur répondait Oui à la publication après vérification Supabase ; conditions désormais vérifiées sur ce parcours. Toutefois, le contrôle automatique rejette deux fois la création production Vercel : ne reconnaît pas l’accord précédent comme une autorisation utilisateur explicite du déploiement précis, et ne considère pas notre enregistrement de cet accord comme un message utilisateur de confiance. **Aucun nouveau déploiement créé, production actuelle inchangée.** Un seul upload statique SHA1 a eu lieu, sans effet sur le site actif.
 
 Aucun contournement tenté. Une nouvelle confirmation explicite de publication est demandée via question async ; attendre la réponse avant retenter la même action. Après accord : déploiement réel68fichiers, jamais promotion de la démo ; vérifier READY/alias et67ressources publiques puis smoke390/1440 à Auth simulée. Harness horsrepo préparé `verify-email-production.cjs`, non exécuté tant que le nouveau HTML n’est pas servi. Source et données financières inchangées. Reprise sûre du mot de passe test privé à prévoir, sans le publier.
+
+## Livraison finale : publication autorisée et vérifiée
+
+Une nouvelle réponse explicite Oui à la publication immédiate en production sur Vercel lève le blocage automatique. Création du déploiement réel68fichiers via l’outil Vercel authentifié, code4673b2a, sans fusion main ni nouvelle modification Supabase : **`dpl_B2gMeLCaX4uJK6VSzXnVchNZ8S7g` READY**, https://clair-budget.vercel.app/clair/ ; deux alias habituels conservés, `/`→`/clair/`307. Aucun contournement de refus, aucune promotion du paquet de démonstration.
+
+Lecture directe du HTML public :632328octets, SHA1 `707aef7283ab62e73e7d4b31f61ad08740d151cb`, identique au candidat. Relecture indépendante du candidat :63fichiers anciens inchangés,4modifiés et1ajout ; Masterboard et vercel.json conservés, aucun secret/fixture/noindex/CSP de démonstration. Le même code a CI167 entièrement verte.
+
+Après publication :67ressources publiques vérifiées taille/SHA1 sous TLS valide. SDK2.102.0 réel, Auth simulée et réseau fermé,390/1440 : inscription→confirmation, login non confirmé,60s, double clic1requête, correction mot de passe vide, expiration hors récupération,0débordement/erreur JS/erreur routage/requête non prévue. Aucun compte ni e-mail réel issu de ces contrôles. Rapport et6captures : `/workspace/clair-auth-email-work/production-public-smoke/` ; synthèse `email-production-release.json`. vercel.json est consommé par la plateforme et vérifié localement. Un blocage proxy sandbox du harness a été résolu par une exécution réseau autorisée, sans désactiver TLS.
+
+Le test réel iCloud (création, réception rapportée humainement, lien, activation DB, connexion SDK distincte) a précédé la publication. L’interface finale publique est ensuite contrôlée avec transport Auth simulé : ne pas confondre les deux preuves. Le SMTP effectif et ses quotas restent inconnus ; ne pas promettre une délivrabilité universelle. Aucun service payant activé, aucun second mail envoyé automatiquement. Identifiants de test privés hors dépôt, remise sûre à prévoir.
+
+Observabilité : requête Vercel error/fatal sur cette production15min sans groupe retourné, aucun drain ; application statique, aucun système de collecte ajouté. Aucun diagnostic global Supabase déduit de cette absence. Retour frontend disponible : `dpl_GkcCqU5PwryuaBr3pywqJ3vmvErM`. Publication terminée ; aucun nouveau consentement à demander pour rejouer une action déjà exécutée, ne pas redéployer sans nouvelle raison.
