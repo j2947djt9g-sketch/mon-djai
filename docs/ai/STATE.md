@@ -1,27 +1,19 @@
 # Clair — état court de reprise
 
-Mis à jour le 5 novembre 2026. Référence produit vérifiée : `13fbf2e28e65f968a57687bfd89a6f3dd9e3e568` ; vérifier le dernier commit avant une nouvelle modification.
+14 novembre2026. Lire AGENTS puis STATE/MAP ; vérifier branche/statut/derniercommit.
 
 ## Repères stables
 
-- Application : https://clair-budget.vercel.app/ ; la racine redirige vers `/clair/`.
-- Code cible : `clair/index.html`. L’`index.html` à la racine est une autre application historique.
-- HTML/CSS/JS statiques, SDK Supabase embarqué, modules sources sous `clair/accounts/`. Budget JSON v3, montants entiers en centimes, dates Europe/Paris.
-- Comptes et synchronisation existants ; préserver les clés par propriétaire, les révisions et les conflits. Une nouvelle adresse ne migre pas automatiquement le stockage local ou l’installation PWA.
-- Commencer par `MAP.md` pour trouver le module et ses tests. Les anciens `clair/docs/CONTEXTE.md` et `SOURCES.md` mélangent des versions : références à consulter seulement pour un point précis.
+Production **Vercel uniquement**, https://clair-budget.vercel.app/clair/ ; dpl_B2gMeLCaX4uJK6VSzXnVchNZ8S7g READY antérieur, code4673b2a/SW41. Masterboard0cdda26/servicev4 préservés. Cette mission n’a rien publié/appliqué dans Supabase. Banque abandonnée.
 
 ## Trois changements récents
 
-1. PR27, publiée : partage et ouverture en ligne vers Vercel ; URL canonique, robots et sitemap ajoutés. Accès HTTP public et ressources vérifiés. L’indexation Google n’est pas confirmée et aucune demande Search Console n’a été effectuée.
-2. PR26, publiée : animation complète à la première visite, accès rapide ensuite ; dépense directe avec brouillon conservé ; aide sur les filtres d’épargne incompatibles. Les propositions d’audit 3 (recherche toute période) et 5 (restauration de position) ne sont pas approuvées.
-3. Présente intervention : ajouter un plan de contexte court, sans changer le produit. La référence Graphty n’a pas été retrouvée dans les dépôts connectés ; cette organisation applique l’objectif décrit par l’utilisateur, sans prétendre recopier un document vérifié.
+1. **Refactorisation locale terminée et revue globale approuvée** (d07f0f6) : `refactor/clair-professional-foundation`, basec55c8ea, tous lots0–6. Guides `docs/architecture/CLAIR.md`, `REFACTOR_VERIFICATION.md`, `FINAL_REVIEW.md`. Aucun problème critique/important/mineur nécessitant correction. Branche/worktree conservés ; aucune fusion/push historique/publication autorisés.
+2. Source canonique : domain/engine.js (41API/calculs préservés), application/{budget-commands,budget-session}.js (candidats validés/snapshots privés/owner/epoch), ui/{navigation,page-host}.js et journal paramétré. Cloud garde CAS/révisions/sync ; cache propriétaire/révision gardés, photos tardives rejetées, ACK préserve vues/drafts. Source/template→`node tools/clair/build.mjs --generate`→`--check`, jamais index à la main. JSONv3/centièmes/CFAentiers/datesParis/IDs/provenance préservés.
+3.51suitesNode+2CLI et19scriptsbrowser verts après corrections ciblées de fixtures ; cycledevie et polishjournal verts. SQLisoléfinances/ACL/RLS/concurrence/legacy/NULLfaults verts. Paquet75fichiers déterministe et vérifié, téléchargement/PWA/ secoursMasterboard contrôlés sans API/cachecompte ni erreur ;0nœud ajouté/retiré sur10refreshs (110/60avant). SDK/Masterboardinchangés. SQLunlockv2 seulement préparé, protocolefencé/inconnufermé ; guide DEVICE_UNLOCK.md.
 
-## Vérifications et limites connues
+## Limites et prochaine intervention
 
-- Base produit : 28 suites Node et contrôles GitHub verts pour PR27 ; profil/partage testé avec données fictives, sur plusieurs tailles et devises. Cela ne remplace pas un essai avec un compte réel ou un iPhone physique.
-- L’aide, la récupération et les rappels côté serveur avaient des origines limitées à GitHub Pages lors du contrôle du 5 novembre. Ne pas les annoncer fonctionnels sur Vercel sans nouvelle vérification ciblée. La connexion ordinaire n’a pas été validée ici sur un vrai compte.
-- Déploiement Vercel manuel par fichiers ; connexion GitHub–Vercel non configurée. Cibles et fichiers nécessaires : `DEPLOYMENT.md`.
+file:// réel NONEXÉCUTÉ (politiqueChromium, ne pas contourner) ; VMfile/téléchargement/PWA sont distincts. Pas de Safari/iPhone physique, nouvelle réceptionmail/push, backendhébergé, CI distante ou typecheck/bundleDeno prouvés. Import/reset conservent orchestration legacy postécriture à durcir séparément ; la garantie `commit` ordinaire ne couvre pas tous ces anciens handlers. Pas de promesse Authexactementunefois/révocationglobale.
 
-## Reprise
-
-Aucune modification produit en cours. Pour une nouvelle demande : identifier le sujet, ouvrir sa source et ses tests via la carte, puis actualiser ce bloc à la fin. Ne pas recommencer les travaux déjà publiés des PR26/27.
+PostgreSQLjetable supprimé par ID après tests ; worktree/sources/preuves conservés. Livraison locale zip+patch et commit/SHA256 : `/workspace/clair-refactor-work/delivery/DELIVERY.json`. Preuves/briefs/logs : `/workspace/clair-refactor-work/` ; tests versionnés à relancer selon tâche, pas tout relire. Avant release : lire DEPLOYMENT.md, vérifier cibles/catalogues et obtenir accord propre pour Vercel/Edge/SQL. Ne jamais réappliquer SQLhistorique ni pousser ancienscommitsphoto. Prochaine action utilisateur : revue des sources/livraison locale ou instruction distincte d’intégration.

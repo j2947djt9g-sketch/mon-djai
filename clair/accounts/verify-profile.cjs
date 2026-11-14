@@ -3,10 +3,11 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 const root=path.resolve(__dirname,'..');
 const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}try{res.writeHead(200,{'content-type':{'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.webp':'image/webp','.svg':'image/svg+xml'}[path.extname(file)]||'application/octet-stream'});res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}});
 (async()=>{
- await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,executablePath:process.env.CLAIR_CHROME_PATH});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({headless:true,executablePath:process.env.CLAIR_CHROME_PATH});
  try{for(const width of [320,390,768,1440])for(const code of ['EUR','USD','XOF','XAF']){
-  const context=await browser.newContext({viewport:{width,height:844},reducedMotion:'reduce'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.addInitScript(()=>{window.CLAIR_ACCOUNT_CONFIG=null;});await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('.tutorial').waitFor();
+  const context=await browser.newContext({viewport:{width,height:844},reducedMotion:'reduce',serviceWorkers:'block'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+  await page.addInitScript(()=>{window.CLAIR_ACCOUNT_CONFIG=null;});await page.goto(origin+'/index.html');await page.locator('#welcome').waitFor({state:'hidden'});await page.locator('.tutorial').waitFor();
   const shot=async label=>{if(process.env.CLAIR_PREVIEW==='1'&&width===390&&code==='EUR')console.log('CLAIR_PROFILE_'+label+'='+(await page.screenshot({type:'jpeg',quality:58})).toString('base64'));};await shot('GUIDE');
   assert.match(await page.locator('#dialog-title').innerText(),/point de départ/);assert(await page.locator('.tutorial-phone').isVisible());
   const demoBefore=await page.evaluate(()=>localStorage.getItem('clair-github-money-v3'));await page.locator('[data-action="tutorial-play"]').click();assert.match(await page.locator('#tutorial-result').innerText(),/point de départ/);assert.equal(await page.evaluate(()=>localStorage.getItem('clair-github-money-v3')),demoBefore);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));

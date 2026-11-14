@@ -1,0 +1,218 @@
+{
+  "html": "clair/index.html",
+  "containers": [
+    "style",
+    "script",
+    "script",
+    "script",
+    "script",
+    "style",
+    "script"
+  ],
+  "mirrors": [
+    {
+      "source": "clair/accounts/account-ui.js",
+      "container": 4,
+      "tag": "script",
+      "order": 1
+    },
+    {
+      "source": "clair/accounts/auth-email.js",
+      "container": 3,
+      "tag": "script",
+      "order": 1
+    },
+    {
+      "source": "clair/accounts/category-art.css",
+      "container": 0,
+      "tag": "style",
+      "order": 5
+    },
+    {
+      "source": "clair/accounts/category-art.js",
+      "container": 1,
+      "tag": "script",
+      "order": 6
+    },
+    {
+      "source": "clair/accounts/cloud.js",
+      "container": 3,
+      "tag": "script",
+      "order": 0
+    },
+    {
+      "source": "clair/accounts/companion-ui.js",
+      "container": 4,
+      "tag": "script",
+      "order": 7
+    },
+    {
+      "source": "clair/accounts/dashboard-ui.js",
+      "container": 4,
+      "tag": "script",
+      "order": 3
+    },
+    {
+      "source": "clair/accounts/dashboard.css",
+      "container": 0,
+      "tag": "style",
+      "order": 0
+    },
+    {
+      "source": "clair/accounts/device-unlock.css",
+      "container": 5,
+      "tag": "style",
+      "order": 0
+    },
+    {
+      "source": "clair/accounts/device-unlock.js",
+      "container": 6,
+      "tag": "script",
+      "order": 0
+    },
+    {
+      "source": "clair/accounts/exchange-ui.js",
+      "container": 4,
+      "tag": "script",
+      "order": 9
+    },
+    {
+      "source": "clair/accounts/exchange.js",
+      "container": 1,
+      "tag": "script",
+      "order": 0,
+      "generatedFrom": "clair/domain/engine.js",
+      "nestedIn": "clair/domain/engine.js",
+      "begin": "/* BEGIN GENERATED COMPATIBILITY exchange.js */",
+      "end": "/* END GENERATED COMPATIBILITY exchange.js */"
+    },
+    {
+      "source": "clair/accounts/express-core.js",
+      "container": 1,
+      "tag": "script",
+      "order": 3
+    },
+    {
+      "source": "clair/accounts/express-insights.js",
+      "container": 1,
+      "tag": "script",
+      "order": 4
+    },
+    {
+      "source": "clair/accounts/express-ui.css",
+      "container": 0,
+      "tag": "style",
+      "order": 4
+    },
+    {
+      "source": "clair/accounts/express-ui.js",
+      "container": 4,
+      "tag": "script",
+      "order": 10
+    },
+    {
+      "source": "clair/accounts/glass-ui.css",
+      "container": 0,
+      "tag": "style",
+      "order": 6
+    },
+    {
+      "source": "clair/accounts/glass-ui.js",
+      "container": 1,
+      "tag": "script",
+      "order": 7
+    },
+    {
+      "source": "clair/accounts/journal-ui.js",
+      "container": 4,
+      "tag": "script",
+      "order": 4
+    },
+    {
+      "source": "clair/accounts/journal.css",
+      "container": 0,
+      "tag": "style",
+      "order": 1
+    },
+    {
+      "source": "clair/accounts/profile-ui.js",
+      "container": 4,
+      "tag": "script",
+      "order": 8
+    },
+    {
+      "source": "clair/accounts/profile.css",
+      "container": 0,
+      "tag": "style",
+      "order": 3
+    },
+    {
+      "source": "clair/accounts/region-currency.js",
+      "container": 1,
+      "tag": "script",
+      "order": 5
+    },
+    {
+      "source": "clair/accounts/savings-ui.js",
+      "container": 4,
+      "tag": "script",
+      "order": 2
+    },
+    {
+      "source": "clair/accounts/sounds.js",
+      "container": 4,
+      "tag": "script",
+      "order": 0
+    },
+    {
+      "source": "clair/accounts/welcome.css",
+      "container": 0,
+      "tag": "style",
+      "order": 2
+    },
+    {
+      "source": "clair/domain/engine.js",
+      "container": 1,
+      "tag": "script",
+      "order": 0
+    },
+    {
+      "source": "clair/application/budget-commands.js",
+      "container": 1,
+      "tag": "script",
+      "order": 1
+    },
+    {
+      "source": "clair/application/budget-session.js",
+      "container": 1,
+      "tag": "script",
+      "order": 2
+    },
+    {
+      "source": "clair/ui/navigation.js",
+      "container": 4,
+      "tag": "script",
+      "order": 5
+    },
+    {
+      "source": "clair/ui/page-host.js",
+      "container": 4,
+      "tag": "script",
+      "order": 6
+    }
+  ],
+  "external": [
+    {
+      "source": "clair/accounts/help-page.js",
+      "reason": "Ressource externe des pages de r\u00e9cup\u00e9ration, absente de index.html."
+    },
+    {
+      "source": "clair/accounts/recovery-support.css",
+      "reason": "Ressource externe des pages de r\u00e9cup\u00e9ration, absente de index.html."
+    },
+    {
+      "source": "clair/accounts/reset-page.js",
+      "reason": "Ressource externe des pages de r\u00e9cup\u00e9ration, absente de index.html."
+    }
+  ]
+}

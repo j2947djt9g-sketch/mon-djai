@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync(__dirname+'/region-currency.js','utf8');
+const ctx={window:{},Intl};vm.createContext(ctx);vm.runInContext(source,ctx);const R=ctx.window.ClairRegionCurrency;
+const codes=['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF'];
+for(const [locale,expected] of [['ar-MA','MAD'],['fr-MA','MAD'],['fr-CA','CAD'],['en-CA','CAD'],['de-CH','CHF'],['de-LI','CHF'],['en-GB','GBP'],['en-US','USD'],['fr-FR','EUR'],['de-DE','EUR'],['fr-SN','XOF'],['fr-CM','XAF'],['ja-JP',null],['fr',null],['en',null],['malformed_locale',null],['',null]])assert.equal(R.suggest(locale,codes),expected,locale);
+assert.equal(R.suggest(['bad_locale','ja-JP','fr-CA','ar-MA'],codes),'CAD','First supported explicit region wins');
+assert.equal(R.suggest(['fr-CA','ar-MA'],['MAD']),'MAD','Unsupported currencies are skipped');
+assert.equal(R.suggest('ar-MA',['EUR']),null);assert.equal(R.suggest([],codes),null);
+assert(!/geolocation|fetch\(|localStorage|sessionStorage/.test(source),'Suggestion helper must stay local and side-effect free');
+console.log('PASS region currency: explicit device regions, priority, malformed/unknown/language-only fallback, supported filtering, no location/network/storage');

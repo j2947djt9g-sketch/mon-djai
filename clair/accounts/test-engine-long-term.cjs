@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const html=fs.readFileSync(__dirname+'/../index.html','utf8'),engine=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1];
-const sandbox={window:{},Date,Intl};vm.createContext(sandbox);vm.runInContext(engine,sandbox);const E=sandbox.window.ClairEngine;
+const {canonicalEngine}=require('../../tools/clair/test-support/vm-loader.cjs');
+const E=canonicalEngine();
 const rule=(id,kind,amountCents,day=31,month=2)=>({id,name:id,categoryId:'autre',kind,amountCents,day,month,start:'2027-01-01',end:null,pauses:[],amounts:kind==='weekly'?Array(7).fill(amountCents):[]});
 let budget=E.empty();budget.initialized=budget.setupDone=true;budget.openingCents=1000000;budget.openingBalanceDate='2027-01-01';
 budget.rules=[rule('daily','weekly',100),rule('monthly','monthly',2000),rule('annual','yearly',3000,29)];

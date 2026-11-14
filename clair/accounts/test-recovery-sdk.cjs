@@ -26,12 +26,12 @@ const s={Intl,Date,TextEncoder,TextDecoder,URL,URLSearchParams,Blob,Headers,Requ
 s.window=s;s.globalThis=s;s.addEventListener=()=>{};s.removeEventListener=()=>{};
 vm.createContext(s);for(let i=0;i<3;i++)vm.runInContext(scripts[i],s);
 const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');
-vm.runInContext(scripts[3].slice(0,boot)+'window.test={cloud,render,accountSubmit,accountAction,state:()=>accountResetStep};})();',s);
+vm.runInContext(scripts[3].slice(0,boot)+require('../../tools/clair/test-support/presentation-adapters.cjs')+'window.test={cloud,render,accountSubmit,accountAction,state:()=>accountResetStep};})();',s);
 async function main(){
  const t=s.test,opening=t.cloud.init();
  for(let n=0;n<50&&!node('#page').innerHTML.includes('account-password-form');n++)await new Promise(r=>setTimeout(r,10));
  assert.equal(t.cloud.user.id,uid);assert.equal(t.state(),'password');assert(node('#page').innerHTML.includes('account-password-form'));assert.equal(s.location.hash,'');
- assert(budgetRequested);assert.equal(t.cloud.status,'loading');assert.equal(t.cloud.ready,true);
+ assert(budgetRequested,'Budget request was not reached: '+t.cloud.error);assert.equal(t.cloud.status,'loading');assert.equal(t.cloud.ready,true);
  await t.accountSubmit({id:'account-password-form',values:{password:'test recovery long phrase'},querySelector:()=>({disabled:false})});
  assert.equal(t.state(),'done');assert(calls.some(c=>c.path==='/auth/v1/user'&&c.method==='PUT'));
  releaseBudget();await opening;assert.equal(t.state(),'done');

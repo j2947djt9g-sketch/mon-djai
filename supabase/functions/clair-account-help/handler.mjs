@@ -1,7 +1,8 @@
+import {isAllowedOrigin} from '../_shared/origins.mjs';
 export function createHelpHandler({submit,fingerprint}){
  return async req=>{
   const origin=req.headers.get('origin');
-  const allowed=!origin||origin==='https://j2947djt9g-sketch.github.io'||/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  const allowed=isAllowedOrigin('account-help',origin);
   const headers={'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'apikey,content-type',...(origin&&allowed?{'Access-Control-Allow-Origin':origin}:{})};
   const answer=(body,status)=>new Response(JSON.stringify(body),{status,headers});
   const ok=()=>answer({ok:true,message:'Ta demande a été prise en compte. L’administrateur pourra te guider pour retrouver ton compte.'},202);

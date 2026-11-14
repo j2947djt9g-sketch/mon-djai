@@ -1,0 +1,14 @@
+/* Express shares the existing modal and follows the current budget's theme. */
+.overview-entry-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;min-width:0}
+.overview-entry-actions .button{min-height:44px}.overview-entry-actions .express-home{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.55);color:#fff}
+.express-panel{min-width:0}.express-context{line-height:1.6}.express-panel>.field{margin-bottom:8px}
+.express-panel input[name=amount]{font-size:28px;min-height:60px;font-variant-numeric:tabular-nums;width:100%;min-width:0}
+.express-shortcuts{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.express-shortcuts .button{min-height:44px;flex:1 0 auto;padding:9px 13px;font-variant-numeric:tabular-nums}
+.express-shortcut-help{font-size:11px;margin:8px 0 18px;line-height:1.5}
+.express-options{border-top:1px solid var(--line);padding-top:8px}.express-options summary,.express-analysis summary{cursor:pointer;min-height:44px;display:list-item;align-content:center;font-size:13px;color:var(--accent-text);padding:10px 0}
+.express-options .field{margin:10px 0 0}.express-options select{width:100%;min-width:0;min-height:44px;font-size:16px}
+.express-suggestion{min-height:36px;line-height:1.5;margin:10px 0 0;font-size:12px}
+.express-panel .dialog-actions{margin-top:16px}.express-panel .dialog-actions .button{min-height:44px;white-space:normal}
+.express-analysis{border-top:1px solid var(--line);margin-top:22px;padding-top:8px}.express-analysis p{line-height:1.6;font-size:13px}.express-analysis ul{padding:0;margin:12px 0 0;list-style:none}.express-analysis li{display:flex;justify-content:space-between;gap:16px;font-size:13px;line-height:1.5;padding:8px 0;border-bottom:1px solid var(--line)}.express-analysis li span{min-width:0;overflow-wrap:anywhere}.express-analysis li strong{flex:none}
+@media(max-width:720px){.balance-section{padding-block:12px;row-gap:9px}.overview-controls{display:grid;grid-template-columns:minmax(0,1fr) 44px max-content;gap:6px;align-items:start}.overview-controls .balance-help{grid-column:1;min-width:0;max-width:100%}.overview-controls .balance-help summary{display:flex;min-width:0;min-height:44px;white-space:normal;line-height:1.35}.overview-controls .balance-help[open]{grid-column:1/-1}.overview-entry-actions{display:contents}.overview-entry-actions .button{min-height:44px;padding:9px 10px;font-size:12px}.overview-entry-actions [data-action=add]{grid-column:2;width:44px;min-width:44px;padding:9px;justify-content:center}.overview-entry-actions .express-home{grid-column:3;white-space:nowrap}.overview-add-label{display:none}.express-panel .dialog-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr)}.express-panel .dialog-actions .button{font-size:13px;padding-inline:10px}}
+@media(max-width:390px){.express-shortcuts{gap:6px}.express-shortcuts .button{padding-inline:10px}.express-panel input[name=amount]{font-size:26px}}

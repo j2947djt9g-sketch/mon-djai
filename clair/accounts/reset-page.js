@@ -26,7 +26,7 @@
  });};
  $('#reset-resend').onclick=e=>task(e.currentTarget,async()=>{
   const input=$('#reset-email');if(!input.reportValidity())return;
-  const {error:failure}=await client.auth.resetPasswordForEmail(input.value.trim().toLowerCase(),{redirectTo:'https://j2947djt9g-sketch.github.io/mon-djai/clair/'});
+  const {error:failure}=await client.auth.resetPasswordForEmail(input.value.trim().toLowerCase(),{redirectTo:'https://clair-budget.vercel.app/clair/'});
   if(failure)throw Error(failure.status===429?'L’envoi est temporairement limité. Réessaie plus tard.':'Le lien n’a pas pu être envoyé. Réessaie ou demande de l’aide.');
   status('Si un compte utilise cette adresse, un lien de récupération sera envoyé. Vérifie aussi les indésirables.');
  });

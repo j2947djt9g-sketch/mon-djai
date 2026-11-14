@@ -15,7 +15,7 @@ ui=ui.slice(0,boot)+`
 download=(body,name,mime)=>window.captureDownload(body,name,mime);
 notify=message=>window.captureNotify(message);
 window.test={pushApi,enablePush,disablePush,syncPush,pushState,renderReminders,configure(uid){cloud.enabled=true;cloud.user=uid?{id:uid}:null;cloud.ready=true;cloud.status='synced';cloud.conflict=null;cloud.record={meta:{dirty:false}};cloud.sync=async()=>{};cloud.client={auth:{getSession:()=>window.mockSession()}};PUSH_KEY='push-'+uid;window.CLAIR_ACCOUNT_CONFIG={key:'sb_publishable_test'};render=()=>{};},settings,startCharge,chargeView,collectCharge,submitCharge,payCard,paymentDetails,pay,installClair,downloadClair,
- setData(d){data=d;snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot);},
+ setData(d){budgetSession.adoptRemote(d,budgetSession.getContext());snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot);},
  getData(){return data;},draft(){return chargeDraft;},setDraft(d){chargeDraft=d;},modal(){return modal;},
  setPrompt(p){installPrompt=p;},busy(){return {installBusy,downloadBusy};}};
 })();`;

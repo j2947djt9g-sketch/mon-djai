@@ -1,7 +1,6 @@
 import {parisTime,remindersFor,validateSubscription} from './schedule.mjs';
-const ORIGIN='https://j2947djt9g-sketch.github.io';
+const ORIGINS=new Set(['https://j2947djt9g-sketch.github.io','https://clair-budget.vercel.app']);
 export function createHandler({db,authenticate,send,generateKeys,now=()=>new Date(),randomId=()=>crypto.randomUUID()}){
-  const reply=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json','cache-control':'no-store','access-control-allow-origin':ORIGIN,'vary':'Origin'}});
   async function config(){
     let c=await db.config();
     if(!c.public_key){await db.initKeys(generateKeys());c=await db.config();}
@@ -9,8 +8,10 @@ export function createHandler({db,authenticate,send,generateKeys,now=()=>new Dat
   }
   return async req=>{
     const route=new URL(req.url).pathname.split('/').pop(),origin=req.headers.get('origin');
-    if(origin&&origin!==ORIGIN)return reply({error:'Origine refusée.'},403);
-    if(req.method==='OPTIONS')return new Response(null,{status:204,headers:{'access-control-allow-origin':ORIGIN,'access-control-allow-methods':'POST, OPTIONS','access-control-allow-headers':'authorization, apikey, content-type','access-control-max-age':'600'}});
+    const cors=origin&&ORIGINS.has(origin)?{'access-control-allow-origin':origin}:{};
+    const reply=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json','cache-control':'no-store',...cors,'vary':'Origin'}});
+    if(origin&&!ORIGINS.has(origin))return reply({error:'Origine refusée.'},403);
+    if(req.method==='OPTIONS')return new Response(null,{status:204,headers:{...cors,'vary':'Origin','access-control-allow-methods':'POST, OPTIONS','access-control-allow-headers':'authorization, apikey, content-type','access-control-max-age':'600'}});
     if(req.method!=='POST')return reply({error:'Méthode refusée.'},405);
     try{
       if(route==='dispatch'){

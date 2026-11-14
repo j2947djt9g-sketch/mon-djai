@@ -4,12 +4,16 @@ on:
     branches: [main, clair-dashboard-savings-20261019, clair-ruban-history-20261019, clair-welcome-ruban-20261019, clair-subscriptions-reminders-20261021, clair-ruban-splash-20261021, clair-navigation-back-20261022, clair-currency-20261022, clair-convert-20261023, clair-profile-tutorial-20261023]
     paths:
       - 'clair/**'
+      - 'tools/clair/**'
+      - '.nvmrc'
       - 'masterboard/**'
       - 'supabase/**'
       - '.github/workflows/clair-checks.yml'
   pull_request:
     paths:
       - 'clair/**'
+      - 'tools/clair/**'
+      - '.nvmrc'
       - 'masterboard/**'
       - 'supabase/**'
       - '.github/workflows/clair-checks.yml'
@@ -18,9 +22,23 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4, official commit
+        with:
+          node-version-file: .nvmrc
+      - name: Check embedded mirrors
+        run: node tools/clair/check-mirrors.mjs
+      - name: Check deterministic assembly and commit package
+        shell: bash
+        run: |
+          node tools/clair/build.mjs --check
+          node tools/clair/tests/build.test.mjs
+          node tools/clair/tests/package.test.mjs
+          node tools/clair/tests/live.test.mjs
+          node tools/clair/package.mjs --ref "$GITHUB_SHA" --out "$RUNNER_TEMP/clair-package"
+          node tools/clair/verify-package.mjs --ref "$GITHUB_SHA" --out "$RUNNER_TEMP/clair-package"
       - name: Run Clair regression suites
         shell: bash
         run: |
@@ -34,19 +52,32 @@ jobs:
       - name: Install pinned browser test tool
         shell: bash
         run: npm install --prefix "$RUNNER_TEMP/clair-tools" --no-save --ignore-scripts playwright@1.64.1
+      - name: Check packaged download, file and controlling offline workers
+        env:
+          CLAIR_CHROME_PATH: /usr/bin/google-chrome
+        run: NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node tools/clair/tests/browser.cjs "$RUNNER_TEMP/clair-package"
       - name: Check browser layouts and savings flows
         shell: bash
         env:
           CLAIR_CHROME_PATH: /usr/bin/google-chrome
           CLAIR_PREVIEW: '1'
         run: |
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-glass-ui.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-nav-motion.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-liquid-nav.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-design-preview.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-category-art.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-render-lifecycle.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-journal.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-fluidity.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-express.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-currency.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-auth-entry.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-profile.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-masterboard-install.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-masterboard.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-masterboard-design.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-masterboard-motion.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-assisted-recovery.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-device-unlock.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-exchange.cjs
@@ -97,6 +128,10 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/verify-device-unlock.sql
           psql -v ON_ERROR_STOP=1 -f supabase/recovery-request-limits.sql
           psql -v ON_ERROR_STOP=1 -f supabase/verify-recovery-request-limits.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/verify-device-unlock-issuance-upgrade.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/verify-device-unlock-issuance-v2.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/verify-device-unlock.sql
+          node tools/clair/test-unlock-sql-concurrency.mjs
 
   reminders-sql:
     runs-on: ubuntu-latest
@@ -112,6 +147,9 @@ jobs:
           --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
       - name: Check reminder permissions, claims, retries and account cleanup
         env:
           PGHOST: localhost
@@ -132,3 +170,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f clair/accounts/verify-exchange.sql
           CLAIR_SQL_VECTORS=1 node clair/accounts/test-exchange.cjs > "$RUNNER_TEMP/clair-exchange-vectors.sql"
           psql -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/clair-exchange-vectors.sql"
+          psql -v ON_ERROR_STOP=1 -f clair/accounts/verify-express.sql
+          psql -v ON_ERROR_STOP=1 -f clair/accounts/verify-exchange-v2.sql
+          CLAIR_SQL_V2_VECTORS=1 node clair/accounts/test-exchange.cjs > "$RUNNER_TEMP/clair-exchange-v2-vectors.sql"
+          psql -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/clair-exchange-v2-vectors.sql"

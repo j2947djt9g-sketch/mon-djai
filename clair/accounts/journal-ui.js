@@ -19,25 +19,52 @@ function journalReset(){
  Object.assign(journalState,{flow:'all',kind:'all',category:'all',query:''});
  $('#search').value='';$('#kind-filter').value='all';$('#category-filter').value='all';journalFlow('all');
 }
-function journalSummary(list){
+function journalSummary(list,{filters,month},{escapeHtml,money,monthLabel,categoryById}){
  const total=(type,savings)=>list.filter(t=>t.type===type&&(t.categoryId==='epargne')===savings).reduce((sum,t)=>sum+t.amountCents,0);
  const saved=total('expense',true),withdrawn=total('income',true),savings=list.some(t=>t.categoryId==='epargne');
- const label=journalState.category==='all'?'Toutes les catégories':cat(journalState.category).label;
- return `<h2>${esc(label)}</h2><p class="help">${list.length} opération${list.length===1?'':'s'} · ${esc(monthLabel(month))}</p><dl class="journal-totals">${journalState.flow!=='expense'?`<div><dt>Argent reçu</dt><dd>${euro(total('income',false))}</dd></div>`:''}${journalState.flow!=='income'?`<div><dt>Argent dépensé</dt><dd>${euro(total('expense',false))}</dd></div>`:''}</dl>${savings?`<p class="help">Épargne : ${euro(saved)} mis de côté · ${euro(withdrawn)} retirés. Ces mouvements sont exclus des totaux ci-dessus.</p>`:''}<p class="journal-summary-note">Totaux des opérations affichées, y compris celles à venir.</p>`;
+ const label=filters.category==='all'?'Toutes les catégories':categoryById(filters.category).label;
+ return `<h2>${escapeHtml(label)}</h2><p class="help">${list.length} opération${list.length===1?'':'s'} · ${escapeHtml(monthLabel(month))}</p><dl class="journal-totals">${filters.flow!=='expense'?`<div><dt>Argent reçu</dt><dd>${money(total('income',false))}</dd></div>`:''}${filters.flow!=='income'?`<div><dt>Argent dépensé</dt><dd>${money(total('expense',false))}</dd></div>`:''}</dl>${savings?`<p class="help">Épargne : ${money(saved)} mis de côté · ${money(withdrawn)} retirés. Ces mouvements sont exclus des totaux ci-dessus.</p>`:''}<p class="journal-summary-note">Totaux des opérations affichées, y compris celles à venir.</p>`;
 }
-function journalResults(){
- journalState.query=$('#search')?.value||'';
- journalState.kind=$('#kind-filter')?.value||'all';
- journalState.category=$('#category-filter')?.value||'all';
- const query=journalState.query.toLocaleLowerCase('fr').trim(),kind=journalState.kind,flow=journalState.flow,category=journalState.category;
- const list=data.transactions.filter(t=>t.date.slice(0,7)===month && (category==='all'||t.categoryId===category) && (!query||(t.name+' '+(t.note||'')+' '+cat(t.categoryId).label+' '+(t.categoryId==='epargne'?data.savingsProjects.find(p=>p.id===t.savingsProjectId)?.name||'':'')).toLocaleLowerCase('fr').includes(query)) && (flow==='all'||(t.type===flow&&t.categoryId!=='epargne')) && (kind==='all'||(kind==='auto'&&t.autoKey)||(kind==='manual'&&!t.autoKey)||(kind==='savings'&&t.categoryId==='epargne'))).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
- $('#journal-results').innerHTML=list.map(t=>txRow(t)).join('');
- $('#journal-results').hidden=!list.length;
- const filtered=Boolean(query||kind!=='all'||flow!=='all'||category!=='all');
- $('#journal-summary').innerHTML=journalSummary(list);$('[data-action="journal-reset"]').hidden=!filtered;
- const guide=$('#journal-companion');if(guide)guide.innerHTML=journalCompanion(list,filtered);
- const summary=$('#journal-more summary');if(summary)summary.textContent='Plus de filtres'+(kind!=='all'?' · 1 actif':'');
+// Query inputs and presentation dependencies are explicit; the controller owns no budget copy.
+function selectJournalTransactions({transactions,savingsProjects,month,filters},{categoryById}){
+ const query=filters.query.toLocaleLowerCase('fr').trim(),kind=filters.kind,flow=filters.flow,category=filters.category;
+ const list=transactions.filter(t=>t.date.slice(0,7)===month && (category==='all'||t.categoryId===category) && (!query||(t.name+' '+(t.note||'')+' '+categoryById(t.categoryId).label+' '+(t.categoryId==='epargne'?savingsProjects.find(p=>p.id===t.savingsProjectId)?.name||'':'')).toLocaleLowerCase('fr').includes(query)) && (flow==='all'||(t.type===flow&&t.categoryId!=='epargne')) && (kind==='all'||(kind==='auto'&&t.autoKey)||(kind==='manual'&&!t.autoKey)||(kind==='savings'&&t.categoryId==='epargne'))).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
+ return list;
 }
+function createJournalController({select,readModel,categoryById,summaryMarkup,companionMarkup,renderRows,now}){
+ const setMarkup=(node,markup)=>{if(node&&node.innerHTML!==markup)node.innerHTML=markup;};
+ function update(){
+  const model=readModel(),{filters}=model,list=selectJournalTransactions(model,{categoryById});
+  const host=select('#journal-results');
+  renderRows(host,list);
+  host.hidden=!list.length;
+  const filtered=Boolean(filters.query.toLocaleLowerCase('fr').trim()||filters.kind!=='all'||filters.flow!=='all'||filters.category!=='all');
+  setMarkup(select('#journal-summary'),summaryMarkup(list,model));select('[data-action="journal-reset"]').hidden=!filtered;
+  setMarkup(select('#journal-companion'),companionMarkup(list,filtered,model,{now:now()}));
+  const summary=select('#journal-more summary');if(summary)summary.textContent='Plus de filtres'+(filters.kind!=='all'?' · 1 actif':'');
+ }
+ return {update};
+}
+function reconcileJournalRows(host,list,transactionRow){
+  const existing=new Map([...host.children].map(node=>[node.querySelector('[data-id]')?.dataset.id,node]));
+  let cursor=host.firstElementChild;
+  for(const transaction of list){
+   const template=document.createElement('template');template.innerHTML=transactionRow(transaction);
+   const fresh=template.content.firstElementChild,previous=existing.get(transaction.id);
+   const node=previous&&previous.isEqualNode(fresh)?previous:fresh;
+   existing.delete(transaction.id);
+   if(previous&&node!==previous){if(cursor===previous)cursor=node;previous.replaceWith(node);}
+   if(node!==cursor)host.insertBefore(node,cursor);
+   cursor=node.nextElementSibling;
+  }
+  for(const node of existing.values())node.remove();
+}
+const journalController=createJournalController({select:$,readModel(){
+ journalState.query=$('#search')?.value||'';journalState.kind=$('#kind-filter')?.value||'all';journalState.category=$('#category-filter')?.value||'all';
+ return {transactions:data.transactions,savingsProjects:data.savingsProjects,month,filters:journalState,feedback:journalFeedback};
+},renderRows:(host,list)=>reconcileJournalRows(host,list,txRow),categoryById:cat,summaryMarkup:(list,model)=>journalSummary(list,model,{escapeHtml:esc,money:euro,monthLabel,categoryById:cat}),companionMarkup:(list,filtered,model,context)=>journalCompanion(list,filtered,model,{...context,escapeHtml:esc}),now:()=>Date.now()});
+function journalResults(){journalController.update();}
+
 function openCategory(){
  dialog('Créer une catégorie',`<p class="help">Elle sera disponible pour tes entrées et tes dépenses, dans tout ton suivi.</p><form id="category-form">${field('Nom de la catégorie','label','','text','required maxlength="40" autofocus placeholder="Ex. Santé, Bourse…"')}${formActions('Créer')}</form>`,'category');
 }

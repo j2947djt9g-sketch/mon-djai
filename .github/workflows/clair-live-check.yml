@@ -1,51 +1,39 @@
-name: Verify Clair publication
+name: Verify explicit Clair Vercel publication (manual, no deployment)
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'clair/index.html'
-      - 'clair/accounts/welcome.css'
-      - 'clair/sw.js'
-      - '.github/workflows/clair-live-check.yml'
   workflow_dispatch:
+    inputs:
+      delivery_commit:
+        description: 'Exact reviewed delivery commit (40 hexadecimal characters)'
+        required: true
+        type: string
+      vercel_origin:
+        description: 'Explicit HTTPS Vercel origin, e.g. https://project.vercel.app'
+        required: true
+        type: string
 permissions:
   contents: read
 jobs:
   published-files:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 6
     steps:
+      - name: Validate explicit delivery identity
+        env:
+          DELIVERY_COMMIT: ${{ inputs.delivery_commit }}
+        run: '[[ "$DELIVERY_COMMIT" =~ ^[0-9a-f]{40}$ ]]'
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Verify the files actually served by GitHub Pages
-        shell: bash
+        with:
+          ref: ${{ inputs.delivery_commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.nvmrc'
+      - name: Reconstruct and verify chosen commit, then compare explicit Vercel domain
+        env:
+          DELIVERY_COMMIT: ${{ inputs.delivery_commit }}
+          VERCEL_ORIGIN: ${{ inputs.vercel_origin }}
         run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const { createHash } = require('node:crypto');
-          const files = ['index.html', 'accounts/welcome.css', 'sw.js'];
-          const hash = body => createHash('sha256').update(body).digest('hex');
-          const expected = new Map(files.map(file => [file, hash(fs.readFileSync('clair/' + file))]));
-          const version = fs.readFileSync('clair/index.html', 'utf8').match(/data-app-version="([^"]+)"/)?.[1];
-          (async () => {
-            let last = '';
-            for (let attempt = 1; attempt <= 18; attempt++) {
-              try {
-                await Promise.all(files.map(async file => {
-                  const url = new URL(file, 'https://j2947djt9g-sketch.github.io/mon-djai/clair/');
-                  url.searchParams.set('publish-check', process.env.GITHUB_SHA);
-                  const response = await fetch(url, { headers: { 'cache-control': 'no-cache' }, signal: AbortSignal.timeout(8000) });
-                  if (!response.ok) throw new Error(file + ': HTTP ' + response.status);
-                  const actual = hash(Buffer.from(await response.arrayBuffer()));
-                  if (actual !== expected.get(file)) throw new Error(file + ': published copy has not caught up');
-                }));
-                console.log('PASS LIVE: Clair ' + version + ' is published; HTML, animation CSS and service worker exactly match the tested source.');
-                return;
-              } catch (error) {
-                last = error.message;
-                console.log('Waiting for publication (' + attempt + '/18): ' + last);
-                if (attempt < 18) await new Promise(resolve => setTimeout(resolve, 5000));
-              }
-            }
-            throw new Error('Publication could not be confirmed: ' + last);
-          })().catch(error => { console.error(error.message); process.exitCode = 1; });
-          NODE
+          node tools/clair/build.mjs --check
+          node tools/clair/package.mjs --ref "$DELIVERY_COMMIT" --out "$RUNNER_TEMP/clair-package"
+          node tools/clair/verify-package.mjs --ref "$DELIVERY_COMMIT" --out "$RUNNER_TEMP/clair-package"
+          node tools/clair/verify-live.mjs --domain "$VERCEL_ORIGIN" --ref "$DELIVERY_COMMIT" --manifest "$RUNNER_TEMP/clair-package/clair-package-manifest.json"

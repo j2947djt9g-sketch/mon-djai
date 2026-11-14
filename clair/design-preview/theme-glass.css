@@ -1,0 +1,16 @@
+.app[data-style=glass]{--accent:#7c659f;--accent-dark:#70598c;--accent-soft:#e9e2ef;background:#f6f3f7;--card-shadow:0 9px 26px #61487806}
+.app[data-style=glass]:before{background:radial-gradient(ellipse at 95% 10%,#e9e0ef82,transparent 45%),radial-gradient(ellipse at 5% 0,#fbf1e9b3,transparent 48%);height:800px}
+[data-style=glass] .prototype-note{background:#eee7f2;color:#8f7b9e}
+[data-style=glass] .balance-card{background:linear-gradient(120deg,#fff 20%,#fdfbff 100%);border-color:#fff}
+[data-style=glass] .balance-top .eyebrow{color:#8c799a}
+[data-style=glass] .primary-action{background:linear-gradient(135deg,#947bab,#7b6296);box-shadow:0 5px 14px #7d5f9023}
+[data-style=glass] .bottom-dock{background:linear-gradient(120deg,#fff9,#f7f0facc);border:1px solid #ffffffe8;box-shadow:0 7px 25px #5b3d7314,inset 0 1px 1px #fff;backdrop-filter:blur(24px) saturate(1.3);-webkit-backdrop-filter:blur(24px) saturate(1.3);bottom:calc(19px + var(--safe-bottom));min-height:74px;padding:7px}
+[data-style=glass] .nav-highlight{background:linear-gradient(140deg,#e1d8e9db,#e9e1efd1);box-shadow:inset 0 1px 0 #f7f2fb,0 1px 3px #6f51720a}
+[data-style=glass] .nav-item{color:#6a607b}
+[data-style=glass] .nav-item.is-active{color:#765b92}
+[data-style=glass] .nav-label{font-size:12px;font-weight:600}
+[data-style=glass] .nav-icon svg{width:26px;height:26px}
+[data-style=glass] .nav-item.is-active .nav-icon svg{stroke-width:2}
+[data-style=glass] .saving-card{background:linear-gradient(115deg,#ece5f0,#f0eaf5)}
+[data-style=glass] .secondary-action{border-color:#e9e0ee;background:#ffffffad}
+[data-style=glass] .profile-identity-card{border-color:#fff;background:#fff;box-shadow:0 10px 30px #6a4d7c05}

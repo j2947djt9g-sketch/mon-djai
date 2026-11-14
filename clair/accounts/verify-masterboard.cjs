@@ -34,10 +34,16 @@ const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+new 
   await page.addInitScript(({user,jwt,exp})=>sessionStorage.setItem('clair-masterboard-session-v1',JSON.stringify({access_token:jwt,refresh_token:'FIXTURE',expires_in:3600,expires_at:exp,token_type:'bearer',user})),{user,jwt,exp});
   await page.goto('http://127.0.0.1:'+server.address().port+'/masterboard/');await page.locator('#board').waitFor({state:'visible'});
   if(width===320||width===1440&&process.env.CLAIR_PREVIEW==='1'){
-   const letter=page.locator('.intro-letters>span').first(),startY=await letter.evaluate(e=>e.getBoundingClientRect().y);
-   await page.waitForTimeout(1900);const landedY=await letter.evaluate(e=>e.getBoundingClientRect().y);
-   assert(landedY>startY+30,'The first letter must fall from above');
-   assert(await page.locator('#intro').isVisible(),'Keep the settled logo visible before lifting the sheet');
+   const strokes=page.locator('.intro-wordmark .intro-stroke'),letter=strokes.first();
+   assert.deepEqual(await strokes.evaluateAll(nodes=>nodes.map(e=>e.dataset.letter)),['C','L','A','I','R']);
+   assert.equal(await page.locator('.intro-letters>span').count(),0,'The wordmark uses handwritten paths');
+   const ink=e=>({y:e.getBoundingClientRect().y,offset:parseFloat(getComputedStyle(e).strokeDashoffset),transform:getComputedStyle(e).transform,animation:getComputedStyle(e).animationName});
+   const start=await letter.evaluate(ink);assert.equal(start.animation,'intro-handwriting');assert(start.offset>0,'The first stroke starts with ink still to reveal');
+   await page.waitForTimeout(1900);const drawn=await letter.evaluate(ink);
+   assert(drawn.offset<.01&&drawn.offset<start.offset,'The first stroke reveals its ink');
+   assert(Math.abs(drawn.y-start.y)<1&&drawn.transform==='none','The handwritten letter stays fixed while its ink is revealed');
+   assert(await strokes.last().evaluate(e=>parseFloat(getComputedStyle(e).strokeDashoffset)>0),'The last stroke waits for its writing turn');
+   assert(await page.locator('#intro').isVisible(),'Keep the wordmark visible before the image stage');
    assert.equal(await page.locator('#intro').evaluate(e=>e.classList.contains('leaving')),false);
    if(process.env.CLAIR_PREVIEW==='1'){const shot=await page.screenshot({animations:'allow'});console.log('INTRO_SCREENSHOT_'+width+'='+shot.toString('base64'));}
   }
