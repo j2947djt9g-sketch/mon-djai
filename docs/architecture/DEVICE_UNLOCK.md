@@ -1,6 +1,6 @@
 # Émission du déblocage d’appareil
 
-Le protocole v2 est du **code source préparé et testé localement, non appliqué à une base hébergée**. La migration réelle et le déploiement nécessitent leur autorisation distincte. Le navigateur conserve `pending`, `ready`, `expired` et `completed` ; il ne reçoit aucune métadonnée de tentative.
+Le protocole v2 est **appliqué au projet hébergé et déployé après accord utilisateur le 14 novembre 2026** : migration 20261114123806, `clair-device-unlock`v2 ACTIVE. Les trois RPC ont été comparées aux sources, ACL/RLS vérifiées ; aucun déblocage réel déclenché pour tester. Voir [REFACTOR_RELEASE.md](REFACTOR_RELEASE.md). Le navigateur conserve `pending`, `ready`, `expired` et `completed` ; il ne reçoit aucune métadonnée de tentative.
 
 ## Autorisation et émission
 
@@ -22,7 +22,7 @@ Un ready exige aussi l’identité attendue et un finish confirmé. Une réponse
 
 ## Déploiement et retour arrière
 
-1. Revoir puis autoriser séparément `supabase/device-unlock-issuance-v2.sql`. Supabase CLI étant absent pendant la préparation, ce fichier autonome n’invente aucune entrée d’historique de migration. Il s’applique une fois au schéma historique ; ne pas réexécuter `device-unlock.sql` sur une base existante.
+1. `supabase/device-unlock-issuance-v2.sql` a été appliqué une fois via la migration hébergée20261114123806 après accord. Le fichier source autonome n’inventait aucune entrée d’historique pendant sa préparation. Consulter l’historique avant intervention ; ne réappliquer ni ce fichier ni `device-unlock.sql` sur cette base existante.
 2. Appliquer le schéma additif avant le serveur v2. Les colonnes historiques et demandes existantes restent intactes ; une ancienne ligne issued ne devient jamais une réservation. Les nouveaux RPC sont SECURITY INVOKER avec search_path vide, réservés à service_role ; RLS et absence de droits publics restent en place.
 3. Vérifier les RPC puis déployer le handler/adaptateur v2. Aucun fallback vers claim historique après une erreur v2. Ancien claim et nouvelle réservation verrouillent la même ligne : un seul gagne.
 4. Un rollback serveur conserve le schéma additif. L’ancien serveur voit issuing/unknown comme pending jusqu’à expiration, sans réémission. Ne pas supprimer les colonnes/contraintes v2 tant que ces états existent ; ne jamais reclasser issued/unknown en approved.

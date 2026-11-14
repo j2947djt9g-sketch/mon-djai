@@ -1,22 +1,22 @@
 # Clair — repères de publication, à lire seulement pour déployer
 
-**Production : Vercel**, projet `clair-budget`. CLAIR `4673b2a` publié le 13 novembre2026 ; Masterboard `0cdda26` conservé.
+**Production : Vercel**, projet `clair-budget`. CLAIR `ef5c75d` publié le 14 novembre 2026 après accord ; Masterboard `0cdda26` conservé. Rapport : [REFACTOR_RELEASE.md](../architecture/REFACTOR_RELEASE.md).
 
 | Élément | Valeur |
 |---|---|
-| Dépôt / source publiée | `j2947djt9g-sketch/mon-djai`, `fix/clair-email-confirmation`, code `4673b2a` |
+| Dépôt / source publiée | `j2947djt9g-sketch/mon-djai`, `refactor/clair-foundation-release-20261114`, runtime `ef5c75d639bec6da0e2ddb5e8a77505fd163caf9` |
 | Adresse publique | https://clair-budget.vercel.app/ |
 | Application servie | `/clair/` |
 | Projet Vercel | `clair-budget`, `prj_LQXscKEX44lvgBR4O8Fru9RVWjKE` |
 | Équipe Vercel | `team_6GfJ1WkSTn5lXj3kWsLF9FeN` |
-| Dernière production vérifiée | `dpl_B2gMeLCaX4uJK6VSzXnVchNZ8S7g` |
-| Empreinte Git du HTML publié | `aec2ca69cf14f59cb40b24feccbc2e81c6d976ca` |
+| Dernière production vérifiée | `dpl_2B8b56bmoFtVcycXSSuUHg3ktpyd` READY |
+| Empreinte Git du HTML publié | `f52a7994670b9d58867dbf0eaec6e2b3781aa148` |
 
-La PR29 reste ouverte : fusion dans `main` refusée par le contrôle automatique faute d’un accord jugé distinct. `main` reste `dc376fb` et ne représente pas le produit publié. Ne pas republier cet ancien code. Retour disponible : `dd7c852`, `dpl_BcrZig2Kb3zVyuegxXPLN9Qbj8TU`. PR30 reste ouverte ; cette publication autorisée ne fusionne aucune branche.
+L’accord de livraison couvre Vercel, les corrections Supabase préparées et l’intégration GitHub. La [PR33](https://github.com/j2947djt9g-sketch/mon-djai/pull/33) intègre un snapshot propre, ayant pour parent l’ancien main dc376fb et arbre égal66f3e38. Elle est fusionnée dans main93c7276 ; ne pas fusionner aveuglément les anciennes PR empilées29–32. Retour frontend : `dpl_B2gMeLCaX4uJK6VSzXnVchNZ8S7g` (4673b2a/SW41, même Masterboard).
 
 Le projet n’est pas relié automatiquement à GitHub. Une fusion seule ne publie donc pas Vercel. Vérifier ce réglage et la cible avant toute publication ; les identifiants ci-dessus évitent de redécouvrir les projets, mais ne prouvent pas leur état actuel.
 
-## Livrable reproductible (lot4, non publié)
+## Livrable reproductible actuel
 
 La recette versionnée est `tools/clair/package-inputs.json` ; assemblage : `build-inputs.json` et `clair/app/index.template.html`. Lire [le protocole](../../tools/clair/README.md). Le paquet est reconstruit exclusivement depuis le commit choisi, jamais depuis les fichiers locaux sales.
 
@@ -29,13 +29,13 @@ node tools/clair/package.mjs --ref COMMIT_EXACT --out /tmp/clair-livraison
 node tools/clair/verify-package.mjs --ref COMMIT_EXACT --out /tmp/clair-livraison
 ```
 
-Inventaire actuel : **66 ressources runtime + 2 licences légales + 1 configuration + 1 manifeste = 70 fichiers**. La mention historique «68/67public» ci-dessous n’est pas reproduite par l’inventaire Git actuel ; aucun fichier manquant n’a été inventé. Les deux fontes et les14ressources Masterboard sont conservées. Les licences Supabase/Manrope sont explicitement distribuées ; tests, SQL, fixtures, docs, sources de template et index racine historique sont exclus. Le manifeste déterministe donne commit exact, chemin/source, taille et SHA256 ; pas de timestamp.
+Inventaire actuel : **71 ressources runtime + 2 licences légales + 1 configuration + 1 manifeste = 75 fichiers**, soit74 fichiers publics. Les deux fontes et les14ressources Masterboard sont conservées. Les licences Supabase/Manrope sont distribuées ; tests, SQL, fixtures, docs, template et index racine historique sont exclus. Le manifeste déterministe donne commit, chemin/source, taille et SHA256 ; pas de timestamp.
 
-`tools/clair/vercel.json` est copié uniquement à la racine du paquet. Il reconstruit le contrat `/`307→`/clair/` ; les octets et éventuels anciens en-têtes de la configuration historique ne sont pas établis. Réexaminer cette limite avant une publication future. Réglages statiques : aucun framework, installation/construction vides, sortie `.`. Aucune publication, intégration ou création de secret CI ajoutée.
+`tools/clair/vercel.json` est copié à la racine du paquet. L’ancienne configuration réelle a été récupérée avant publication : même JSON fonctionnel, uniquement `/`307→`/clair/`, aucun en-tête supplémentaire ni règle projet additionnelle. Réglages statiques : aucun framework, installation/construction vides, sortie `.`. Aucun secret CI ajouté.
 
-Le workflow `clair-live-check.yml` est **manuel uniquement** et reçoit le commit complet et l’origine Vercel explicites. Il reconstruit le manifeste de ce commit et compare les69fichiers servis (configuration consommée par Vercel exclue). Le contrôle historique GitHub Pages n’est plus présenté comme preuve de production. Ne lancer une vérification publique ou publication qu’après instruction distincte ; les tests du lot4 utilisent localhost uniquement.
+Le workflow `clair-live-check.yml` est **manuel uniquement** : commit complet et origine Vercel explicites, comparaison des74 fichiers servis (configuration consommée exclue). Le contrôle historique GitHub Pages ne prouve pas la production. La vérification stricte de cette publication est verte pour ef5c75d. Une vérification publique n’autorise aucune autre publication.
 
-Téléchargement HTTP et PWA/offline ont une preuve Chromium locale sur paquet. L’ouverture réelle `file://` est bloquée par la politique Chromium de cet environnement (`ERR_BLOCKED_BY_ADMINISTRATOR`) : elle reste **non exécutée**, distincte des simulations VM en mode fichier. Le fichier téléchargé est inspecté ; le test navigateur strict est conservé pour un environnement autorisant cette ouverture. L’atlas de catégories reste relatif et peut manquer en mode fichier avec repli ; aucun actif supplémentaire n’est embarqué par ce lot.
+Téléchargement HTTP et PWA/offline ont une preuve Chromium locale sur paquet. L’ouverture réelle `file://` est bloquée par la politique Chromium de cet environnement (`ERR_BLOCKED_BY_ADMINISTRATOR`) : elle reste **non exécutée**, distincte des simulations VM en mode fichier. Le fichier téléchargé est inspecté ; le test navigateur strict est conservé pour un environnement autorisant cette ouverture. Le contrôle strict file:// réel a depuis réussi sur le runner GitHub dans CI172, sans skip ; ne pas contourner la politique locale. L’atlas de catégories reste relatif et peut manquer en mode fichier avec repli.
 
 ## Vérifications après publication
 
@@ -80,4 +80,4 @@ Après nouvelle confirmation explicite utilisateur, production `dpl_B2gMeLCaX4uJ
 
 Avant publication, compte test créé avec autorisation : réception iCloud et ouverture du lien rapportées par le destinataire, activation vérifiée en base et connexion SDK distincte200, clôture de cette seule session204 ; aucun budget modifié par le test. Configuration Site URL/redirects corrigée humainement, email confirmation toujours obligatoire. SMTP effectif/quotas non inspectés : cette preuve ne garantit pas tous les destinataires. Aucun fournisseur payant/secret/RLS/migration/reset activé ou modifié. Rapport `EMAIL_CONFIRMATION.md`.
 
-Retour frontend : `dpl_GkcCqU5PwryuaBr3pywqJ3vmvErM` (CLAIR ef2558c/SW40, même Masterboard). Ne pas annuler les URL Supabase Vercel corrigées. Contrôle runtime de cette production sur15min : aucun groupe error/fatal retourné ; app statique, ce contrôle ne remplace ni les erreurs navigateur ni les logs Supabase. Aucun drain configuré, aucune nouvelle observabilité activée.
+Retour frontend : `dpl_GkcCqU5PwryuaBr3pywqJ3vmvErM` (CLAIR ef2558c/SW40, même Masterboard). Ne pas annuler les URL Supabase Vercel corrigées. Contrôle runtime de cette production sur15 min : aucun groupe error/fatal retourné ; app statique, ce contrôle ne remplace ni les erreurs navigateur ni les logs Supabase. Aucun drain configuré, aucune nouvelle observabilité activée.
