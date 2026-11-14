@@ -8,7 +8,7 @@ function app(){
  const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto:require('node:crypto').webcrypto,console,AbortController,FormData:class{constructor(form){this.fields=form.fields;}get(k){return this.fields[k]??null;}},setTimeout:()=>1,clearTimeout(){},setInterval(){},location:{protocol:'file:',href:'file:///clair/index.html'},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener(type,fn){events[type]=fn;}}};
  sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
  const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);
- vm.runInContext(scripts[3].slice(0,boot)+`window.test={openTx,journalFlow,journalResults,state:journalState,getData:()=>data,getModal:()=>modal,getMonth:()=>month,setPage(p){page=p;},setMonth(m){month=m;},setData(d){data=d;snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot);}};})();`,sandbox);
+ vm.runInContext(scripts[3].slice(0,boot)+`${require('../../tools/clair/test-support/presentation-adapters.cjs')}window.test={openTx,journalFlow,journalResults,state:journalState,getData:()=>data,getModal:()=>modal,getMonth:()=>month,setPage(p){page=p;},setMonth(m){month=m;},setData(d){budgetSession.adoptRemote(d,budgetSession.getContext());snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot);}};})();`,sandbox);
  const E=sandbox.ClairEngine,t=sandbox.test,d=E.empty();Object.assign(d,{initialized:true,setupDone:true,openingCents:1000000,openingBalanceDate:'2026-10-01'});d.customCategories=[{id:'custom-study',label:'Bourse étudiante',icon:'·'}];
  t.setData(d);t.setMonth('2026-10');t.setPage('journal');
  return {E,t,node,click:(action,extra={})=>events.click({target:{closest:()=>({dataset:{action,...extra}})}}),submit:fields=>events.submit({target:{id:'tx-form',fields,closest:()=>true},preventDefault(){}})};
@@ -22,7 +22,7 @@ test('Add opens a new expense directly without writing an operation',async()=>{
 
 test('expense and income use the selected type, category and current currency at submit',async()=>{
  for(const [currency,amount,want]of [['EUR','12,50',1250],['USD','12,50',1250],['XOF','1500',150000],['XAF','1500',150000]]){
-  const a=app();a.t.getData().currency=currency;await a.click('add');
+  const a=app();a.t.getData().currency=currency;a.t.setData(a.t.getData());await a.click('add');
   await a.submit({amount,date:'2026-10-15',name:'Courses',categoryId:'alimentation',note:'Dépense fictive'});
   assert.equal(a.t.getData().transactions[0]?.type,'expense');assert.equal(a.t.getData().transactions[0].amountCents,want);assert.equal(a.E.balance(a.t.getData()),1000000-want);
   await a.click('add');await a.click('income');
@@ -33,7 +33,7 @@ test('expense and income use the selected type, category and current currency at
 });
 
 test('existing ordinary and automatic corrections keep their original type',async()=>{
- const a=app();a.t.getData().transactions=[{id:'expense',type:'expense',amountCents:3000,date:'2026-10-15',categoryId:'alimentation',name:'Courses'},{id:'income',type:'income',amountCents:500,date:'2026-10-16',categoryId:'custom-study',name:'Bourse'},{id:'auto',type:'expense',amountCents:700,date:'2026-10-15',categoryId:'transport',name:'Trajet',autoKey:'rule:2026-10-15'}];
+ const a=app();a.t.getData().transactions=[{id:'expense',type:'expense',amountCents:3000,date:'2026-10-15',categoryId:'alimentation',name:'Courses'},{id:'income',type:'income',amountCents:500,date:'2026-10-16',categoryId:'custom-study',name:'Bourse'},{id:'auto',type:'expense',amountCents:700,date:'2026-10-15',categoryId:'transport',name:'Trajet',autoKey:'rule:2026-10-15'}];a.t.setData(a.t.getData());
  for(const id of ['expense','income','auto']){
   const original=a.t.getData().transactions.find(t=>t.id===id);await a.click('edit-tx',{id});
   assert.equal(a.t.getModal().type,original.type);
@@ -47,7 +47,7 @@ test('incompatible savings filters explain the conflict and recover only the flo
  for(const flow of ['income','expense'])for(const [kind,category,expected]of [['savings','all',['withdraw','deposit']],['all','epargne',['withdraw','deposit']],['manual','epargne',['withdraw','deposit']],['auto','epargne',[]],['savings','telephone',[]]]){
   const a=app(),d=a.t.getData();d.savingsProjects=[{id:'trip',name:'Voyage',kind:'voyage',icon:'plane',color:'violet',targetCents:100000,targetDate:null,archived:false}];
   d.transactions=[{id:'deposit',type:'expense',amountCents:3000,date:'2026-10-15',categoryId:'epargne',savingsProjectId:'trip',name:'Voyage déposé'},{id:'withdraw',type:'income',amountCents:500,date:'2026-10-16',categoryId:'epargne',savingsProjectId:'trip',name:'Voyage retiré'},{id:'phone',type:'expense',amountCents:1000,date:'2026-10-15',categoryId:'telephone',name:'Forfait'}];
-  const before=JSON.stringify(d),balance=a.E.balance(d);a.node('#kind-filter').value=kind;a.node('#category-filter').value=category;a.node('#search').value='Voyage';a.t.state.more=true;a.t.journalFlow(flow);
+  a.t.setData(d);const before=JSON.stringify(d),balance=a.E.balance(d);a.node('#kind-filter').value=kind;a.node('#category-filter').value=category;a.node('#search').value='Voyage';a.t.state.more=true;a.t.journalFlow(flow);
   assert.equal(a.node('#journal-results').hidden,true);
   const hint=a.node('#journal-companion').innerHTML;assert.match(hint,/data-action="journal-show-savings"/,'A savings/flow conflict must offer explicit recovery');assert.match(hint,/épargne/i);assert.match(hint,/revenu|achat|dépens|transfert/i,'Explain why savings do not belong to the selected flow');
   await a.click('journal-show-savings');

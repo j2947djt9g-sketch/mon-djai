@@ -4,8 +4,17 @@
  const node=selector=>{if(!nodes.has(selector))nodes.set(selector,{innerHTML:'',textContent:'',value:'',dataset:{},style:{},open:false,hidden:false,attributes:{},setAttribute(k,v){this.attributes[k]=v},addEventListener(){},scrollIntoView(){},focus(){}});return nodes.get(selector)};
  const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,crypto,console,AbortController,FormData:class{constructor(form){this.fields=form.fields}get(k){return this.fields[k]??null}},setTimeout(){},clearTimeout(){},setInterval(){},location:{protocol:'file:',href:'file:///clair/index.html'},navigator:{onLine:true},matchMedia:()=>({matches:false,addEventListener(){}}),localStorage:{getItem:k=>storage.get(k)||null,setItem(k,v){if(storageFails)throw Error('storage unavailable');storage.set(k,v)},removeItem:k=>storage.delete(k)},document:{documentElement:{dataset:{}},body:{dataset:{}},querySelector:node,addEventListener(type,fn){events[type]=fn}}};
  sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
- const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);vm.runInContext(scripts[3].slice(0,boot)+`window.test={journal,journalFlow,journalResults,txRow,render,state:journalState,setData(d){data=d;snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot)},getData(){return data},setModal(m){modal=m},setMonth(m){month=m},setPage(p){page=p}};})();`,sandbox);
- const E=sandbox.ClairEngine,t=sandbox.test,d=E.empty();d.initialized=d.setupDone=true;d.openingBalanceDate='2026-10-01';d.openingCents=100000;
+ const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);vm.runInContext(scripts[3].slice(0,boot)+`${require('../../tools/clair/test-support/presentation-adapters.cjs')}window.test={journalCompanion,journal,journalFlow,journalResults,txRow,render,state:journalState,setData(d){budgetSession.adoptRemote(d,budgetSession.getContext());snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot)},getData(){return data},setModal(m){modal=m},setMonth(m){month=m},setPage(p){page=p}};})();`,sandbox);
+ const E=sandbox.ClairEngine,t=sandbox.test,d=E.empty();
+ const companion=t.journalCompanion,filters={flow:'all',kind:'all',category:'all',query:''},transactions=[{id:'explicit-model'}];
+ const model={transactions,filters,feedback:{id:'explicit-model',until:1500}};
+ assert.match(companion(transactions,false,model,{now:1000,escapeHtml:value=>value}),/data-mascot-state="saved"/,'Feedback must use the supplied model and clock');
+ assert.doesNotMatch(companion(transactions,false,model,{now:1500,escapeHtml:value=>value}),/data-mascot-state="saved"/,'Feedback expires at the supplied time');
+ assert.match(companion([],false,{...model,feedback:null},{now:1000,escapeHtml:value=>value}),/Aucune opération ce mois-ci/,'Empty month must use the supplied transaction history');
+ assert.match(companion([],false,{transactions:[],filters,feedback:null},{now:1000,escapeHtml:value=>value}),/Ton historique commence ici/);
+ assert.match(companion([],false,{...model,filters:{...filters,flow:'expense',kind:'savings'}},{now:1000,escapeHtml:value=>value}),/data-action="journal-show-savings"/,'Savings conflict must use the supplied filters');
+ console.log('PASS companion uses explicit current model, filters/history and expiry clock');
+d.initialized=d.setupDone=true;d.openingBalanceDate='2026-10-01';d.openingCents=100000;
  d.savingsProjects=[{id:'trip',name:'Voyage <test>',kind:'voyage',icon:'plane',color:'violet',targetCents:100000,targetDate:null,archived:false}];
  const tx=(id,type,amountCents,name,extra={})=>({id,type,amountCents,name,date:'2026-10-15',categoryId:'autre',note:'',...extra});
  d.transactions=[tx('salary','income',24000,'Salaire'),tx('phone','expense',1000,'Téléphone'),tx('transport','expense',2200,'Transport',{autoKey:'rule:2026-10-15'}),tx('deposit','expense',3000,'Épargne',{categoryId:'epargne',savingsProjectId:'trip'}),tx('withdraw','income',500,'Retrait',{categoryId:'epargne',savingsProjectId:'trip',date:'2026-10-16'}),tx('older','income',100,'Autre mois',{date:'2026-09-30'}),tx('unsafe','expense',100,'<img src=x onerror=alert(1)>',{note:'test'})];
@@ -24,7 +33,7 @@
  assert.equal(JSON.stringify(d),before);assert.equal(E.balance(d),balance);
  // A category must narrow both the rows and their summary without changing the ledger.
  d.transactions.push(tx('food','expense',1250,'Courses',{categoryId:'alimentation'}),tx('food-in','income',5000,'Budget repas',{categoryId:'alimentation'}));
- node('#category-filter').value='alimentation';
+ t.setData(d);node('#category-filter').value='alimentation';
  assert.deepEqual(show('expense'),['food'],'The selected category must exclude other expenses');
  assert.match(node('#journal-summary').innerHTML,/Alimentation/);
  assert.match(node('#journal-summary').innerHTML,/1 opération/);
@@ -49,7 +58,7 @@
  assert.match(node('#journal-summary').innerHTML,/290,00/,'Income excludes savings withdrawals');
  assert.match(node('#journal-summary').innerHTML,/45,50/,'Spending excludes savings deposits');
  d.customCategories=[{id:'custom-test',label:'<img src=x> & Santé',icon:'·'}];
- const controls=t.journal();assert.match(controls,/&lt;img src=x&gt; &amp; Santé/);assert.doesNotMatch(controls,/<img src=x>/);
+ t.setData(d);const controls=t.journal();assert.match(controls,/&lt;img src=x&gt; &amp; Santé/);assert.doesNotMatch(controls,/<img src=x>/);
  node('#category-filter').value='alimentation';show('expense','manual','Courses');
  events.click({target:{closest:()=>({dataset:{action:'journal-reset'}})}});assert.equal(t.state.category,'all');assert.equal(t.state.query,'');assert.equal(t.state.flow,'all');assert.equal(t.state.kind,'all');assert.equal(rows().length,8);
  // Exercise the existing submit boundary; category persistence must survive normalization.

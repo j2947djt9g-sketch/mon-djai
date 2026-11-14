@@ -42,7 +42,14 @@
         }
       });
       const authEpoch=this.epoch;
+      let initializationError=null;
+      if(typeof this.client.auth.initialize==='function'){
+        try{const initialized=await this.client.auth.initialize();initializationError=initialized?.error||null;}
+        catch(error){initializationError=error;}
+      }
       const {data,error}=await this.client.auth.getSession();
+      // getSession may still return an older cached session after a failed link.
+      this.hooks.authInitialized?.({error:initializationError||error||null,session:data?.session||null});
       if(authEpoch!==this.epoch){if(this.authTransition)await this.attach(this.authTransition.user);return;}
       if(error){this.error='La session n’a pas pu être restaurée.';this.ready=true;this.status='signed-out';this.emit();return;}
       await this.attach(data.session?.user||null);
@@ -80,6 +87,12 @@
       if(clean.preferences){clean.preferences.photo=null;if(clean.preferences.wallpaper==='photo')clean.preferences.wallpaper='plain';}
       return clean;
     }
+    expressDowngrade(remote,local){
+      if(remote?.expressSchema!==1)return false;
+      if(local?.expressSchema!==1)return true;
+      const byId=new Map((local.transactions||[]).map(t=>[t.id,t]));
+      return (remote.transactions||[]).some(t=>t.express&&byId.has(t.id)&&['source','createdAt','originalCurrency','accountId','idempotencyKey'].some(k=>t.express[k]!==byId.get(t.id).express?.[k]));
+    }
     adopt(row, expectedEpoch=this.epoch){
       if(expectedEpoch!==this.epoch)return;
       const payload=this.hooks.normalize(row.payload);
@@ -87,7 +100,7 @@
       const meta={userId:this.user.id,revision:row.revision,dirty:false,operationId:row.operation_id};
       const raw=JSON.stringify({...payload,_cloud:meta});
       localStorage.setItem(this.key(),raw);this.record={payload,meta};this.displayName=row.display_name||this.displayName;this.conflict=null;
-      this.status='synced';this.error='';this.hooks.apply?.(payload,raw);this.emit();
+      this.status='synced';this.error='';this.hooks.apply?.(payload,raw,{owner:this.user.id,epoch:expectedEpoch});this.emit();
     }
     async sync(expectedEpoch=this.epoch){
       if(!this.enabled||!this.user||this.authTransition!==null||this.busy||this.conflict||this.disposed)return;
@@ -105,6 +118,12 @@
           else this.adopt(remote,expectedEpoch);
           return;
         }
+        // Keep the schema capability even after an explicit reset or legacy import.
+        // A stripped same-revision cache is not evidence that provenance was intentionally removed.
+        if(remote&&this.record&&this.expressDowngrade(remote.payload,this.record.payload)){
+          if(this.record.meta.dirty)this.setConflict(remote);else this.adopt(remote,expectedEpoch);
+          return;
+        }
         if(this.record?.meta.dirty){
           const pending=this.record;
           if(remote&&JSON.stringify(this.wire(pending.payload))===JSON.stringify(this.wire(this.hooks.normalize(remote.payload)))){this.adopt(remote,expectedEpoch);return;}
@@ -115,7 +134,7 @@
           const latest=this.decode(localStorage.getItem(this.key(userId)),userId);
           if(latest?.meta.operationId!==pending.meta.operationId){
             // A new edit arrived while saving. Advance its base revision without replacing the edit.
-            if(latest){latest.meta.revision=data.row.revision;localStorage.setItem(this.key(userId),JSON.stringify({...latest.payload,_cloud:latest.meta}));this.record=latest;this.hooks.apply?.(latest.payload,JSON.stringify({...latest.payload,_cloud:latest.meta}));this.status='pending';this.schedule();}
+            if(latest){latest.meta.revision=data.row.revision;localStorage.setItem(this.key(userId),JSON.stringify({...latest.payload,_cloud:latest.meta}));this.record=latest;this.hooks.apply?.(latest.payload,JSON.stringify({...latest.payload,_cloud:latest.meta}),{owner:userId,epoch:expectedEpoch});this.status='pending';this.schedule();}
           }else this.adopt(data.row,expectedEpoch);
         }else if(remote){
           if(!this.record||remote.revision!==this.record.meta.revision)this.adopt(remote,expectedEpoch);
@@ -138,28 +157,30 @@
         this.adopt(this.conflict.remote);return;
       }
       if(this.conflict.remote?.payload.initialized&&this.record?.payload.initialized&&((this.conflict.remote.payload.currency||'EUR')!==(this.record.payload.currency||'EUR')||(this.conflict.remote.payload.currencyRevision||0)!==(this.record.payload.currencyRevision||0)))throw Error('Les copies utilisent des devises différentes ou une ancienne conversion. Sauvegarde cette copie, puis conserve la copie en ligne.');
+      if(this.expressDowngrade(this.conflict.remote?.payload,this.record?.payload))throw Error('Cette copie a perdu des informations Express. Sauvegarde-la, puis conserve la copie en ligne.');
       // The conflict UI exports the device copy before asking the user to choose.
       const meta={...this.record.meta,revision:this.conflict.remote?.revision||0,operationId:crypto.randomUUID(),dirty:true};
       // Commit metadata only after persistence succeeds, so a full storage leaves both copies intact.
-      const raw=JSON.stringify({...this.record.payload,_cloud:meta});localStorage.setItem(this.key(),raw);this.record={payload:this.record.payload,meta};this.conflict=null;this.hooks.apply?.(this.record.payload,raw);this.status='pending';this.emit();this.schedule();
+      const raw=JSON.stringify({...this.record.payload,_cloud:meta});localStorage.setItem(this.key(),raw);this.record={payload:this.record.payload,meta};this.conflict=null;this.hooks.apply?.(this.record.payload,raw,{owner:this.user.id,epoch:this.epoch});this.status='pending';this.emit();this.schedule();
     }
-    async convertCurrency(to,revision,asOf){
+    async convertCurrency(to,revision,asOf,policyId){
+      if(policyId!=='inforeuro-2026-11')throw Error('Politique de conversion invalide. Recommence l’aperçu avec une version à jour.');
       if(!this.user||!this.ready||this.busy||this.converting||this.conflict||this.status!=='synced'||this.record?.meta.dirty||this.record?.meta.revision!==revision)throw Error('Synchronise ton budget et recommence l’aperçu.');
       const epoch=this.epoch,startingRaw=localStorage.getItem(this.key());this.converting=true;this.busy=true;this.emit();
       try{
-        const {data,error}=await this.client.rpc('convert_clair_currency',{p_currency:to,p_expected_revision:revision,p_operation_id:crypto.randomUUID(),p_as_of:asOf});
+        const {data,error}=await this.client.rpc('convert_clair_currency_v2',{p_currency:to,p_expected_revision:revision,p_operation_id:crypto.randomUUID(),p_as_of:asOf,p_policy_id:policyId});
         if(epoch!==this.epoch)throw Error('Le compte a changé pendant la conversion.');
         if(error)throw Error(error.message||'Conversion indisponible. Ton budget est conservé.');
         if(!data?.saved){this.setConflict(data?.row||null);throw Error('Un autre appareil a modifié le budget. Vérifie la copie en ligne.');}
         const latestRaw=localStorage.getItem(this.key());
         if(latestRaw!==startingRaw){
           const latest=this.decode(latestRaw,this.user.id);
-          if(latest?.meta.dirty){this.record=latest;this.hooks.apply?.(latest.payload,latestRaw);this.setConflict(data.row);throw Error('Un autre onglet a modifié le budget pendant la conversion. Les deux copies sont conservées.');}
-          if(latest&&latest.meta.revision>=data.row.revision){this.record=latest;this.status='synced';this.hooks.apply?.(latest.payload,latestRaw);return;}
+          if(latest?.meta.dirty){this.record=latest;this.hooks.apply?.(latest.payload,latestRaw,{owner:this.user.id,epoch});this.setConflict(data.row);throw Error('Un autre onglet a modifié le budget pendant la conversion. Les deux copies sont conservées.');}
+          if(latest&&latest.meta.revision>=data.row.revision){this.record=latest;this.status='synced';this.hooks.apply?.(latest.payload,latestRaw,{owner:this.user.id,epoch});return;}
         }
         this.adopt(data.row,epoch);
       }catch(error){if(epoch===this.epoch&&!this.conflict){this.status='error';this.error='Vérification de la conversion en ligne nécessaire.';this.schedule();}throw error;
-      }finally{this.converting=false;this.busy=false;this.emit();}
+      }finally{this.converting=false;this.busy=false;if(epoch!==this.epoch&&this.user)this.schedule();this.emit();}
     }
     async logout(){
       const uid=this.user?.id;

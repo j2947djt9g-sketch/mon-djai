@@ -1,0 +1,202 @@
+{
+  "version": 2,
+  "template": "clair/app/index.template.html",
+  "output": "clair/index.html",
+  "containers": [
+    "style",
+    "script",
+    "script",
+    "script",
+    "script",
+    "style",
+    "script"
+  ],
+  "inputs": [
+    {
+      "token": "@@CLAIR_ENGINE@@",
+      "source": "clair/domain/engine.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_SOURCE_00@@",
+      "source": "clair/accounts/account-ui.js",
+      "transform": "trim",
+      "container": 4
+    },
+    {
+      "token": "@@CLAIR_SOURCE_01@@",
+      "source": "clair/accounts/auth-email.js",
+      "transform": "trim",
+      "container": 3
+    },
+    {
+      "token": "@@CLAIR_SOURCE_02@@",
+      "source": "clair/accounts/category-art.css",
+      "transform": "trim",
+      "container": 0
+    },
+    {
+      "token": "@@CLAIR_SOURCE_03@@",
+      "source": "clair/accounts/category-art.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_SOURCE_04@@",
+      "source": "clair/accounts/cloud.js",
+      "transform": "trim",
+      "container": 3
+    },
+    {
+      "token": "@@CLAIR_SOURCE_05@@",
+      "source": "clair/accounts/companion-ui.js",
+      "transform": "trim",
+      "container": 4
+    },
+    {
+      "token": "@@CLAIR_SOURCE_06@@",
+      "source": "clair/accounts/dashboard-ui.js",
+      "transform": "trim",
+      "container": 4
+    },
+    {
+      "token": "@@CLAIR_SOURCE_07@@",
+      "source": "clair/accounts/dashboard.css",
+      "transform": "trim",
+      "container": 0
+    },
+    {
+      "token": "@@CLAIR_SOURCE_08@@",
+      "source": "clair/accounts/device-unlock.css",
+      "transform": "trim",
+      "container": 5
+    },
+    {
+      "token": "@@CLAIR_SOURCE_09@@",
+      "source": "clair/accounts/device-unlock.js",
+      "transform": "trim",
+      "container": 6
+    },
+    {
+      "token": "@@CLAIR_SOURCE_10@@",
+      "source": "clair/accounts/exchange-ui.js",
+      "transform": "trim",
+      "container": 4
+    },
+    {
+      "token": "@@CLAIR_SOURCE_12@@",
+      "source": "clair/accounts/express-core.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_SOURCE_13@@",
+      "source": "clair/accounts/express-insights.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_SOURCE_14@@",
+      "source": "clair/accounts/express-ui.css",
+      "transform": "trim",
+      "container": 0
+    },
+    {
+      "token": "@@CLAIR_SOURCE_15@@",
+      "source": "clair/accounts/express-ui.js",
+      "transform": "trim",
+      "container": 4
+    },
+    {
+      "token": "@@CLAIR_SOURCE_16@@",
+      "source": "clair/accounts/glass-ui.css",
+      "transform": "trim",
+      "container": 0
+    },
+    {
+      "token": "@@CLAIR_SOURCE_17@@",
+      "source": "clair/accounts/glass-ui.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_SOURCE_18@@",
+      "source": "clair/accounts/journal-ui.js",
+      "transform": "trim",
+      "container": 4
+    },
+    {
+      "token": "@@CLAIR_SOURCE_19@@",
+      "source": "clair/accounts/journal.css",
+      "transform": "trim",
+      "container": 0
+    },
+    {
+      "token": "@@CLAIR_SOURCE_20@@",
+      "source": "clair/accounts/profile-ui.js",
+      "transform": "trim",
+      "container": 4
+    },
+    {
+      "token": "@@CLAIR_SOURCE_21@@",
+      "source": "clair/accounts/profile.css",
+      "transform": "trim",
+      "container": 0
+    },
+    {
+      "token": "@@CLAIR_SOURCE_22@@",
+      "source": "clair/accounts/region-currency.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_SOURCE_23@@",
+      "source": "clair/accounts/savings-ui.js",
+      "transform": "trim",
+      "container": 4
+    },
+    {
+      "token": "@@CLAIR_SOURCE_24@@",
+      "source": "clair/accounts/sounds.js",
+      "transform": "trim",
+      "container": 4
+    },
+    {
+      "token": "@@CLAIR_SOURCE_25@@",
+      "source": "clair/accounts/welcome.css",
+      "transform": "trim",
+      "container": 0
+    },
+    {
+      "token": "@@CLAIR_SHARED_SDK@@",
+      "source": "masterboard/supabase-2.102.0.js",
+      "transform": "trim",
+      "container": 2
+    },
+    {
+      "token": "@@CLAIR_BUDGET_COMMANDS@@",
+      "source": "clair/application/budget-commands.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_BUDGET_SESSION@@",
+      "source": "clair/application/budget-session.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "source": "clair/ui/navigation.js",
+      "token": "@@CLAIR_NAVIGATION@@",
+      "container": 4,
+      "transform": "trim"
+    },
+    {
+      "source": "clair/ui/page-host.js",
+      "token": "@@CLAIR_PAGE_HOST@@",
+      "container": 4,
+      "transform": "trim"
+    }
+  ]
+}

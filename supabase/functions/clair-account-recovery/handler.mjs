@@ -1,7 +1,8 @@
+import {isAllowedOrigin} from '../_shared/origins.mjs';
 export function createRecoveryHandler({claim,send,fingerprint,apiKeys}){
  return async req=>{
   const origin=req.headers.get('origin');
-  const allowed=!origin||origin==='https://j2947djt9g-sketch.github.io'||/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  const allowed=isAllowedOrigin('account-recovery',origin);
   const headers={'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'apikey,content-type','Access-Control-Expose-Headers':'Retry-After',...(origin&&allowed?{'Access-Control-Allow-Origin':origin}:{})};
   const answer=(body,status,retry=0)=>new Response(JSON.stringify(body),{status,headers:{...headers,...(retry?{'Retry-After':String(retry)}:{})}});
   const neutral=wait=>answer({ok:true,retry_after:wait,message:'Si un compte utilise cette adresse, un lien sera envoyé.'},202,wait);

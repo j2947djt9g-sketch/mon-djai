@@ -1,8 +1,9 @@
+import {isAllowedOrigin} from '../_shared/origins.mjs';
 const uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value);
 export async function hashSecret(value){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),b=>b.toString(16).padStart(2,'0')).join('');}
 export function createUnlockHandler({db,auth,fingerprint}){
  return async req=>{
-  const origin=req.headers.get('origin'),allowed=!origin||origin==='https://j2947djt9g-sketch.github.io'||/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  const origin=req.headers.get('origin'),allowed=isAllowedOrigin('device-unlock',origin);
   const headers={'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'apikey,authorization,content-type',...(origin&&allowed?{'Access-Control-Allow-Origin':origin}:{})};
   const answer=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
   if(!allowed)return answer({error:'Origine refusée.'},403);
@@ -20,12 +21,24 @@ export function createUnlockHandler({db,auth,fingerprint}){
     return answer({state:'pending'},202);
    }
    if(input.action==='poll'){
-    const claim=await db.claim(input.id,hash);
-    if(claim?.state!=='ready')return answer({state:claim?.state==='expired'?'expired':'pending'});
-    // The capability is checked atomically before generating a credential. It is never stored server-side.
-    const recovery=await auth.recovery(claim.email);
-    if(!recovery?.hashed_token||!/^[A-Za-z0-9_-]{32,128}$/.test(recovery.hashed_token))throw Error('Recovery unavailable');
-    return answer({state:'ready',token_hash:recovery.hashed_token});
+    const reservation=await db.reserve(input.id,hash);
+    if(reservation?.state!=='reserved')return answer({state:reservation?.state==='expired'?'expired':'pending'});
+    const attempt=reservation.attempt_id;
+    // Only an affirmative, single-use dispatch reply authorizes Auth. Never retry a lost RPC reply.
+    if(!await db.dispatch(input.id,hash,attempt))throw Error('Dispatch unavailable');
+    let recovery;
+    try{
+     // A local deadline reduces delayed-worker calls; SQL remains the authoritative fence.
+     if(Date.parse(reservation.lease_until)<=Date.now())recovery={kind:'not_issued',reason:'local_preflight'};
+     else recovery=await auth.issueRecovery({email:reservation.email,expectedUserId:reservation.user_id});
+    }catch{recovery={kind:'unknown'};}
+    const issued=recovery?.kind==='issued'&&recovery.userId===reservation.user_id&&
+     typeof recovery.tokenHash==='string'&&/^[A-Za-z0-9_-]{32,128}$/.test(recovery.tokenHash);
+    const outcome=issued?'issued':recovery?.kind==='not_issued'&&recovery.reason==='local_preflight'?'not_issued':'unknown';
+    // Discard the credential unless the durable finish is affirmatively acknowledged.
+    const finished=await db.finish(input.id,hash,attempt,outcome);
+    if(!finished||!issued)throw Error('Recovery unavailable');
+    return answer({state:'ready',token_hash:recovery.tokenHash});
    }
    if(input.action==='complete'){
     const user=await auth.user(req.headers.get('authorization')||'');

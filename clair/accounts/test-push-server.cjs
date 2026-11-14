@@ -31,7 +31,31 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
  const handler=createHandler({db,now:()=>clock,randomId:()=>crypto.randomUUID(),authenticate:async h=>h==='Bearer alice'?{id:'alice'}:h==='Bearer bob'?{id:'bob'}:null,generateKeys:()=>({publicKey:'public',privateKey:'never-return-this'}),send:async(s,p)=>{if(fail)throw Object.assign(Error('gone'),{statusCode:410});sent.push(p)}});
  const call=async(route,body={},headers={authorization:'Bearer alice'})=>handler(new Request('https://example.test/clair-reminders/'+route,{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(body)}));
  assert.equal((await call('vapid',{},{})).status,401);let response=await call('vapid');assert.deepEqual(await response.json(),{publicKey:'public'});assert(!JSON.stringify(await (await call('vapid')).json()).includes('never-return'));
- assert.equal((await call('vapid',{}, {authorization:'Bearer alice',origin:'https://evil.test'})).status,403);
+ // Both deployed frontends must pass browser preflight and retain authentication/ownership checks.
+ for(const origin of ['https://clair-budget.vercel.app','https://j2947djt9g-sketch.github.io']){
+   const preflight=await handler(new Request('https://example.test/clair-reminders/subscribe',{method:'OPTIONS',headers:{origin,'access-control-request-method':'POST','access-control-request-headers':'authorization, apikey, content-type'}}));
+   assert.equal(preflight.status,204,'Allowed browser origin must pass preflight: '+origin);
+   assert.equal(preflight.headers.get('access-control-allow-origin'),origin);
+   assert.match(preflight.headers.get('vary'),/Origin/);
+   assert.match(preflight.headers.get('access-control-allow-headers'),/authorization/);
+   const authorized=await call('vapid',{}, {authorization:'Bearer alice',origin});
+   assert.equal(authorized.status,200);assert.equal(authorized.headers.get('access-control-allow-origin'),origin);
+   assert.deepEqual(await authorized.json(),{publicKey:'public'});
+   const unauthenticated=await call('vapid',{}, {origin});assert.equal(unauthenticated.status,401);assert.equal(unauthenticated.headers.get('access-control-allow-origin'),origin);
+   const deviceId=origin.includes('vercel')?'c'.repeat(32):'d'.repeat(32);
+   assert.equal((await call('subscribe',{deviceId,user_id:'bob',subscription:sub},{authorization:'Bearer alice',origin})).status,200);
+   assert.equal(devices.get(deviceId).user_id,'alice');
+   assert.equal((await call('unsubscribe',{deviceId},{authorization:'Bearer bob',origin})).status,409);
+   await call('unsubscribe',{deviceId},{authorization:'Bearer alice',origin});
+ }
+ for(const origin of ['https://evil.test','https://clair-budget.vercel.app.evil.test','http://clair-budget.vercel.app','https://clair-budget.vercel.app:444','null']){
+   for(const method of ['POST','OPTIONS']){
+     const rejected=await handler(new Request('https://example.test/clair-reminders/vapid',{method,headers:{origin,authorization:'Bearer alice'}}));
+     assert.equal(rejected.status,403,'Foreign origin must be rejected: '+origin);
+     assert.equal(rejected.headers.get('access-control-allow-origin'),null);
+   }
+ }
+ console.log('PASS exact Vercel/GitHub CORS preflight, JWT enforcement, ownership and foreign-origin rejection');
  assert.equal((await call('subscribe',{deviceId:'bad',subscription:sub})).status,400);
  const id='a'.repeat(32);assert.equal((await call('subscribe',{deviceId:id,user_id:'bob',subscription:sub})).status,200);assert.equal(devices.get(id).user_id,'alice');
  assert.equal((await call('unsubscribe',{deviceId:id},{authorization:'Bearer bob'})).status,409);
@@ -39,12 +63,13 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
  clock=new Date('2026-10-21T06:59:00Z');assert.equal((await (await call('dispatch',{},cron)).json()).outsideWindow,true);assert.equal(sent.length,0);
  clock=new Date('2026-10-21T07:00:00Z');await Promise.all([call('dispatch',{},cron),call('dispatch',{},cron)]);assert.equal(sent.length,1);assert.match(sent[0].body,/9,99/);assert.equal(sent[0].tag,'clair-phone:2026-10-23');assert(!JSON.stringify(sent).includes('openingCents'));
  await call('dispatch',{},cron);assert.equal(sent.length,1);
- for(const currency of ['EUR','USD','XOF','XAF']){
-   const amountCents=currency.startsWith('X')?150000:999;latest={...latest,currency,rules:[{...rule('phone'),amountCents}]};claims.clear();await call('dispatch',{},cron);
+ for(const currency of ['EUR','USD','GBP','MAD','CAD','CHF','XOF','XAF']){
+   const amountCents=currency.startsWith('X')?150000:999;latest={...latest,currency,rules:[{...rule('phone'),amountCents}]};claims.clear();const before=sent.length;await call('dispatch',{},cron);
+   assert.equal(sent.length,before+1,'Native '+currency+' reminder must be dispatched');
    assert(sent.at(-1).body.includes(new Intl.NumberFormat('fr-FR',{style:'currency',currency}).format(amountCents/100)));
  }
  sent=sent.slice(0,1);latest={...latest,currency:'EUR',rules:[rule('phone')]};
- console.log('PASS push reminders format EUR USD XOF XAF without currency conversion');
+ console.log('PASS push reminders format EUR USD GBP MAD CAD CHF XOF XAF without currency conversion');
  claims.clear();onBudget=n=>{if(n===2)latest={...latest,preferences:{reminders:false}}};budgetsRead=0;await call('dispatch',{},cron);assert.equal(sent.length,1);onBudget=null;
  latest={...latest,preferences:{reminders:true}};claims.clear();fail=true;await call('dispatch',{},cron);assert.equal(devices.get(id).enabled,false);fail=false;
  await call('subscribe',{deviceId:id,subscription:sub});await call('unsubscribe',{deviceId:id});assert.equal((await (await call('status',{deviceId:id})).json()).active,false);assert.equal(devices.get(id).enabled,false);

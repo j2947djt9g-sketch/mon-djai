@@ -1,8 +1,16 @@
 # Clair — comptes et synchronisation
 
-Clair est relié au projet Supabase `hkssnbvktfscizojhftl`. La PR #1 a été fusionnée et la version avec comptes est publiée sur GitHub Pages.
+Clair est relié au projet Supabase `hkssnbvktfscizojhftl`. La version publique actuelle utilise Vercel : https://clair-budget.vercel.app/clair/. Les anciens constats ci-dessous sont historiques ; diagnostic Auth actuel : `../../docs/ai/EMAIL_CONFIRMATION.md`.
 
-## État vérifié
+## État courant — 13 novembre 2026
+
+Mode local : budget dans le navigateur, sans synchronisation financière. Mode compte : transfert explicite puis synchronisation des données financières et préférences avec Supabase ; photos de fond conservées sur l’appareil. Auth reçoit l’adresse et le mot de passe. Les abonnements push sont transmis au service de rappels si activés. Le HTML téléchargé conserve le mode local.
+
+La confirmation réelle, reçue puis activée sur une adresse iCloud, et la connexion ont été vérifiées lors de la dernière livraison Vercel. Cela ne prouve pas les quotas SMTP ni la réception chez tous les fournisseurs. Les paragraphes d’activation et de limites ci-dessous décrivent des vérifications antérieures ; leurs réserves sur la réception sont historiques. Le détail actuel fait foi dans [EMAIL_CONFIRMATION.md](../../docs/ai/EMAIL_CONFIRMATION.md).
+
+Pour commencer et lancer les tests : [LISEZ-MOI](../LISEZ-MOI.md). Node 24.22.1 est fixé par `.nvmrc`, Playwright 1.64.1 par la CI. `node tools/clair/check-mirrors.mjs` contrôle les copies sans les réparer ; `node clair/accounts/test-mirrors.cjs` vérifie ce garde-fou sur des fixtures. Les suites `test-*` sont des simulations locales, les `verify-*` des parcours navigateur ; les tests SQL du workflow utilisent une base isolée et n’autorisent aucune migration distante.
+
+## État vérifié — historique de l’activation initiale
 
 - Migration `clair_private_budgets_and_revision_sync` appliquée.
 - Tests SQL passés sur la base réelle : création du budget, rejeu idempotent d'une sauvegarde, refus d'une révision obsolète, isolation entre deux identités, refus de réaffecter le propriétaire et refus d'accès anonyme.
@@ -39,7 +47,7 @@ La synchronisation s'effectue à l'ouverture, au retour de connexion et chaque m
 
 Le compteur de trois erreurs impose une pause d'une minute sur l'appareil. Il complète les limites de débit de Supabase et n'est pas un verrouillage global côté serveur. Le hook Password Verification Attempt nécessite actuellement une offre Teams ou Enterprise ; aucune offre payante n'est activée.
 
-Le service d'e-mail par défaut de Supabase est destiné aux essais et restreint les destinataires aux adresses autorisées de l'équipe. Un SMTP doit être configuré avant d'ouvrir les inscriptions au grand public. La réception des e-mails et les sessions de navigateur réelles restent à vérifier.
+Le service d’e-mail par défaut de Supabase est destiné aux essais et restreint les destinataires à l’équipe. Le réglage SMTP actuel du projet n’a pas pu être lu pendant l’audit du 13 novembre2026 : vérifier SMTP Settings avant de conclure qu’un fournisseur est absent. La réception réelle en production reste à valider ; Auth/SMTP ont été vérifiés uniquement dans un environnement local isolé.
 
 ## Dépendance
 
@@ -68,3 +76,9 @@ Signup explains that a new account must be confirmed by opening Clair's email an
 The login screen counts only `invalid_credentials`: two wrong passwords remain retryable, the third starts a 3600-second browser pause. The normalized address is represented by a SHA-256 digest in local storage. Signup, unconfirmed email, offline/network failures and provider throttles do not consume attempts. Success and verified password recovery clear the corresponding counter. Forgot password and private administrator help remain reachable while paused.
 
 This is a browser UX guard, not a server-wide account lock: other browsers, cleared storage, or direct Auth API requests can bypass it. Supabase's independent server limits remain active. The existing five-request recovery quota is unchanged, and delivery still requires a configured mail sender.
+
+## Confirmation e-mail — correctif publié le 13 novembre2026
+
+`auth-email.js` centralise inscription, renvoi, destination Vercel et reconnaissance/nettoyage des callbacks après initialisation SDK. `account-ui.js` sépare confirmation, récupération et suspension ; correction d’adresse sans réutiliser le mot de passe, délai60s et verrou de renvoi, acceptation conditionnelle sans promesse de livraison. Copies inline à maintenir dans `clair/index.html`.
+
+Tests : `test-auth-email.cjs`, `test-confirmation-sdk.cjs`, `test-account-ui.cjs`, `test-cloud.cjs`, `verify-auth-entry.cjs`. Destinations Supabase Vercel vérifiées après correction humaine ; parcours réel reçu/activé/connecté sur une adresse iCloud et correctif publié sur Vercel après accord. SMTP effectif/quotas inconnus ; tests publics390/1440 à Auth simulée verts. Procédure et limites : [EMAIL_CONFIRMATION.md](../../docs/ai/EMAIL_CONFIRMATION.md).

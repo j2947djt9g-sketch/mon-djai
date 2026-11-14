@@ -15,7 +15,7 @@ ui=ui.slice(0,boot)+`
 download=(body,name,mime)=>window.captureDownload(body,name,mime);
 notify=message=>window.captureNotify(message);
 window.test={settings,startCharge,chargeView,collectCharge,submitCharge,payCard,paymentDetails,pay,installClair,downloadClair,
- setData(d){data=d;snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot);},
+ setData(d){budgetSession.adoptRemote(d,budgetSession.getContext());snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot);},
  getData(){return data;},draft(){return chargeDraft;},setDraft(d){chargeDraft=d;},modal(){return modal;},
  setPrompt(p){installPrompt=p;},busy(){return {installBusy,downloadBusy};}};
 })();`;

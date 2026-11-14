@@ -13,7 +13,7 @@ function context(){
  sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;
  vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
  const boot=scripts[3].indexOf('  render();if(!cloud.enabled)catchUp();');assert(boot>0);
- vm.runInContext(scripts[3].slice(0,boot)+`window.test={home,journal,journalResults,balanceCompanion,render,openTx,feedback:()=>journalFeedback,setData(d){data=d;snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot)},getData:()=>data,setPage:p=>{page=p},setMonth:m=>{month=m}};})();`,sandbox);
+ vm.runInContext(scripts[3].slice(0,boot)+`${require('../../tools/clair/test-support/presentation-adapters.cjs')}window.test={home,journal,journalResults,balanceCompanion,render,openTx,feedback:()=>journalFeedback,setData(d){budgetSession.adoptRemote(d,budgetSession.getContext());snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot)},getData:()=>data,setPage:p=>{page=p},setMonth:m=>{month=m}};})();`,sandbox);
  return {E:sandbox.ClairEngine,t:sandbox.test,node,events,timers,advance:ms=>clock+=ms,failStorage:()=>{failStorage=true}};
 }
 const prepared=c=>{const d=c.E.empty();d.initialized=d.setupDone=true;d.openingBalanceDate='2026-10-15';d.openingCents=50000;return d};

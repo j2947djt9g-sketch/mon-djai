@@ -6,10 +6,12 @@ const assert=require('node:assert/strict');
  let row=null,generated=0,completed=0,actor=null,requests=0;
  const db={
   request:async(i,email,hash,device,ip)=>{requests++;row={id:i,email,hash,device,state:'pending'};assert.notEqual(hash,secret);assert.equal(ip,'ip-hash');return true;},
-  claim:async(i,hash)=>{if(!row||row.id!==i||row.hash!==hash)return {state:'expired'};if(row.state==='approved'){row.state='issued';return {state:'ready',email:row.email,user_id:uid};}return {state:row.state==='pending'?'pending':'expired'};},
+  reserve:async(i,hash)=>{if(!row||row.id!==i||row.hash!==hash)return {state:'expired'};if(row.state==='approved'){row.state='issuing';return {state:'reserved',attempt_id:'attempt',lease_until:new Date(Date.now()+30000).toISOString(),email:row.email,user_id:uid};}return {state:row.state==='pending'?'pending':'expired'};},
+  dispatch:async()=>row.state==='issuing',
+  finish:async(i,hash,attempt,outcome)=>{if(outcome!=='issued')return false;row.state='issued';return true;},
   complete:async(i,hash,user)=>{if(!row||row.id!==i||row.hash!==hash||user!==uid||row.state!=='issued')return false;completed++;row.state='completed';return true;}
  };
- const handler=createUnlockHandler({db,fingerprint:async()=>'ip-hash',auth:{user:async()=>actor,recovery:async email=>{assert.equal(email,row.email);generated++;return {hashed_token:'b'.repeat(64)};}}});
+ const handler=createUnlockHandler({db,fingerprint:async()=>'ip-hash',auth:{user:async()=>actor,issueRecovery:async({email,expectedUserId})=>{assert.equal(email,row.email);assert.equal(expectedUserId,uid);generated++;return {kind:'issued',tokenHash:'b'.repeat(64),userId:uid};}}});
  const call=async(body,origin='https://j2947djt9g-sketch.github.io')=>handler(new Request('https://example.invalid',{method:'POST',headers:{origin},body:JSON.stringify({id,secret,...body})}));
  assert.equal((await call({action:'request',email:'member@example.invalid',device:'iPhone'},'https://evil.invalid')).status,403);
  assert.equal((await call({action:'request',secret:'bad',email:'member@example.invalid',device:'iPhone'})).status,400);

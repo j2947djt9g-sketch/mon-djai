@@ -1,0 +1,278 @@
+/* B — Express. Warm, welcoming surfaces and a lifted quick-action button. */
+[data-style="express"] {
+  --ink: #30213e;
+  --muted: #716479;
+  --surface: #fffcf8;
+  --accent: #674779;
+  --accent-soft: #eee5f6;
+  --line: #e8e0e9;
+  --page: #f8f4ee;
+  color: #30213e;
+  background: #f8f4ee;
+}
+[data-style="express"]::before {
+  background: radial-gradient(ellipse at 100% 0%, #ebe0f5 0, transparent 58%),
+    radial-gradient(ellipse at 0% 48%, #f5e5da 0, transparent 56%);
+  opacity: .72;
+}
+[data-style="express"] .app-header { border-color: transparent; }
+[data-style="express"] .brand { color: #392847; letter-spacing: -.07em; }
+[data-style="express"] .icon-button {
+  color: #594266;
+  background: #fffcf8;
+  border: 1px solid #e8dfeb;
+  box-shadow: 0 3px 10px #503b6110;
+}
+[data-style="express"] .avatar-button {
+  color: #503563;
+  background: #e7d8ee;
+  border: 3px solid #fffcf8;
+  box-shadow: 0 0 0 1px #dfd0e6;
+}
+[data-style="express"] #content { padding-bottom: 188px; }
+[data-style="express"] .eyebrow { color: #76637f; letter-spacing: .16em; }
+[data-style="express"] .greeting h1 { color: #392847; letter-spacing: -.045em; }
+[data-style="express"] .greeting p { color: #776879; }
+[data-style="express"] .balance-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: #372347;
+  background: #eae0f1;
+  border: 1px solid #f7f1fc;
+  border-radius: 29px;
+  box-shadow: 0 14px 32px #69527812, inset 0 1px 0 #fff9;
+}
+[data-style="express"] .balance-card::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 240px;
+  height: 240px;
+  right: -138px;
+  top: -92px;
+  border-radius: 50%;
+  border: 32px solid #f7f0fb7d;
+  pointer-events: none;
+}
+[data-style="express"] .balance-top { color: #685373; }
+[data-style="express"] .balance-top .icon-button {
+  color: #654a76;
+  background: #f8f2fb99;
+  border-color: #fff7;
+  box-shadow: none;
+}
+[data-style="express"] .money { color: #372347; font-weight: 650; letter-spacing: -.065em; }
+[data-style="express"] .money .unit { color: #6b5379; font-weight: 600; letter-spacing: .01em; }
+[data-style="express"] .balance-details { color: #6b5675; }
+[data-style="express"] .button {
+  min-height: 48px;
+  border-radius: 17px;
+  font-weight: 650;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+[data-style="express"] .primary-action {
+  color: #fff;
+  background: #68447a;
+  border: 1px solid #68447a;
+  box-shadow: 0 6px 12px #5a36652b, inset 0 1px 0 #ffffff25;
+}
+[data-style="express"] .secondary-action {
+  color: #5d416d;
+  background: #fffaf7;
+  border: 1px solid #ded0e7;
+  box-shadow: 0 3px 8px #5a366508;
+}
+[data-style="express"] .section-title { color: #4a3556; }
+[data-style="express"] .section-title button,
+[data-style="express"] .section-title a { color: #765286; }
+[data-style="express"] .transaction-list {
+  overflow: hidden;
+  background: #fffcf9;
+  border: 1px solid #eee5e9;
+  border-radius: 23px;
+  box-shadow: 0 6px 24px #59406c05;
+}
+[data-style="express"] .transaction { border-color: #f0e8ed; }
+[data-style="express"] .transaction-icon {
+  color: #845044;
+  background: #f4e5df;
+  border-radius: 15px;
+}
+[data-style="express"] .transaction:nth-child(2n) .transaction-icon {
+  color: #6a4d80;
+  background: #eee4f5;
+}
+[data-style="express"] .transaction:nth-child(3n) .transaction-icon {
+  color: #3e7163;
+  background: #e5efe8;
+}
+[data-style="express"] .transaction-main { color: #44324e; }
+[data-style="express"] .transaction-main small,
+[data-style="express"] .transaction-main p { color: #796780; }
+[data-style="express"] .transaction-amount { color: #493653; }
+[data-style="express"] .transaction-amount.positive { color: #2b7356; }
+[data-style="express"] .saving-card {
+  color: #465c4c;
+  background: #eaf0e7;
+  border: 1px solid #dde8da;
+  border-radius: 23px;
+}
+[data-style="express"] .saving-card p,
+[data-style="express"] .saving-card small { color: #5b6c58; }
+[data-style="express"] .saving-progress { background: #d4e0d1; }
+[data-style="express"] .saving-progress > * { background: #6c8870; }
+[data-style="express"] .profile-identity-card {
+  color: #352342;
+  background: #fffdfb;
+  border: 1px solid #e9deeb;
+  border-radius: 28px;
+  box-shadow: 0 12px 32px #6347720a;
+}
+[data-style="express"] .profile-avatar {
+  color: #674879;
+  background: #eee3f5;
+  border: 5px solid #f9f4fc;
+  box-shadow: 0 0 0 1px #e3d4ec;
+}
+[data-style="express"] .profile-name { color: #352342; font-weight: 700; letter-spacing: -.04em; }
+[data-style="express"] .profile-email { color: #75637e; }
+[data-style="express"] .currency-chip {
+  color: #674879;
+  background: #f0e7f6;
+  border: 1px solid #e5d8ed;
+  border-radius: 999px;
+}
+[data-style="express"] .edit-profile {
+  color: #694a7b;
+  background: #fffdfb;
+  border: 1px solid #ddcde6;
+  border-radius: 13px;
+}
+[data-style="express"] .profile-balance-card {
+  color: #fff9ff;
+  background: #483055;
+  border: 1px solid #62446f;
+  border-radius: 26px;
+  box-shadow: 0 12px 26px #46314e1a;
+}
+[data-style="express"] .profile-balance-card .eyebrow,
+[data-style="express"] .profile-balance-card .unit,
+[data-style="express"] .profile-balance-card p,
+[data-style="express"] .profile-balance-card small { color: #e0cde8; }
+[data-style="express"] .profile-balance { color: #fffaff; font-weight: 650; letter-spacing: -.055em; }
+[data-style="express"] .profile-stats {
+  color: #483251;
+  background: #fffdfb;
+  border: 1px solid #e7dce9;
+  border-radius: 21px;
+}
+[data-style="express"] .profile-stat { border-color: #eadfed; }
+[data-style="express"] .profile-stat p,
+[data-style="express"] .profile-stat small,
+[data-style="express"] .profile-stat span { color: #75637e; }
+[data-style="express"] .profile-stat strong { color: #493153; }
+[data-style="express"] .negative,
+[data-style="express"] .profile-stat .negative,
+[data-style="express"] .profile-stat .negative .unit { color: #b52043; }
+[data-style="express"] .profile-links {
+  background: #fffdfb;
+  border: 1px solid #e9e0eb;
+  border-radius: 23px;
+  overflow: hidden;
+}
+[data-style="express"] .profile-link { color: #513d5d; border-color: #f0e8f1; }
+[data-style="express"] .profile-link > svg,
+[data-style="express"] .profile-link > [data-icon] { color: #846394; }
+[data-style="express"] .bottom-dock {
+  position: fixed;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  min-height: 76px;
+  padding: 9px;
+  gap: 3px;
+  background: #fffdf9f2;
+  border: 1px solid #fff;
+  border-radius: 30px;
+  box-shadow: 0 10px 36px #51336022, inset 0 1px 0 #fff;
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+[data-style="express"] .nav-highlight {
+  background: #eee3f5;
+  border: 1px solid #e6d7ef;
+  border-radius: 21px;
+  box-shadow: inset 0 1px 0 #fff9;
+}
+[data-style="express"] .nav-item {
+  color: #7b6785;
+  min-height: 56px;
+  min-width: 0;
+  border-radius: 21px;
+}
+[data-style="express"] .nav-item.is-active { color: #603f73; background: transparent; }
+[data-style="express"] .nav-label { font-weight: 600; }
+[data-style="express"] .nav-item.is-active .nav-icon { transform: translateY(-1px); }
+[data-style="express"] .nav-express {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 10px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 66px;
+  height: 66px;
+  min-width: 66px;
+  min-height: 66px;
+  padding: 7px;
+  border-radius: 50%;
+  border: 5px solid #fffdf9;
+  color: #fff8ff;
+  background: #68447a;
+  box-shadow: 0 7px 20px #54306540, inset 0 1px 0 #ffffff35;
+  transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+  z-index: 3;
+}
+[data-style="express"] .nav-express svg { width: 22px; height: 22px; }
+[data-style="express"] .quick-label { display: block; font-size: 8px; font-weight: 750; letter-spacing: .025em; line-height: 1.1; }
+[data-style="express"] .nav-express:active,
+[data-style="express"] .nav-express.is-pressed {
+  transform: translateX(-50%) translateY(2px) scale(.94);
+  background: #50305f;
+  box-shadow: 0 2px 8px #54306535;
+}
+[data-style="express"] .button:active,
+[data-style="express"] .button.is-pressed { transform: translateY(2px) scale(.98); box-shadow: 0 1px 4px #4b30561f; }
+[data-style="express"] .nav-item:active,
+[data-style="express"] .nav-item.is-pressed { background: #e9dcf28c; transform: scale(.96); }
+[data-style="express"] .ripple { background: #ad8bc337; }
+[data-style="express"] .primary-action .ripple,
+[data-style="express"] .nav-express .ripple { background: #fff5; }
+[data-style="express"] .demo-sheet { color: #382645; background: #fffdf9; border: 1px solid #eadfed; border-radius: 29px 29px 0 0; }
+[data-style="express"] .sheet-handle { background: #d9c9e2; }
+[data-style="express"] .sheet-help { color: #7d6b86; }
+[data-style="express"] .amount-wrap { color: #786183; background: #f5eef8; border-color: #e4d4eb; border-radius: 20px; }
+[data-style="express"] .amount-input { color: #493155; }
+[data-style="express"] .amount-input::placeholder { color: #9b86a5; }
+[data-style="express"] .amount-shortcuts button { color: #694b79; background: #f1e7f7; border: 1px solid #e3d3ec; border-radius: 13px; min-height: 44px; }
+[data-style="express"] .toast { color: #fff9ff; background: #483055; box-shadow: 0 8px 24px #49345526; }
+[data-style="express"] :is(button, a, input):focus-visible { outline: 3px solid #9d5b30; outline-offset: 4px; }
+@media (hover: hover) {
+  [data-style="express"] .primary-action:hover { background: #573565; box-shadow: 0 8px 18px #5a366535; }
+  [data-style="express"] .secondary-action:hover,
+  [data-style="express"] .profile-link:hover { background: #f5edf8; }
+  [data-style="express"] .nav-express:hover { background: #563563; box-shadow: 0 9px 24px #5430654d; }
+}
+@media (max-width: 350px) {
+  [data-style="express"] .bottom-dock { border-radius: 26px; padding: 7px; }
+  [data-style="express"] .nav-item { min-height: 54px; }
+  [data-style="express"] .nav-label { font-size: 10px; }
+  [data-style="express"] .profile-email { font-size: 13px; overflow-wrap: anywhere; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-style="express"] *, [data-style="express"] *::before, [data-style="express"] *::after { animation: none !important; transition: none !important; }
+}

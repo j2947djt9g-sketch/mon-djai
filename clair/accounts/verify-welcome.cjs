@@ -81,7 +81,10 @@
     await page.locator('[data-action="account-forgot"]').click();await page.locator('#account-forgot-form').waitFor();
     assert.equal(await page.locator('#account-forgot-form input[name="email"]').inputValue(),'demo@example.test');
     await page.locator('#account-forgot-form button[type="submit"]').click();await page.locator('#account-reset-resend').waitFor();assert.equal(calls.recovery,1);
-    assert(await page.locator('#recovery-admin-contact').isVisible());assert(await page.locator('#account-reset-resend').isDisabled());await page.clock.runFor(61000);await page.locator('#account-reset-resend').click();await page.waitForFunction(()=>document.querySelector('#account-reset-resend').disabled);assert.equal(calls.recovery,2);
+    assert(await page.locator('#recovery-admin-contact').isVisible());assert(await page.locator('#account-reset-resend').isDisabled());await page.clock.runFor(61000);
+    // Busy state disables immediately; wait for the actual resend before checking its request count.
+    const resendResponse=page.waitForResponse(response=>response.request().method()==='POST'&&/\/(?:recover|clair-account-recovery)$/.test(new URL(response.url()).pathname));
+    await page.locator('#account-reset-resend').click();await resendResponse;assert.equal(calls.recovery,2);assert(await page.locator('#account-reset-resend').isDisabled());
     await page.locator('[data-action="account-reset-edit"]').click();await page.locator('#account-forgot-form').waitFor();
     await page.locator('[data-action="account-reset-back"]').click();await page.locator('#account-form[data-mode="login"]').waitFor();
     await page.locator('[data-action="account-mode"]').click();await page.locator('#account-form[data-mode="signup"]').waitFor();assert.equal(await page.locator('input[name="displayName"]').count(),1);

@@ -5,18 +5,21 @@ const server=http.createServer((req,res)=>{let p=path.resolve(root,'.'+new URL(r
 (async()=>{
  const {createUnlockHandler}=await import('../../supabase/functions/clair-device-unlock/handler.mjs');
  const {createHandler}=await import('../../supabase/functions/clair-masterboard/core.mjs');
+ const {unlockDb}=await import('../../tools/clair/test-support/unlock-db.mjs');
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
  const browser=await chromium.launch({headless:true,executablePath:process.env.CLAIR_CHROME_PATH});
  try{for(const width of [320,390,1440]){
   const uid='22222222-2222-4222-8222-222222222222',admin='11111111-1111-4111-8111-111111111111',now=new Date(),exp=Math.floor(Date.now()/1000)+3600;
   const user={id:uid,email:'member@example.invalid',email_confirmed_at:null,aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{},identities:[]};
   const jwt=[{alg:'HS256',typ:'JWT'},{sub:uid,aud:'authenticated',role:'authenticated',exp},'FIXTURE'].map(x=>Buffer.from(typeof x==='string'?x:JSON.stringify(x)).toString('base64url')).join('.');
-  const rows=new Map();let oldPassword='PreviousPassword_42',generated=0,updated=0,identityVerified=false,approvedId=null;
+  const rows=new Map(),issuance=new Map();let oldPassword='PreviousPassword_42',generated=0,updated=0,identityVerified=false,approvedId=null;
   const device=createUnlockHandler({fingerprint:async()=>'f'.repeat(64),db:{
-   request:async(id,email,hash,label)=>{rows.set(id,{id,email,hash,device_label:label,status:'pending',expires_at:new Date(+now+86400000).toISOString()});return true;},
-   claim:async(id,hash)=>{const r=rows.get(id);if(!r||r.hash!==hash||r.status==='issued'||r.status==='completed')return {state:'expired'};if(r.status==='approved'){r.status='issued';return {state:'ready',email:r.email,user_id:uid};}return {state:'pending'};},
-   complete:async(id,hash,who)=>{const r=rows.get(id);if(r?.hash!==hash||r?.status!=='issued'||who!==uid)return false;r.status='completed';return true;}
-  },auth:{user:async()=>identityVerified?user:null,recovery:async()=>{generated++;return {hashed_token:'a'.repeat(64)};}}});
+   request:async(id,email,hash,label)=>{const state=unlockDb({id,email,hash,uid});Object.assign(state.row,{device_label:label,status:'pending',expires_at:new Date(+now+86400000).toISOString()});issuance.set(id,state);rows.set(id,state.row);return true;},
+   reserve:async(id,hash)=>issuance.has(id)?issuance.get(id).db.reserve(id,hash):{state:'expired'},
+   dispatch:async(id,hash,attempt)=>issuance.has(id)?issuance.get(id).db.dispatch(id,hash,attempt):false,
+   finish:async(id,hash,attempt,outcome)=>issuance.has(id)?issuance.get(id).db.finish(id,hash,attempt,outcome):false,
+   complete:async(id,hash,who)=>issuance.has(id)?issuance.get(id).db.complete(id,hash,who):false
+  },auth:{user:async()=>identityVerified?user:null,issueRecovery:async({email,expectedUserId})=>{assert.equal(email,user.email);assert.equal(expectedUserId,uid);generated++;return {kind:'issued',tokenHash:'a'.repeat(64),userId:uid};}}});
   const adminHandler=createHandler({now:()=>now,db:{
    isAdmin:async id=>id===admin,unlockRequest:async id=>rows.get(id),beginUnlock:async id=>{const r=rows.get(id);if(r.status!=='pending')return false;r.status='approving';return true;},
    approveUnlock:async id=>{rows.get(id).status='approved';approvedId=id;},log:async()=>{}
