@@ -1,0 +1,235 @@
+#clair-conseils-prototype{--font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",system-ui,"Segoe UI",sans-serif;--bg:#f6f4fb;--paper:#fff;--paper-soft:#fbf9ff;--ink:#25133e;--muted:#6a607b;--line:#eae4f1;--accent:#783bf1;--accent-strong:#6226cc;--accent-soft:#f1eaff;--green:#316f58;--green-soft:#eef7f2;--warm:#856138;--warm-soft:#faf4eb;--shadow:0 12px 32px #39215305;--prototype-bg:#eeebf5;--glass:#ffffffdc;position:relative;isolation:isolate;display:flex;flex-direction:column;width:100%;height:100dvh;min-height:560px;overflow:hidden;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased;color-scheme:light}
+#clair-conseils-prototype[data-theme=dark]{--bg:#100d17;--paper:#21192e;--paper-soft:#251d33;--ink:#f3edff;--muted:#b5a9c6;--line:#3d304b;--accent:#bb98ff;--accent-strong:#a679ff;--accent-soft:#352648;--green:#a4d4ba;--green-soft:#1b342d;--warm:#ebc78f;--warm-soft:#382d23;--shadow:0 12px 32px #00000018;--prototype-bg:#211a2d;--glass:#251e31e8;color-scheme:dark}
+#clair-conseils-prototype *,#clair-conseils-prototype *::before,#clair-conseils-prototype *::after{box-sizing:border-box}
+#clair-conseils-prototype button,#clair-conseils-prototype input,#clair-conseils-prototype select{font:inherit}
+#clair-conseils-prototype button{cursor:pointer;color:inherit;border:0;background:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#clair-conseils-prototype button:active{transform:scale(.985)}
+#clair-conseils-prototype a{color:var(--accent-strong)}
+#clair-conseils-prototype :where(button,a,input,select,summary):focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+#clair-conseils-prototype :where(h1,h2,h3,h4,p){margin-top:0}
+#clair-conseils-prototype .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#clair-conseils-prototype [hidden]{display:none!important}
+#clair-conseils-prototype svg{display:block;flex:none;pointer-events:none}
+#clair-conseils-prototype button,#clair-conseils-prototype summary{transition:background .18s ease,transform .18s ease,border-color .18s ease}
+#clair-conseils-prototype .prototype-toolbar{position:relative;z-index:20;flex:none;background:var(--prototype-bg);border-bottom:1px solid var(--line)}
+#clair-conseils-prototype .prototype-toolbar-inner{max-width:1440px;min-height:78px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:12px 28px}
+#clair-conseils-prototype .prototype-label{display:flex;gap:11px;align-items:center;flex:none}
+#clair-conseils-prototype .prototype-label strong{display:block;font-size:10px;letter-spacing:.13em;font-weight:750;color:var(--muted)}
+#clair-conseils-prototype .prototype-label span:not(.prototype-dot){display:block;font-size:11px;color:var(--muted);margin-top:2px}
+#clair-conseils-prototype .prototype-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+#clair-conseils-prototype .prototype-tools{display:flex;align-items:center;gap:9px}
+#clair-conseils-prototype .direction-switch{display:flex;gap:3px;padding:4px;border:1px solid var(--line);border-radius:15px;background:var(--bg)}
+#clair-conseils-prototype .direction-switch button{min-height:40px;padding:8px 13px;border-radius:11px;color:var(--muted);font-size:12px;white-space:nowrap}
+#clair-conseils-prototype .direction-switch button[aria-pressed=true]{background:var(--paper);color:var(--accent-strong);box-shadow:0 2px 7px #3921530b}
+#clair-conseils-prototype .direction-switch b{font-weight:750;margin-right:3px}
+#clair-conseils-prototype .prototype-icon-button{display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--line);border-radius:13px;background:var(--paper)}
+#clair-conseils-prototype .scenario-options{position:relative}
+#clair-conseils-prototype .scenario-options summary{list-style:none;display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:8px 10px;font-size:12px;border-radius:12px;cursor:pointer;color:var(--muted)}
+#clair-conseils-prototype .scenario-options summary::-webkit-details-marker{display:none}
+#clair-conseils-prototype .scenario-options[open] summary{background:var(--paper)}
+#clair-conseils-prototype .scenario-panel{position:absolute;top:calc(100% + 13px);right:0;width:290px;padding:20px;background:var(--paper);border:1px solid var(--line);border-radius:20px;box-shadow:0 20px 60px #25133e24;z-index:30}
+#clair-conseils-prototype .scenario-panel label{display:block;font-size:12px;font-weight:650}
+#clair-conseils-prototype .scenario-panel select{width:100%;margin:8px 0 16px;min-height:44px;padding:9px 12px;border:1px solid var(--line);border-radius:11px;background:var(--paper-soft);color:var(--ink)}
+#clair-conseils-prototype .scenario-panel p:not(.small-eyebrow){font-size:11px;color:var(--muted);margin:8px 0 17px}
+#clair-conseils-prototype .scenario-panel .checkbox-line{display:flex;align-items:flex-start;gap:8px;min-height:44px;line-height:1.6;font-weight:500}
+#clair-conseils-prototype .scenario-panel .checkbox-line input{margin-top:4px;width:17px;height:17px;accent-color:var(--accent-strong);flex:none}
+#clair-conseils-prototype .prototype-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+#clair-conseils-prototype .app-shell{max-width:1440px;margin:0 auto;display:grid;grid-template-columns:216px minmax(0,1fr);align-items:start;min-height:100%}
+#clair-conseils-prototype .sidebar{position:sticky;top:0;min-height:calc(100dvh - 79px);padding:35px 21px 24px;border-right:1px solid var(--line);background:var(--paper);display:flex;flex-direction:column}
+#clair-conseils-prototype .brand{display:flex;align-items:center;gap:9px;color:var(--ink);text-decoration:none;font-size:27px;font-weight:760;letter-spacing:-1px}
+#clair-conseils-prototype .brand img{width:31px;height:31px;border-radius:10px}
+#clair-conseils-prototype .sidebar-caption{font-size:10px;color:var(--muted);margin:11px 0 35px}
+#clair-conseils-prototype .desktop-nav{display:grid;gap:7px}
+#clair-conseils-prototype .desktop-nav button{display:flex;align-items:center;gap:11px;text-align:left;min-height:49px;font-size:13px;font-weight:600;padding:12px;border-radius:14px}
+#clair-conseils-prototype .desktop-nav button.active{background:var(--accent-soft);color:var(--accent-strong)}
+#clair-conseils-prototype .sidebar-subpage{display:flex;align-items:center;gap:10px;margin:14px 0 0 18px;font-size:11px;color:var(--muted)}
+#clair-conseils-prototype .sidebar-subpage>span{width:4px;height:4px;border-radius:50%;background:var(--accent)}
+#clair-conseils-prototype .sidebar-footer{margin-top:auto;padding-top:50px;display:flex;align-items:flex-start;gap:9px}
+#clair-conseils-prototype .sidebar-footer p{margin:0;font-size:11px;color:var(--muted);line-height:1.8}
+#clair-conseils-prototype .quiet-dot{width:6px;height:6px;border-radius:50%;background:#7b9f8c;display:block;margin-top:7px}
+#clair-conseils-prototype .main-content{min-width:0;padding:24px 38px 42px}
+#clair-conseils-prototype .app-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:26px;min-height:38px}
+#clair-conseils-prototype .desktop-breadcrumb{font-size:11px;color:var(--muted)}
+#clair-conseils-prototype .desktop-breadcrumb span{padding:0 10px;color:#b8aaca}
+#clair-conseils-prototype .app-topbar-right{display:flex;align-items:center;gap:11px;margin-left:auto}
+#clair-conseils-prototype .fictional-account{font-size:10px;color:var(--muted)}
+#clair-conseils-prototype .avatar{min-width:38px;min-height:38px;border-radius:14px;background:var(--accent-soft);color:var(--accent-strong);font-size:13px;font-weight:700}
+#clair-conseils-prototype .mobile-brand{display:none}
+#clair-conseils-prototype .page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:22px}
+#clair-conseils-prototype .small-eyebrow{font-size:10px;font-weight:750;letter-spacing:.11em;color:var(--accent-strong);margin:0 0 7px;text-transform:uppercase}
+#clair-conseils-prototype h1{font-size:36px;line-height:1.14;letter-spacing:-1.5px;font-weight:710;margin:0 0 9px}
+#clair-conseils-prototype .page-header-copy{font-size:12px;color:var(--muted);margin:0;max-width:470px}
+#clair-conseils-prototype .period-select{display:flex;align-items:center;gap:9px;padding:3px 12px;border:1px solid var(--line);border-radius:14px;background:var(--paper);white-space:nowrap;box-shadow:var(--shadow);min-height:46px;flex:none;margin-top:10px}
+#clair-conseils-prototype .period-select>svg{color:var(--accent-strong)}
+#clair-conseils-prototype .period-select select{font-size:12px;font-weight:650;border:0;color:var(--ink);background:transparent;min-height:40px;max-width:180px}
+#clair-conseils-prototype .report-body{display:grid;gap:24px}
+#clair-conseils-prototype .report-overview{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);gap:18px;align-items:stretch}
+#clair-conseils-prototype .summary-column{display:grid;gap:13px;align-content:start}
+#clair-conseils-prototype .balance-card{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:24px;background:linear-gradient(120deg,var(--paper) 25%,var(--accent-soft));padding:24px 25px 20px;box-shadow:var(--shadow)}
+#clair-conseils-prototype .balance-card::before{content:"";position:absolute;right:-60px;top:-78px;width:230px;height:230px;border-radius:50%;border:35px solid #783bf105;pointer-events:none}
+#clair-conseils-prototype .balance-head{display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative}
+#clair-conseils-prototype .balance-head h2{font-size:13px;font-weight:600;margin:0;color:var(--muted)}
+#clair-conseils-prototype .status-pill{display:inline-flex;align-items:center;gap:5px;flex:none;border:1px solid var(--line);border-radius:99px;padding:4px 9px;font-size:9px;font-weight:650;background:var(--paper)}
+#clair-conseils-prototype .status-pill svg{width:12px;height:12px;color:var(--accent-strong)}
+#clair-conseils-prototype .balance-value{display:block;font-size:47px;letter-spacing:-1.9px;font-weight:710;line-height:1.2;margin-top:11px;font-variant-numeric:tabular-nums}
+#clair-conseils-prototype .balance-definition{font-size:11px;line-height:1.6;color:var(--muted);margin:6px 0 21px}
+#clair-conseils-prototype .cashflow-grid{display:grid;grid-template-columns:1fr 1fr;padding-top:17px;border-top:1px solid var(--line);gap:20px}
+#clair-conseils-prototype .cashflow-grid>div{min-width:0}
+#clair-conseils-prototype .cashflow-grid>div+div{border-left:1px solid var(--line);padding-left:20px}
+#clair-conseils-prototype .cashflow-grid small{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-bottom:5px}
+#clair-conseils-prototype .cashflow-grid strong{font-size:20px;letter-spacing:-.5px;font-weight:670;white-space:nowrap}
+#clair-conseils-prototype .cashflow-grid svg{width:13px;height:13px}
+#clair-conseils-prototype .savings-strip{display:flex;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:13px 17px}
+#clair-conseils-prototype .savings-strip .savings-icon{display:grid;place-items:center;width:35px;height:35px;flex:none;border-radius:12px;background:var(--green-soft);color:var(--green)}
+#clair-conseils-prototype .savings-strip p{margin:0;font-size:11px;font-weight:650}
+#clair-conseils-prototype .savings-strip small{font-size:10px;color:var(--muted);display:block;margin-top:2px}
+#clair-conseils-prototype .savings-strip strong{margin-left:auto;font-size:22px;font-weight:680;letter-spacing:-.65px;color:var(--green);white-space:nowrap}
+#clair-conseils-prototype .category-card{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:21px 22px 16px;box-shadow:var(--shadow)}
+#clair-conseils-prototype .section-card-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px}
+#clair-conseils-prototype .section-card-header h2{font-size:14px;letter-spacing:-.2px;font-weight:680;margin:0}
+#clair-conseils-prototype .section-card-header span{font-size:10px;color:var(--muted)}
+#clair-conseils-prototype .category-item{display:flex;align-items:center;gap:11px;margin:14px 0}
+#clair-conseils-prototype .category-item:first-of-type{margin-top:8px}
+#clair-conseils-prototype .category-text{flex:1;min-width:0}
+#clair-conseils-prototype .category-text>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;margin-bottom:6px}
+#clair-conseils-prototype .category-text strong{font-weight:650;white-space:nowrap}
+#clair-conseils-prototype .category-track{height:4px;background:var(--bg);border-radius:5px;overflow:hidden}
+#clair-conseils-prototype .category-track span{display:block;height:100%;border-radius:5px;background:var(--category-color,var(--accent))}
+#clair-conseils-prototype .category-caption{font-size:9px;line-height:1.6;color:var(--muted);margin:16px 0 0}
+#clair-conseils-prototype .art{position:relative;width:38px;height:38px;flex:none;display:inline-block;pointer-events:none}
+#clair-conseils-prototype .art-fallback,#clair-conseils-prototype .art-sprite{position:absolute;inset:0;display:grid;place-items:center}
+#clair-conseils-prototype .art-fallback{border-radius:12px;background:var(--accent-soft);color:var(--accent-strong)}
+#clair-conseils-prototype .art-sprite{visibility:hidden;background-image:url("assets/category-atlas.webp");background-size:400% 400%;background-repeat:no-repeat}
+#clair-conseils-prototype[data-art-ready=true] .art-sprite{visibility:visible}
+#clair-conseils-prototype[data-art-ready=true] .art-fallback{visibility:hidden}
+#clair-conseils-prototype .art-food .art-sprite{background-position:0 0}
+#clair-conseils-prototype .art-home .art-sprite{background-position:100% 0}
+#clair-conseils-prototype .art-transport .art-sprite{background-position:66.666667% 0}
+#clair-conseils-prototype .art-other .art-sprite{background-position:100% 100%}
+#clair-conseils-prototype .art-savings .art-sprite{background-position:0 66.666667%}
+#clair-conseils-prototype .coach-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:1px 0 15px}
+#clair-conseils-prototype .coach-heading h2{font-size:21px;font-weight:690;line-height:1.25;letter-spacing:-.6px;margin:0 0 6px}
+#clair-conseils-prototype .coach-heading p{font-size:11px;color:var(--muted);margin:0}
+#clair-conseils-prototype .coach-mascot{width:48px;height:60px;object-fit:contain;object-position:bottom;flex:none;filter:drop-shadow(0 5px 5px #39215308)}
+#clair-conseils-prototype .advice-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);gap:18px;align-items:start}
+#clair-conseils-prototype .advice-card{padding:22px;background:var(--paper);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);min-width:0}
+#clair-conseils-prototype .food-advice{border-color:color-mix(in srgb,var(--accent) 26%,var(--line))}
+#clair-conseils-prototype .advice-card-top{display:flex;align-items:center;gap:11px;margin-bottom:15px}
+#clair-conseils-prototype .advice-card-top>.art{width:43px;height:43px}
+#clair-conseils-prototype .advice-card-top p{font-size:10px;color:var(--muted);margin:0 0 3px}
+#clair-conseils-prototype .advice-card-top h3{font-size:13px;line-height:1.4;letter-spacing:-.1px;font-weight:670;margin:0}
+#clair-conseils-prototype .advice-count{margin-left:auto;align-self:flex-start;font-size:9px;color:var(--muted);border:1px solid var(--line);border-radius:7px;padding:3px 6px}
+#clair-conseils-prototype .advice-title{font-size:24px;line-height:1.22;font-weight:690;letter-spacing:-.7px;margin:0 0 9px;max-width:350px}
+#clair-conseils-prototype .advice-title .accent-number{color:var(--accent-strong)}
+#clair-conseils-prototype .advice-copy{font-size:12px;line-height:1.75;color:var(--muted);margin:0 0 17px}
+#clair-conseils-prototype .advice-copy strong{color:var(--ink);font-weight:600}
+#clair-conseils-prototype .primary-button,#clair-conseils-prototype .secondary-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;max-width:100%;border-radius:14px;padding:11px 16px;font-size:11px;line-height:1.5;font-weight:670;text-decoration:none}
+#clair-conseils-prototype .primary-button{background:var(--accent-strong);color:#fff;box-shadow:0 4px 9px #6226cc0c}
+#clair-conseils-prototype[data-theme=dark] .primary-button{color:#1c112b}
+#clair-conseils-prototype .secondary-button{border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+#clair-conseils-prototype .text-button{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 0;color:var(--accent-strong);font-size:11px;font-weight:650;text-decoration:none;text-align:left}
+#clair-conseils-prototype .food-details{margin-top:19px;border-top:1px solid var(--line);padding-top:19px}
+#clair-conseils-prototype .detail-heading{font-size:14px;font-weight:680;margin:0 0 14px;letter-spacing:-.2px;scroll-margin-top:18px}
+#clair-conseils-prototype .chart-note{font-size:10px;color:var(--muted);margin:10px 0 17px}
+#clair-conseils-prototype .comparison-chart{display:grid;gap:14px;background:var(--paper-soft);border:1px solid var(--line);padding:18px;border-radius:17px}
+#clair-conseils-prototype .chart-row{display:grid;grid-template-columns:58px minmax(0,1fr) 47px;align-items:center;gap:10px;font-size:10px}
+#clair-conseils-prototype .chart-row strong{font-size:12px;font-weight:650;text-align:right;white-space:nowrap}
+#clair-conseils-prototype .chart-track{height:15px;border-radius:5px;background:var(--bg);overflow:hidden}
+#clair-conseils-prototype .chart-track span{display:block;height:100%;border-radius:5px;background:#c6b4df}
+#clair-conseils-prototype .chart-row.current .chart-track span{background:var(--accent-strong)}
+#clair-conseils-prototype .chart-delta{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:10px;padding-top:8px;border-top:1px solid var(--line);color:var(--muted)}
+#clair-conseils-prototype .chart-delta strong{color:var(--accent-strong);font-size:12px;font-weight:650}
+#clair-conseils-prototype .transactions-panel{margin-top:22px;padding-top:22px;border-top:1px solid var(--line)}
+#clair-conseils-prototype .transactions-description{font-size:11px;color:var(--muted);margin:0 0 12px;line-height:1.75}
+#clair-conseils-prototype .transaction-list{list-style:none;padding:0;margin:0}
+#clair-conseils-prototype .transaction-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+#clair-conseils-prototype .transaction-date{display:grid;place-items:center;width:35px;flex:none;min-height:35px;border-radius:10px;background:var(--bg);font-size:10px;font-weight:650;color:var(--muted)}
+#clair-conseils-prototype .transaction-info{flex:1;min-width:0}
+#clair-conseils-prototype .transaction-info strong{display:block;font-size:11px;font-weight:600}
+#clair-conseils-prototype .transaction-info small{display:block;font-size:9px;color:var(--muted);margin-top:2px}
+#clair-conseils-prototype .transaction-amount{font-size:12px;font-weight:650;white-space:nowrap}
+#clair-conseils-prototype .transaction-featured{flex-wrap:wrap;background:var(--paper-soft);border:1px solid var(--line);border-radius:15px;padding:12px;margin-top:10px}
+#clair-conseils-prototype .mark-control{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;margin:1px 0 0;padding-top:8px;border-top:1px solid var(--line);font-size:10px;color:var(--muted);cursor:pointer}
+#clair-conseils-prototype .mark-control input{height:18px;width:18px;margin:0;accent-color:var(--accent-strong);flex:none}
+#clair-conseils-prototype .transaction-total{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;margin:15px 0;color:var(--muted)}
+#clair-conseils-prototype .transaction-total strong{font-size:16px;color:var(--ink);font-weight:680}
+#clair-conseils-prototype .context-callout{padding:14px;border:1px solid color-mix(in srgb,var(--accent) 23%,var(--line));border-radius:14px;background:var(--accent-soft);font-size:11px;line-height:1.75;margin:17px 0;color:var(--ink)}
+#clair-conseils-prototype .context-callout strong{font-weight:670}
+#clair-conseils-prototype .goal-panel{margin-top:22px;border-top:1px solid var(--line);padding-top:22px}
+#clair-conseils-prototype .goal-heading-line{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:7px}
+#clair-conseils-prototype .goal-heading-line h4{margin:0;font-size:14px;font-weight:680;letter-spacing:-.3px}
+#clair-conseils-prototype .goal-scope{font-size:9px;white-space:nowrap;color:var(--muted);border:1px solid var(--line);border-radius:7px;padding:4px 6px}
+#clair-conseils-prototype .goal-copy{font-size:11px;line-height:1.75;color:var(--muted);margin:12px 0 17px}
+#clair-conseils-prototype .goal-form label{display:block;font-size:11px;font-weight:650;margin:0 0 7px}
+#clair-conseils-prototype .amount-field{display:flex;align-items:center;border:1px solid var(--line);border-radius:13px;background:var(--paper);padding:0 14px;min-height:51px}
+#clair-conseils-prototype .amount-field:focus-within{outline:3px solid var(--accent);outline-offset:3px}
+#clair-conseils-prototype .amount-field input{width:100%;min-width:0;border:0;background:transparent;color:var(--ink);font-size:19px;font-weight:650;min-height:49px;outline:none;box-shadow:none;font-variant-numeric:tabular-nums}
+#clair-conseils-prototype .amount-field span{font-size:17px;color:var(--muted)}
+#clair-conseils-prototype .goal-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:11px;flex-wrap:wrap}
+#clair-conseils-prototype .goal-message{font-size:11px;line-height:1.7;padding:13px;border-radius:12px;background:var(--green-soft);color:var(--green);margin:16px 0 0}
+#clair-conseils-prototype .goal-error{color:#a03d50;font-size:11px;margin:10px 0 0}
+#clair-conseils-prototype[data-theme=dark] .goal-error{color:#ffafbf}
+#clair-conseils-prototype .goal-message strong{display:block;font-size:12px;margin-bottom:4px}
+#clair-conseils-prototype .savings-advice .advice-title{font-size:22px}
+#clair-conseils-prototype .calculation-details summary{font-size:11px;min-height:44px;display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--accent-strong);font-weight:650;list-style:none}
+#clair-conseils-prototype .calculation-details summary::after{content:"+";font-size:17px;font-weight:400;margin-left:auto}
+#clair-conseils-prototype .calculation-details[open] summary::after{content:"−"}
+#clair-conseils-prototype .calculation-details summary::-webkit-details-marker{display:none}
+#clair-conseils-prototype .calculation-details p{font-size:11px;color:var(--muted);line-height:1.7;margin:0;padding:7px 0 3px}
+#clair-conseils-prototype .reference-details{margin-top:17px;border-top:1px solid var(--line);padding-top:11px}
+#clair-conseils-prototype .reference-details summary{display:flex;align-items:center;gap:7px;min-height:44px;font-size:11px;font-weight:650;color:var(--muted);cursor:pointer;list-style:none}
+#clair-conseils-prototype .reference-details summary::-webkit-details-marker{display:none}
+#clair-conseils-prototype .reference-content{padding:11px 0 0;font-size:10px;color:var(--muted);line-height:1.8}
+#clair-conseils-prototype .reference-content p{margin-bottom:9px}
+#clair-conseils-prototype .reference-content a{display:inline-flex;align-items:center;gap:5px;min-height:44px;font-weight:650;font-size:11px}
+#clair-conseils-prototype .reference-meta{padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--paper-soft);font-size:9px}
+#clair-conseils-prototype .reference-meta dl{margin:0;display:grid;grid-template-columns:90px 1fr;gap:4px 8px}
+#clair-conseils-prototype .reference-meta dt{color:var(--muted)}
+#clair-conseils-prototype .reference-meta dd{margin:0;color:var(--ink)}
+#clair-conseils-prototype .place-line{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px;margin:14px 0 0}
+#clair-conseils-prototype .place-line button{font-size:10px;min-height:44px;padding:6px 8px;color:var(--accent-strong);text-decoration:underline;text-underline-offset:3px}
+#clair-conseils-prototype .page-note{font-size:10px;color:var(--muted);text-align:center;margin:28px 0 0;line-height:1.7}
+#clair-conseils-prototype .local-view-tabs{display:none;padding:4px;border:1px solid var(--line);border-radius:15px;background:var(--paper);margin:0 0 20px;gap:4px}
+#clair-conseils-prototype .local-view-tabs button{flex:1;min-height:44px;border-radius:11px;font-size:12px;color:var(--muted);font-weight:650}
+#clair-conseils-prototype .local-view-tabs button[aria-pressed=true]{background:var(--accent-soft);color:var(--accent-strong)}
+#clair-conseils-prototype .read-coach-link{display:none}
+#clair-conseils-prototype .bottom-nav{display:none}
+#clair-conseils-prototype .scope-message{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);width:min(430px,calc(100% - 32px));display:flex;align-items:center;gap:12px;padding:15px 15px 15px 19px;background:var(--ink);color:var(--paper);border-radius:17px;box-shadow:0 7px 30px #25133e28;z-index:40;font-size:11px;line-height:1.65}
+#clair-conseils-prototype .scope-message button{display:grid;place-items:center;min-width:44px;min-height:44px;color:inherit}
+#clair-conseils-prototype .scope-message button:active{transform:none}
+#clair-conseils-prototype .data-notice{font-size:11px;line-height:1.7;border:1px solid var(--line);border-radius:14px;padding:13px 15px;background:var(--paper);color:var(--muted);margin:0 0 18px}
+#clair-conseils-prototype[data-layout=b] .report-body{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:start;gap:25px}
+#clair-conseils-prototype[data-layout=b] .report-overview{grid-template-columns:minmax(0,1fr)}
+#clair-conseils-prototype[data-layout=b] .advice-grid{grid-template-columns:minmax(0,1fr)}
+#clair-conseils-prototype[data-layout=b] .coach-heading{min-height:62px;margin-top:0}
+#clair-conseils-prototype[data-layout=b] .balance-value{font-size:43px}
+#clair-conseils-prototype[data-layout=b] .advice-title{font-size:23px}
+@media(min-width:1500px){#clair-conseils-prototype .main-content{padding-inline:48px}}
+@media(max-width:1150px){#clair-conseils-prototype .app-shell{grid-template-columns:190px minmax(0,1fr)}#clair-conseils-prototype .sidebar{padding-inline:16px}#clair-conseils-prototype .main-content{padding:23px}#clair-conseils-prototype .prototype-toolbar-inner{padding-inline:22px}#clair-conseils-prototype .report-overview,#clair-conseils-prototype .advice-grid{grid-template-columns:minmax(0,1.1fr) minmax(250px,.9fr)}#clair-conseils-prototype .balance-card{padding:21px}#clair-conseils-prototype .advice-card,#clair-conseils-prototype .category-card{padding:19px}}
+@media(max-width:1000px){#clair-conseils-prototype .app-shell{grid-template-columns:170px minmax(0,1fr)}#clair-conseils-prototype .sidebar{padding-inline:13px}#clair-conseils-prototype .sidebar-caption{font-size:9px}#clair-conseils-prototype .report-overview{grid-template-columns:minmax(0,1fr)}#clair-conseils-prototype .advice-grid{grid-template-columns:minmax(0,1fr)}#clair-conseils-prototype .category-card{padding:19px 22px}#clair-conseils-prototype .category-item{margin-block:12px}#clair-conseils-prototype .category-list{display:grid;grid-template-columns:1fr 1fr;gap:0 25px}#clair-conseils-prototype[data-layout=b] .report-body{grid-template-columns:minmax(0,1fr)}#clair-conseils-prototype[data-layout=b] .local-view-tabs{display:flex}#clair-conseils-prototype[data-layout=b] .report-body[data-local-view=report] .coach-section{display:none}#clair-conseils-prototype[data-layout=b] .report-body[data-local-view=coach] .report-overview{display:none}#clair-conseils-prototype[data-layout=b] .read-coach-link{display:inline-flex}#clair-conseils-prototype .prototype-label strong{font-size:9px;letter-spacing:.1em}#clair-conseils-prototype .prototype-label span:not(.prototype-dot){font-size:10px}#clair-conseils-prototype .prototype-toolbar-inner{gap:10px}#clair-conseils-prototype .prototype-tools{gap:6px}#clair-conseils-prototype .direction-switch button{padding-inline:10px;font-size:11px}}
+@media(max-width:720px){#clair-conseils-prototype{min-height:500px}#clair-conseils-prototype .prototype-toolbar-inner{padding:10px 14px;flex-wrap:wrap;min-height:101px;gap:8px 10px}#clair-conseils-prototype .prototype-label{width:100%;gap:9px}#clair-conseils-prototype .prototype-label>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}#clair-conseils-prototype .prototype-label strong{font-size:8px}#clair-conseils-prototype .prototype-label span:not(.prototype-dot){font-size:9px;margin:0}#clair-conseils-prototype .prototype-dot{width:6px;height:6px;box-shadow:0 0 0 3px var(--accent-soft)}#clair-conseils-prototype .prototype-tools{width:100%;gap:7px}#clair-conseils-prototype .direction-switch{flex:1;padding:3px;border-radius:13px}#clair-conseils-prototype .direction-switch button{flex:1;min-height:34px;padding:6px 7px;font-size:10px;border-radius:10px}#clair-conseils-prototype .prototype-icon-button{min-width:44px;width:44px;height:44px}#clair-conseils-prototype .scenario-options summary{padding:8px 6px;font-size:10px;gap:4px}#clair-conseils-prototype .scenario-options summary svg{width:15px;height:15px}#clair-conseils-prototype .scenario-panel{top:calc(100% + 9px);right:-1px;width:min(292px,calc(100vw - 28px))}#clair-conseils-prototype .app-shell{display:block}#clair-conseils-prototype .sidebar{display:none}#clair-conseils-prototype .main-content{padding:15px 17px calc(118px + env(safe-area-inset-bottom,0px))}#clair-conseils-prototype .app-topbar{margin-bottom:22px;min-height:34px}#clair-conseils-prototype .desktop-breadcrumb{display:none}#clair-conseils-prototype .mobile-brand{display:flex;font-size:25px;letter-spacing:-.7px}#clair-conseils-prototype .mobile-brand img{width:28px;height:28px;border-radius:8px}#clair-conseils-prototype .avatar{min-width:36px;min-height:36px;border-radius:13px;font-size:12px}#clair-conseils-prototype .fictional-account{font-size:9px}#clair-conseils-prototype .page-header{display:block;margin-bottom:17px}#clair-conseils-prototype h1{font-size:31px;letter-spacing:-1.2px;margin-bottom:5px}#clair-conseils-prototype .small-eyebrow{font-size:9px;margin-bottom:5px}#clair-conseils-prototype .page-header-copy{font-size:11px}#clair-conseils-prototype .period-select{display:inline-flex;margin-top:14px;min-height:43px;padding:1px 10px;border-radius:12px;max-width:100%}#clair-conseils-prototype .period-select select{min-height:39px;font-size:11px}#clair-conseils-prototype .period-select>svg{width:16px;height:16px}#clair-conseils-prototype .report-body{gap:23px}#clair-conseils-prototype .report-overview{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}#clair-conseils-prototype .balance-card{padding:20px 20px 18px;border-radius:22px}#clair-conseils-prototype .balance-head h2{font-size:12px}#clair-conseils-prototype .balance-value{font-size:43px;margin-top:9px;letter-spacing:-1.5px}#clair-conseils-prototype .balance-definition{font-size:10px;margin-bottom:18px}#clair-conseils-prototype .cashflow-grid{padding-top:14px}#clair-conseils-prototype .cashflow-grid strong{font-size:19px}#clair-conseils-prototype .cashflow-grid small{font-size:9px}#clair-conseils-prototype .savings-strip{padding:11px 15px;border-radius:17px;gap:10px}#clair-conseils-prototype .savings-strip p{font-size:10px}#clair-conseils-prototype .savings-strip small{font-size:9px}#clair-conseils-prototype .savings-strip strong{font-size:21px}#clair-conseils-prototype .category-card{padding:18px 19px 15px;border-radius:22px}#clair-conseils-prototype .category-list{display:block}#clair-conseils-prototype .category-item{margin-block:13px}#clair-conseils-prototype .art{width:34px;height:34px}#clair-conseils-prototype .section-card-header{margin-bottom:10px}#clair-conseils-prototype .section-card-header h2{font-size:13px}#clair-conseils-prototype .section-card-header>span{font-size:9px}#clair-conseils-prototype .coach-heading{margin:0 0 13px}#clair-conseils-prototype .coach-heading h2{font-size:21px}#clair-conseils-prototype .coach-heading p{font-size:10px}#clair-conseils-prototype .coach-mascot{width:44px;height:56px}#clair-conseils-prototype .advice-grid{grid-template-columns:minmax(0,1fr);gap:14px}#clair-conseils-prototype .advice-card{padding:20px;border-radius:22px}#clair-conseils-prototype .advice-title{font-size:24px}#clair-conseils-prototype .advice-copy{font-size:11px;line-height:1.8}#clair-conseils-prototype .advice-card-top h3{font-size:12px}#clair-conseils-prototype .advice-card-top>.art{width:40px;height:40px}#clair-conseils-prototype .advice-card-top p{font-size:9px}#clair-conseils-prototype .primary-button,#clair-conseils-prototype .secondary-button{font-size:11px}#clair-conseils-prototype .bottom-nav{position:absolute;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:0;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);width:calc(100% - 28px);max-width:420px;height:76px;padding:7px;border-radius:44px;border:1px solid #ffffffde;background:var(--glass);box-shadow:0 7px 25px #5b3d7314,inset 0 1px 1px #fff;-webkit-backdrop-filter:blur(24px) saturate(1.3);backdrop-filter:blur(24px) saturate(1.3);z-index:10}#clair-conseils-prototype .bottom-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;height:60px;min-height:44px;border-radius:34px;font-size:11px;line-height:1.15;color:var(--muted);font-weight:600}#clair-conseils-prototype .bottom-nav button>span:first-child{display:grid;place-items:center;width:25px;height:25px}#clair-conseils-prototype .bottom-nav button svg{width:25px;height:25px;stroke-width:1.75}#clair-conseils-prototype .bottom-nav button.active{background:linear-gradient(140deg,#e1d8e9eb,#e9e1efeb);box-shadow:inset 0 1px 0 #f7f2fb,0 1px 3px #6f51720a;color:#70558c}#clair-conseils-prototype .scope-message{bottom:calc(105px + env(safe-area-inset-bottom,0px));font-size:11px}#clair-conseils-prototype .page-note{font-size:9px;margin-top:24px}#clair-conseils-prototype[data-layout=b] .report-body{display:block}#clair-conseils-prototype[data-layout=b] .balance-value{font-size:43px}#clair-conseils-prototype .goal-actions{align-items:stretch}#clair-conseils-prototype .goal-actions .primary-button{flex:1}#clair-conseils-prototype .goal-scope{font-size:8px}#clair-conseils-prototype .chart-row{grid-template-columns:52px minmax(0,1fr) 45px;gap:8px}}
+@media(max-width:360px){#clair-conseils-prototype .prototype-label>div{gap:4px}#clair-conseils-prototype .prototype-label span:not(.prototype-dot){font-size:8px}#clair-conseils-prototype .main-content{padding-inline:13px}#clair-conseils-prototype .scenario-options summary>span:last-child{display:none}#clair-conseils-prototype .scenario-options summary{min-width:38px}#clair-conseils-prototype .direction-switch button{font-size:9px}#clair-conseils-prototype .balance-card,#clair-conseils-prototype .advice-card{padding:18px}#clair-conseils-prototype .category-card{padding-inline:17px}#clair-conseils-prototype .goal-heading-line{align-items:flex-start}#clair-conseils-prototype .goal-scope{max-width:95px;white-space:normal;text-align:right}}
+@media(prefers-reduced-motion:reduce){#clair-conseils-prototype *,#clair-conseils-prototype *::before,#clair-conseils-prototype *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}#clair-conseils-prototype button:active{transform:none}}
+@media(forced-colors:active){#clair-conseils-prototype :where(button,.balance-card,.advice-card,.category-card,.savings-strip){border:1px solid CanvasText}#clair-conseils-prototype .chart-track span,#clair-conseils-prototype .category-track span{background:Highlight}#clair-conseils-prototype .bottom-nav{background:Canvas;border-color:CanvasText}}
+
+/* Review refinements: all interactive targets remain at least 44px. */
+#clair-conseils-prototype .direction-switch button{min-height:44px}
+#clair-conseils-prototype .avatar{min-width:44px;min-height:44px}
+#clair-conseils-prototype .brand{min-height:44px}
+#clair-conseils-prototype .period-select,#clair-conseils-prototype .period-select select{min-height:44px}
+#clair-conseils-prototype .cashflow-grid .value-unavailable{font-size:13px;white-space:normal}
+#clair-conseils-prototype .balance-value.value-unavailable{font-size:29px;letter-spacing:-.6px}
+
+/* Readable annotation and advice sizes on touch screens. */
+#clair-conseils-prototype .prototype-label strong{font-size:10px}
+#clair-conseils-prototype .prototype-label span:not(.prototype-dot){font-size:11px}
+#clair-conseils-prototype .small-eyebrow,#clair-conseils-prototype .cashflow-grid small,#clair-conseils-prototype .category-caption,#clair-conseils-prototype .chart-note,#clair-conseils-prototype .advice-card-top p,#clair-conseils-prototype .fictional-account,#clair-conseils-prototype .savings-strip small,#clair-conseils-prototype .reference-content,#clair-conseils-prototype .reference-meta,#clair-conseils-prototype .section-card-header span,#clair-conseils-prototype .coach-heading p,#clair-conseils-prototype .page-note,#clair-conseils-prototype .goal-scope,#clair-conseils-prototype .status-pill{font-size:11px}
+#clair-conseils-prototype .advice-copy{font-size:13px}
+#clair-conseils-prototype .advice-card-top h3,#clair-conseils-prototype .section-card-header h2{font-size:14px}
+#clair-conseils-prototype .savings-strip p,#clair-conseils-prototype .goal-copy,#clair-conseils-prototype .transactions-description,#clair-conseils-prototype .category-text>div:first-child,#clair-conseils-prototype .primary-button,#clair-conseils-prototype .secondary-button,#clair-conseils-prototype .text-button,#clair-conseils-prototype .goal-form label,#clair-conseils-prototype .mark-control,#clair-conseils-prototype .transaction-info strong{font-size:12px}
+#clair-conseils-prototype .transaction-info small,#clair-conseils-prototype .transaction-date,#clair-conseils-prototype .chart-row,#clair-conseils-prototype .chart-delta{font-size:11px}
+#clair-conseils-prototype .chart-row{grid-template-columns:65px minmax(0,1fr) 49px}
+#clair-conseils-prototype .chart-delta{flex-wrap:wrap}
+#clair-conseils-prototype .prototype-label strong,#clair-conseils-prototype .advice-count,#clair-conseils-prototype .scenario-options summary,#clair-conseils-prototype .direction-switch button,#clair-conseils-prototype .sidebar-caption{font-size:11px}
+#clair-conseils-prototype .balance-definition,#clair-conseils-prototype .place-line{font-size:11px}
+#clair-conseils-prototype .scenario-options summary{min-width:44px}

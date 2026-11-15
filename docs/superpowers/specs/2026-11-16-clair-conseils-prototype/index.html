@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="theme-color" content="#f6f4fb">
+  <title>CLAIR Conseils — maquette interactive</title>
+  <link rel="icon" href="assets/clair.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body style="margin:0">
+  <div id="clair-conseils-prototype" data-layout="a" data-theme="light">
+    <div class="prototype-toolbar" aria-label="Commandes de la maquette">
+      <div class="prototype-toolbar-inner">
+        <div class="prototype-label"><span class="prototype-dot" aria-hidden="true"></span><div><strong>MAQUETTE INTERACTIVE</strong><span>Données fictives · rien n’est enregistré</span></div></div>
+        <div class="prototype-tools">
+          <div class="direction-switch" role="group" aria-label="Comparer les deux propositions">
+            <button type="button" data-layout-choice="a" aria-pressed="true"><b>A</b><span> Compact</span></button>
+            <button type="button" data-layout-choice="b" aria-pressed="false"><b>B</b><span> Plus aéré</span></button>
+          </div>
+          <button type="button" id="theme-toggle" class="prototype-icon-button" aria-label="Afficher le mode sombre" aria-pressed="false"><span data-theme-icon></span></button>
+          <details class="scenario-options" id="scenario-options">
+            <summary><span data-scenario-icon></span><span>Scénario</span></summary>
+            <div class="scenario-panel">
+              <p class="small-eyebrow">POUR EXPLORER LA MAQUETTE</p>
+              <label>État des données<select id="demo-state"><option value="closed">Mois clôturé</option><option value="partial">Mois en cours</option><option value="missing">Historique manquant</option></select></label>
+              <label class="checkbox-line"><input type="checkbox" id="show-city" checked><span>Afficher le repère facultatif Angers</span></label>
+              <p>Aucun GPS. Ce repère ne change aucun calcul.</p>
+              <button type="button" class="secondary-button" id="reset-scenario">Réinitialiser le scénario</button>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+    <div id="prototype-scroll" class="prototype-scroll">
+      <div class="app-shell">
+        <aside class="sidebar" aria-label="Navigation de CLAIR">
+          <a class="brand" href="#bilan"><img src="assets/clair.svg" alt=""><span>clair</span></a>
+          <p class="sidebar-caption">Ton budget, l’esprit tranquille.</p>
+          <nav class="desktop-nav" aria-label="Navigation principale">
+            <button type="button" data-scope="Accueil"><span data-icon="home"></span>Accueil</button>
+            <button type="button" data-scope="Historique"><span data-icon="clock"></span>Historique</button>
+            <button type="button" aria-current="page" class="active" data-scope="Réglages"><span data-icon="settings"></span>Réglages</button>
+          </nav>
+          <div class="sidebar-subpage"><span></span>Mon bilan du mois</div>
+          <div class="sidebar-footer"><span class="quiet-dot"></span><p>Un peu plus de clarté.<br>À ton rythme.</p></div>
+        </aside>
+        <main class="main-content" id="bilan">
+          <div class="app-topbar">
+            <a class="brand mobile-brand" href="#bilan"><img src="assets/clair.svg" alt=""><span>clair</span></a>
+            <span class="desktop-breadcrumb">Ton espace <span aria-hidden="true">/</span> Mon bilan du mois</span>
+            <div class="app-topbar-right"><span class="fictional-account">Espace fictif</span><button type="button" class="avatar" data-scope="Profil" aria-label="Profil fictif d’Alex">A</button></div>
+          </div>
+          <div id="prototype-content"></div>
+          <p class="page-note">Démonstration avec des données fictives. Aucune connexion à tes comptes.</p>
+        </main>
+      </div>
+    </div>
+    <nav class="bottom-nav" aria-label="Navigation principale mobile">
+      <button type="button" data-scope="Accueil"><span data-icon="home"></span><span>Accueil</span></button>
+      <button type="button" data-scope="Historique"><span data-icon="clock"></span><span>Historique</span></button>
+      <button type="button" class="active" aria-current="page" data-scope="Réglages"><span data-icon="settings"></span><span>Réglages</span></button>
+    </nav>
+    <div id="scope-message" class="scope-message" hidden><span></span><button type="button" id="dismiss-scope" aria-label="Fermer le message"></button></div>
+    <div id="prototype-announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

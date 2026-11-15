@@ -1,0 +1,184 @@
+{
+  "scope": "Fictitious interactive prototype only; not a product, backend, real-account or financial-engine test",
+  "cases": [
+    {
+      "width": 390,
+      "layout": "a",
+      "stats": {
+        "surplus": "+273€",
+        "income": "1050€",
+        "expenses": "777€",
+        "savings": "+80€",
+        "food": "185€"
+      },
+      "layoutReport": {
+        "viewport": 390,
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "scrollOverflow": 0,
+        "smallTargets": [],
+        "finePrint": []
+      },
+      "flowsPassed": true
+    },
+    {
+      "width": 390,
+      "layout": "b",
+      "stats": {
+        "surplus": "+273€",
+        "income": "1050€",
+        "expenses": "777€",
+        "savings": "+80€",
+        "food": "185€"
+      },
+      "layoutReport": {
+        "viewport": 390,
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "scrollOverflow": 0,
+        "smallTargets": [],
+        "finePrint": []
+      },
+      "flowsPassed": true
+    },
+    {
+      "width": 1440,
+      "layout": "a",
+      "stats": {
+        "surplus": "+273€",
+        "income": "1050€",
+        "expenses": "777€",
+        "savings": "+80€",
+        "food": "185€"
+      },
+      "layoutReport": {
+        "viewport": 1440,
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "scrollOverflow": 0,
+        "smallTargets": [],
+        "finePrint": []
+      },
+      "flowsPassed": true
+    },
+    {
+      "width": 1440,
+      "layout": "b",
+      "stats": {
+        "surplus": "+273€",
+        "income": "1050€",
+        "expenses": "777€",
+        "savings": "+80€",
+        "food": "185€"
+      },
+      "layoutReport": {
+        "viewport": 1440,
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "scrollOverflow": 0,
+        "smallTargets": [],
+        "finePrint": []
+      },
+      "flowsPassed": true
+    },
+    {
+      "width": 320,
+      "layout": "a",
+      "stats": {
+        "surplus": "+273€",
+        "income": "1050€",
+        "expenses": "777€",
+        "savings": "+80€",
+        "food": "185€"
+      },
+      "layoutReport": {
+        "viewport": 320,
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "scrollOverflow": 0,
+        "smallTargets": [],
+        "finePrint": []
+      },
+      "flowsPassed": true
+    },
+    {
+      "width": 320,
+      "layout": "b",
+      "stats": {
+        "surplus": "+273€",
+        "income": "1050€",
+        "expenses": "777€",
+        "savings": "+80€",
+        "food": "185€"
+      },
+      "layoutReport": {
+        "viewport": 320,
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "scrollOverflow": 0,
+        "smallTargets": [],
+        "finePrint": []
+      },
+      "flowsPassed": true
+    },
+    {
+      "width": 768,
+      "layout": "a",
+      "stats": {
+        "surplus": "+273€",
+        "income": "1050€",
+        "expenses": "777€",
+        "savings": "+80€",
+        "food": "185€"
+      },
+      "layoutReport": {
+        "viewport": 768,
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "scrollOverflow": 0,
+        "smallTargets": [],
+        "finePrint": []
+      },
+      "flowsPassed": true
+    },
+    {
+      "width": 768,
+      "layout": "b",
+      "stats": {
+        "surplus": "+273€",
+        "income": "1050€",
+        "expenses": "777€",
+        "savings": "+80€",
+        "food": "185€"
+      },
+      "layoutReport": {
+        "viewport": 768,
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "scrollOverflow": 0,
+        "smallTargets": [],
+        "finePrint": []
+      },
+      "flowsPassed": true
+    }
+  ],
+  "captures": [
+    "390-a-bilan.png",
+    "390-a-conseil.png",
+    "390-a-achats.png",
+    "390-a-objectif.png",
+    "390-a-sombre.png",
+    "390-b-bilan.png",
+    "1440-a-bilan.png",
+    "1440-b-bilan.png"
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "apiRequests": [],
+  "sourceHashes": {
+    "index.html": "2b3165c962682ea056a87e31508171a9c52862b4c0b65568236476cb503a4eee",
+    "style.css": "354df0ee076790f22347407322ed7fa7704486f5e7a6695d748c88d9de5adbef",
+    "app.js": "d40609869b4f4e755c55cb8aaaa2686a6d630c4e5839d1f82b8292fcda6bb8cf"
+  },
+  "result": "PASS prototype flows, invariant fictitious totals, layouts and no external/API requests"
+}
