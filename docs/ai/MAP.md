@@ -22,3 +22,5 @@
 Sources/template → `node tools/clair/build.mjs --generate` → `--check` + `check-mirrors.mjs`. Le moteur possède `accounts/exchange.js`, compatibilité générée depuis ses frontières uniques ; ne pas éditer ce fragment. Cinq scripts/sept conteneurs conservés. `reset-page.js`, `help-page.js`, `recovery-support.css` restent externes. `device-unlock.js` est aussi embarqué.
 
 `node A/test-*.cjs` = Node ; `verify-*.cjs` = Playwright (`CLAIR_CHROME_PATH`). Chargeur VM partagé : `tools/clair/test-support/vm-loader.cjs`. Fixtures adoptées explicitement ; aucun accès mutable à l’état privé. Simulation ≠ email réel ou preuve navigateur file://.
+
+Conseils (conception à valider) : `docs/superpowers/specs/2026-11-16-clair-conseils-design.md` ; aucun module produit ajouté.
