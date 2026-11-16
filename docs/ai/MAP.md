@@ -22,4 +22,4 @@
 
 Tests Node : `A/test-*.cjs` ; navigateur : `verify-*.cjs`, `CLAIR_CHROME_PATH`. VM partagée `tools/clair/test-support/vm-loader.cjs`. Simulation ≠ email réel ou file://.
 
-Conseils : `domain/{monthly-summary,spending-trends,advice-rules}.js`, `application/advice-commands.js`, `accounts/monthly-advice-ui.js/css`, `config/advice-references.js` ; contrat `docs/architecture/CLAIR_CONSEILS.md`. Tests `test-advice-*`, `verify-{monthly-advice,advice-app,advice-sync}.cjs` ; SQL préparé `advice-compatibility.sql`, test Docker `tools/clair/tests/verify-advice-sql.cjs`. Publication/migration non autorisées.
+Conseils : `domain/{monthly-summary,spending-trends,advice-rules}.js`, `application/advice-commands.js`, `accounts/monthly-advice-ui.js/css`, `config/advice-references.js` ; contrat `docs/architecture/CLAIR_CONSEILS.md`. Tests `test-advice-*`, `verify-{monthly-advice,advice-app,advice-sync}.cjs` ; SQL préparé `advice-compatibility.sql`, test Docker `tools/clair/tests/verify-advice-sql.cjs`. Garde appliquée/publication : voir STATE et `CLAIR_CONSEILS_RELEASE.md`.

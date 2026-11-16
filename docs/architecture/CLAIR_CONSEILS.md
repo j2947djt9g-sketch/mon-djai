@@ -1,6 +1,6 @@
 # CLAIR Conseils
 
-Bilan compact approuvé le 16 novembre 2026. Implémentation sur `feat/clair-conseils`, sans changement de production ni application du SQL hébergé. La page `budget` existante accueille le bilan ; la navigation et les enveloppes restent partagées avec CLAIR.
+Bilan compact approuvé le 16 novembre 2026. Implémentation initiale sur `feat/clair-conseils`, puis publication autorisée le16novembre2026 et garde Supabase appliquée. Voir [CLAIR_CONSEILS_RELEASE.md](CLAIR_CONSEILS_RELEASE.md). La page `budget` existante accueille le bilan ; la navigation et les enveloppes restent partagées avec CLAIR.
 
 ## Responsabilités et flux
 
@@ -13,7 +13,7 @@ Bilan compact approuvé le 16 novembre 2026. Implémentation sur `feat/clair-con
 | `domain/advice-rules.js` | Au plus trois constats déterministes expliqués, classés par priorité. |
 | `config/advice-references.js` | Catalogue documentaire immuable ; aucune requête automatique. |
 | `accounts/monthly-advice-ui.js` | Contrôleur monté par `budgetPageView` dans le page-host existant, détails et formulaires limités au compte actif. |
-| `accounts/advice-compatibility.sql` | Garde additive préparée, à examiner et appliquer séparément avant une future publication. |
+| `accounts/advice-compatibility.sql` | Garde additive appliquée après accord explicite ; voir le rapport de publication avant toute modification. |
 
 Flux : snapshot détaché de `budgetSession` → synthèse → comparaison → règles → contrôleur. Une action explicite passe par `commit` → commandes existantes → réconciliation/validation du candidat → stockage durable → publication du snapshot → synchronisation CAS existante. L’affichage ne déclare une réussite qu’après le succès de `commit`. Aucun conseil ne crée de transaction.
 

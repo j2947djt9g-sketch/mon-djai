@@ -1,16 +1,16 @@
 # Clair — repères de publication, à lire seulement pour déployer
 
-**Production : Vercel**, projet `clair-budget`. CLAIR `ef5c75d` publié le 14 novembre 2026 après accord ; Masterboard `0cdda26` conservé. Rapport : [REFACTOR_RELEASE.md](../architecture/REFACTOR_RELEASE.md).
+**Production : Vercel**, projet `clair-budget`. CLAIR Conseils `21dc507`/SW42 publié le16novembre2026 après accords Vercel et Supabase ; Masterboard conservé. Rapport actuel : [CLAIR_CONSEILS_RELEASE.md](../architecture/CLAIR_CONSEILS_RELEASE.md). Fondation : [REFACTOR_RELEASE.md](../architecture/REFACTOR_RELEASE.md).
 
 | Élément | Valeur |
 |---|---|
-| Dépôt / source publiée | `j2947djt9g-sketch/mon-djai`, `refactor/clair-foundation-release-20261114`, runtime `ef5c75d639bec6da0e2ddb5e8a77505fd163caf9` |
+| Dépôt / source publiée | `j2947djt9g-sketch/mon-djai`, `release/clair-conseils-20261116`, runtime `21dc507b855da9b93eda32198a4b23d519497e09` |
 | Adresse publique | https://clair-budget.vercel.app/ |
 | Application servie | `/clair/` |
 | Projet Vercel | `clair-budget`, `prj_LQXscKEX44lvgBR4O8Fru9RVWjKE` |
 | Équipe Vercel | `team_6GfJ1WkSTn5lXj3kWsLF9FeN` |
-| Dernière production vérifiée | `dpl_2B8b56bmoFtVcycXSSuUHg3ktpyd` READY |
-| Empreinte Git du HTML publié | `f52a7994670b9d58867dbf0eaec6e2b3781aa148` |
+| Dernière production vérifiée | `dpl_Bmr6F84cTKNcHrbJyntLFgvdh86r` READY |
+| Empreinte Git du HTML publié | `6b63755d7fead0dcace7697405447b3548a7367d` |
 
 L’accord de livraison couvre Vercel, les corrections Supabase préparées et l’intégration GitHub. La [PR33](https://github.com/j2947djt9g-sketch/mon-djai/pull/33) intègre un snapshot propre, ayant pour parent l’ancien main dc376fb et arbre égal66f3e38. Elle est fusionnée dans main93c7276 ; ne pas fusionner aveuglément les anciennes PR empilées29–32. Retour frontend : `dpl_B2gMeLCaX4uJK6VSzXnVchNZ8S7g` (4673b2a/SW41, même Masterboard).
 
@@ -29,11 +29,11 @@ node tools/clair/package.mjs --ref COMMIT_EXACT --out /tmp/clair-livraison
 node tools/clair/verify-package.mjs --ref COMMIT_EXACT --out /tmp/clair-livraison
 ```
 
-Inventaire actuel : **71 ressources runtime + 2 licences légales + 1 configuration + 1 manifeste = 75 fichiers**, soit74 fichiers publics. Les deux fontes et les14ressources Masterboard sont conservées. Les licences Supabase/Manrope sont distribuées ; tests, SQL, fixtures, docs, template et index racine historique sont exclus. Le manifeste déterministe donne commit, chemin/source, taille et SHA256 ; pas de timestamp.
+Inventaire actuel : **78 ressources runtime + 2 licences légales + 1 configuration + 1 manifeste = 82 fichiers**, soit81 fichiers publics. Les deux fontes et les14ressources Masterboard sont conservées. Les licences Supabase/Manrope sont distribuées ; tests, SQL, fixtures, docs, template et index racine historique sont exclus. Le manifeste déterministe donne commit, chemin/source, taille et SHA256 ; pas de timestamp.
 
 `tools/clair/vercel.json` est copié à la racine du paquet. L’ancienne configuration réelle a été récupérée avant publication : même JSON fonctionnel, uniquement `/`307→`/clair/`, aucun en-tête supplémentaire ni règle projet additionnelle. Réglages statiques : aucun framework, installation/construction vides, sortie `.`. Aucun secret CI ajouté.
 
-Le workflow `clair-live-check.yml` est **manuel uniquement** : commit complet et origine Vercel explicites, comparaison des74 fichiers servis (configuration consommée exclue). Le contrôle historique GitHub Pages ne prouve pas la production. La vérification stricte de cette publication est verte pour ef5c75d. Une vérification publique n’autorise aucune autre publication.
+Le workflow `clair-live-check.yml` est **manuel uniquement** : commit complet et origine Vercel explicites, comparaison des81 fichiers servis (configuration consommée exclue). Le contrôle historique GitHub Pages ne prouve pas la production. La vérification stricte de cette publication est verte pour21dc507. Une vérification publique n’autorise aucune autre publication.
 
 Téléchargement HTTP et PWA/offline ont une preuve Chromium locale sur paquet. L’ouverture réelle `file://` est bloquée par la politique Chromium de cet environnement (`ERR_BLOCKED_BY_ADMINISTRATOR`) : elle reste **non exécutée**, distincte des simulations VM en mode fichier. Le fichier téléchargé est inspecté ; le test navigateur strict est conservé pour un environnement autorisant cette ouverture. Le contrôle strict file:// réel a depuis réussi sur le runner GitHub dans CI172, sans skip ; ne pas contourner la politique locale. L’atlas de catégories reste relatif et peut manquer en mode fichier avec repli.
 
