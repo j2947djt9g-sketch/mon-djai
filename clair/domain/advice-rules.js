@@ -43,7 +43,7 @@
       add(30, 'category-increase', change.id, { title: 'Comprendre cette hausse', amountCents: change.deltaCents,
         suggestedGoalCents,
         finding: `Cette catégorie augmente de ${money(change.deltaCents)} sur des périodes comparables.`,
-        explanation: `La variation dépasse 20 % du mois précédent et représente au moins 3 % des dépenses brutes du mois.${exceptional > 0 ? ` Tu as identifié ${money(exceptional)} de dépenses exceptionnelles, conservées dans les totaux.` : ''}`,
+        explanation: `La variation atteint au moins 20 % du mois précédent et représente au moins 3 % des dépenses brutes du mois.${exceptional > 0 ? ` Tu as identifié ${money(exceptional)} de dépenses exceptionnelles, conservées dans les totaux.` : ''}`,
         recommendation: suggestedGoalCents === null ? 'Ouvre les opérations pour comprendre ce qui a changé.' :
           `Si cela convient à tes besoins, tu peux choisir ${money(suggestedGoalCents)} comme prochain repère. Ce n’est pas une promesse d’économie.`,
         action: { type: 'category', categoryId: change.id } });
