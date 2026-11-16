@@ -69,8 +69,10 @@ Advice commands mutate only a caller-owned draft: `annotateTransaction(d,id,cont
 - [x] Add failing SQL guard tests for marker downgrade, malformed metadata, authorized ownership/RLS/CAS preservation and currency-goal evidence; use only disposable PostgreSQL.
 - [x] Prepare additive invoker/search_path-empty trigger guard without touching live schema; test upgrade/old payload preservation and eight currencies/conversion.
 - [x] Run existing relevant Node/browser suites plus reproducible build/package checks. No file:// policy bypass; distinguish local policy block from CI evidence. Independent whole-branch review; fix actionable important findings.
-- [ ] Update short state/architecture/contracts/tests/results/limits and deployment prerequisites. Commit and open draft PR, no merge or production deployment. Provide screenshots and a reviewable candidate.
+- [x] Update short state/architecture/contracts/tests/results/limits and deployment prerequisites. Commit and open draft PR, no merge or production deployment. Provide screenshots and a reviewable candidate.
 
 ## Progress / decisions
 
 Execution ledger: `/workspace/clair-conseils-work/implementation/progress.md`. This plan is execution detail under the user's explicit implementation approval. Prepared migration and production release remain separate future approval steps.
+
+Livraison : runtime fe52aba, PR37 en brouillon (https://github.com/j2947djt9g-sketch/mon-djai/pull/37). Revue globale approuvée après correction de la conversion locale. Tests locaux et paquet vérifiés ; CI suivie séparément, aucune publication ni migration hébergée.

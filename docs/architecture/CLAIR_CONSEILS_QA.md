@@ -7,6 +7,7 @@
 | Contrôle | Résultat observé |
 |---|---|
 | `node --test clair/accounts/test-*.cjs` | 53 fichiers réussis, aucun échec, après le dernier correctif du moteur. |
+| Paquet `fe52aba` | 82 fichiers exacts vérifiés depuis Git ; téléchargement inspecté, HTTP et workers PWA contrôlant une recharge hors ligne réussis. Ouverture réelle file:// explicitement non prouvée. |
 | Génération, contrôle en lecture seule et miroirs | Réussis ; cinq scripts/sept conteneurs et toutes les nouvelles sources déclarés. |
 | Tests outillage `build.test.mjs`, `package.test.mjs`, `live.test.mjs` | 7 tests réussis. Le contrôle live utilise son serveur HTTP local, pas la production. |
 | `verify-monthly-advice.cjs` | Contrôleur réel + modules métier : chiffres, périodes, contexte, objectifs, erreurs, propriétaire, unicité de l’éditeur et focus clavier ; 320/390/768/1440, clair/sombre/auto et réduction des animations. |
@@ -37,3 +38,5 @@ Le contrôle applicatif produit les captures avec `CLAIR_ADVICE_SHOTS`. Les capt
 Les tests de réseau utilisent un transport simulé ; PostgreSQL est local. Ils ne prouvent aucune écriture/synchronisation sur le Supabase hébergé. Aucun compte réel n’a été ouvert. Safari et l’installation sur iPhone physique ne sont pas testés. La politique Chromium locale interdit l’ouverture réelle `file://` ; les assertions VM ne remplacent pas cette preuve. Les ressources documentaires sont facultatives et actuellement limitées au guide français déclaré, sans prix local, évaluation d’aide, connexion bancaire ni service d’IA payant.
 
 La garde SQL reste **préparée uniquement**. Son application au projet existant doit être approuvée séparément, avant une future publication du client. La fusion et le déploiement de production restent également non autorisés. Les procédures et le paquet de livraison ne constituent pas une autorisation de publier.
+
+Livraison : commit runtime `fe52aba94f1d1f30b46a281c26f2534472faf068`, [PR37 en brouillon](https://github.com/j2947djt9g-sketch/mon-djai/pull/37). CI distante en cours à la rédaction ; ses résultats ne sont pas assimilés aux vérifications locales ci-dessus. Aucun aperçu Vercel n’a été déployé pour cette fonctionnalité.
