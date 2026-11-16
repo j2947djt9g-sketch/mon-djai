@@ -59,7 +59,7 @@ export function checkMirrors(root = fileURLToPath(new URL('../../', import.meta.
     const blocks = containers(html);
     if (JSON.stringify(blocks.map(b=>b.tag)) !== JSON.stringify(manifest.containers)) errors.push('Container inventory/order differs');
     const declared = [...manifest.mirrors, ...manifest.external].map(m=>m.source);
-    const actual = ['clair/accounts','clair/domain','clair/application','clair/ui'].flatMap(directory=>fs.existsSync(path.join(root,directory))?fs.readdirSync(path.join(root,directory)).filter(f=>/\.(js|css)$/.test(f)).map(f=>directory+'/'+f):[]);
+    const actual = ['clair/accounts','clair/domain','clair/application','clair/ui','clair/config'].flatMap(directory=>fs.existsSync(path.join(root,directory))?fs.readdirSync(path.join(root,directory)).filter(f=>/\.(js|css)$/.test(f)).map(f=>directory+'/'+f):[]);
     if (new Set(declared).size !== declared.length || JSON.stringify([...declared].sort()) !== JSON.stringify(actual.sort())) errors.push('JS/CSS inventory differs (missing, duplicate or unlisted source)');
     const positions = new Map();
     for (const mirror of manifest.mirrors) {

@@ -8,7 +8,7 @@ const sandbox={Intl,Date,TextEncoder,URL,URLSearchParams,Blob,structuredClone,cr
 sandbox.window=sandbox;sandbox.addEventListener=()=>{};sandbox.scrollTo=()=>{};sandbox.CLAIR_ACCOUNT_CONFIG=null;
 vm.createContext(sandbox);vm.runInContext(scripts[0],sandbox);vm.runInContext(scripts[2],sandbox);
 let ui=scripts[3],boot=ui.indexOf('  render();if(!cloud.enabled)catchUp();');assert.ok(boot>0);
-ui=ui.slice(0,boot)+`${require('../../tools/clair/test-support/presentation-adapters.cjs')}window.test={sessionContext:()=>budgetSession.getContext(),cloud,switchPage,rules,budget,startCharge,chargeView,openRule,beginSetup,wizardView,collectWizard,
+ui=ui.slice(0,boot)+`${require('../../tools/clair/test-support/presentation-adapters.cjs')}window.test={sessionContext:()=>budgetSession.getContext(),cloud,switchPage,rules,startCharge,chargeView,openRule,beginSetup,wizardView,collectWizard,
 getPage(){return page;},getCharge(){return chargeDraft;},getWizard(){return wizard;},getModal(){return modal;},getData(){return data;},
 setData(d){budgetSession.adoptRemote(d,budgetSession.getContext());snapshot=JSON.stringify(d);localStorage.setItem(KEY,snapshot);},setWizard(w){wizard=w;}};})();`;
 vm.runInContext(ui,sandbox);const t=sandbox.test,E=sandbox.ClairEngine,d=E.empty();d.initialized=true;d.setupDone=true;d.openingCents=100000;d.openingBalanceDate=E.today();t.setData(d);

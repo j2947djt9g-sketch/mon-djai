@@ -32,7 +32,7 @@
       "source": "clair/accounts/category-art.js",
       "container": 1,
       "tag": "script",
-      "order": 6
+      "order": 12
     },
     {
       "source": "clair/accounts/cloud.js",
@@ -90,13 +90,13 @@
       "source": "clair/accounts/express-core.js",
       "container": 1,
       "tag": "script",
-      "order": 3
+      "order": 9
     },
     {
       "source": "clair/accounts/express-insights.js",
       "container": 1,
       "tag": "script",
-      "order": 4
+      "order": 10
     },
     {
       "source": "clair/accounts/express-ui.css",
@@ -120,7 +120,7 @@
       "source": "clair/accounts/glass-ui.js",
       "container": 1,
       "tag": "script",
-      "order": 7
+      "order": 13
     },
     {
       "source": "clair/accounts/journal-ui.js",
@@ -150,7 +150,7 @@
       "source": "clair/accounts/region-currency.js",
       "container": 1,
       "tag": "script",
-      "order": 5
+      "order": 11
     },
     {
       "source": "clair/accounts/savings-ui.js",
@@ -180,13 +180,13 @@
       "source": "clair/application/budget-commands.js",
       "container": 1,
       "tag": "script",
-      "order": 1
+      "order": 7
     },
     {
       "source": "clair/application/budget-session.js",
       "container": 1,
       "tag": "script",
-      "order": 2
+      "order": 8
     },
     {
       "source": "clair/ui/navigation.js",
@@ -199,20 +199,62 @@
       "container": 4,
       "tag": "script",
       "order": 6
+    },
+    {
+      "source": "clair/domain/monthly-summary.js",
+      "container": 1,
+      "tag": "script",
+      "order": 1
+    },
+    {
+      "source": "clair/domain/spending-trends.js",
+      "container": 1,
+      "tag": "script",
+      "order": 2
+    },
+    {
+      "source": "clair/domain/advice-rules.js",
+      "container": 1,
+      "tag": "script",
+      "order": 3
+    },
+    {
+      "source": "clair/application/advice-commands.js",
+      "container": 1,
+      "tag": "script",
+      "order": 4
+    },
+    {
+      "source": "clair/config/advice-references.js",
+      "container": 1,
+      "tag": "script",
+      "order": 5
+    },
+    {
+      "source": "clair/accounts/monthly-advice-ui.js",
+      "container": 1,
+      "tag": "script",
+      "order": 6
+    },
+    {
+      "source": "clair/accounts/monthly-advice.css",
+      "container": 0,
+      "tag": "style",
+      "order": 7
     }
   ],
   "external": [
     {
       "source": "clair/accounts/help-page.js",
-      "reason": "Ressource externe des pages de r\u00e9cup\u00e9ration, absente de index.html."
+      "reason": "Ressource externe des pages de récupération, absente de index.html."
     },
     {
       "source": "clair/accounts/recovery-support.css",
-      "reason": "Ressource externe des pages de r\u00e9cup\u00e9ration, absente de index.html."
+      "reason": "Ressource externe des pages de récupération, absente de index.html."
     },
     {
       "source": "clair/accounts/reset-page.js",
-      "reason": "Ressource externe des pages de r\u00e9cup\u00e9ration, absente de index.html."
+      "reason": "Ressource externe des pages de récupération, absente de index.html."
     }
   ]
 }

@@ -68,6 +68,9 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-design-preview.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-category-art.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-render-lifecycle.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-monthly-advice.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-advice-app.cjs
+          NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-advice-sync.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-journal.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-fluidity.cjs
           NODE_PATH="$RUNNER_TEMP/clair-tools/node_modules" node clair/accounts/verify-express.cjs
@@ -172,5 +175,6 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/clair-exchange-vectors.sql"
           psql -v ON_ERROR_STOP=1 -f clair/accounts/verify-express.sql
           psql -v ON_ERROR_STOP=1 -f clair/accounts/verify-exchange-v2.sql
+          node tools/clair/tests/verify-advice-sql.cjs
           CLAIR_SQL_V2_VECTORS=1 node clair/accounts/test-exchange.cjs > "$RUNNER_TEMP/clair-exchange-v2-vectors.sql"
           psql -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/clair-exchange-v2-vectors.sql"

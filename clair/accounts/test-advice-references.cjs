@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const context={};vm.createContext(context);
+vm.runInContext(fs.readFileSync('clair/config/advice-references.js','utf8'),context);
+const refs=context.ClairAdviceReferences;
+for(const country of ['',undefined,'MA','CI','US'])assert.equal(refs.forCountry(country).length,0);
+const fr=refs.forCountry('FR');assert.equal(fr.length,1);assert.match(fr[0].url,/^https:\/\/www\.mesquestionsdargent\.fr\//);
+assert.equal(fr[0].publication,null);assert.equal(fr[0].checkedAt,'2026-11-15');
+assert(Object.isFrozen(fr));assert(Object.isFrozen(fr[0]));
+assert.doesNotMatch(JSON.stringify(fr),/partenaire|éligible|prix moyen/i);
+console.log('PASS documentary catalogue: explicit geography, source/date and immutable records');
