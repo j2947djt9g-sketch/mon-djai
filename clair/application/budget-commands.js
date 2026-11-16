@@ -23,8 +23,10 @@
       Promise.resolve(result).catch(() => {});
       throw Error('La modification du budget doit être synchrone.');
     }
+    E.reconcileAdviceContext(current, candidate);
     validateBudgetCandidate(candidate);
     E.sync(candidate);
+    E.reconcileAdviceContext(current, candidate);
     validateBudgetCandidate(candidate);
     return structuredClone(candidate);
   }

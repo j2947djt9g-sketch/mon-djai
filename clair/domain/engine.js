@@ -137,6 +137,9 @@
         Object.fromEntries(Object.entries(o).map(([k, n]) => [k, major(n)])),
       ]),
     );
+    if (out.adviceSchema === 1)
+      for (const goals of Object.values(out.advice.goals))
+        for (const goal of Object.values(goals)) goal.amountCents = convert(goal.amountCents);
     // Reconcile the rounded ledger with the directly converted balance today.
     out.openingCents += convert(balance(d, asOf)) - balance(out, asOf);
     return normalize(out);
@@ -434,6 +437,179 @@
       }
     return result;
   }
+  function normalizeAdvice(value, d) {
+    const fail = () => {
+      throw Error('Données CLAIR Conseils invalides.');
+    };
+    const object = (v) => {
+      if (v === undefined) return {};
+      if (!v || typeof v !== 'object' || Array.isArray(v)) fail();
+      return v;
+    };
+    const fields = (v, allowed) => {
+      if (Object.keys(v).some((k) => !allowed.includes(k))) fail();
+    };
+    const monthKey = (m) => /^\d{4}-\d{2}$/.test(m) && validDate(m + '-01');
+    const source = object(value);
+    fields(source, ['transactions', 'months', 'goals', 'location']);
+    const out = { transactions: {}, months: {}, goals: {}, location: { country: '', city: '' } },
+      txs = new Map(d.transactions.map((t) => [t.id, t]));
+    const annotations = object(source.transactions);
+    if (Object.keys(annotations).length > 50000) fail();
+    for (const [id, raw] of Object.entries(annotations)) {
+      if (!safeId(id) || !txs.has(id)) fail();
+      const v = object(raw),
+        t = txs.get(id);
+      fields(v, ['nature', 'exceptional', 'refundOf']);
+      const n = v.nature;
+      if (n !== undefined && !['income', 'expense', 'refund', 'transfer', 'adjustment'].includes(n))
+        fail();
+      if (n && t.categoryId === 'epargne') fail();
+      if (
+        ((n === 'refund' || n === 'income') && t.type !== 'income') ||
+        (n === 'expense' && t.type !== 'expense')
+      )
+        fail();
+      if (v.exceptional !== undefined && typeof v.exceptional !== 'boolean') fail();
+      if (
+        v.exceptional &&
+        (t.type !== 'expense' || t.categoryId === 'epargne' || (n && n !== 'expense'))
+      )
+        fail();
+      if (v.refundOf !== undefined && (n !== 'refund' || !safeId(v.refundOf))) fail();
+      out.transactions[id] = {
+        ...(n ? { nature: n } : {}),
+        ...(v.exceptional !== undefined ? { exceptional: v.exceptional } : {}),
+        ...(v.refundOf ? { refundOf: v.refundOf } : {}),
+      };
+    }
+    const refunds = new Map();
+    for (const [id, v] of Object.entries(out.transactions))
+      if (v.refundOf) {
+        const original = txs.get(v.refundOf),
+          t = txs.get(id),
+          c = out.transactions[v.refundOf];
+        if (
+          !original ||
+          original.type !== 'expense' ||
+          original.categoryId === 'epargne' ||
+          original.date > t.date ||
+          ['transfer', 'adjustment'].includes(c?.nature)
+        )
+          fail();
+        const total = (refunds.get(original.id) || 0) + t.amountCents;
+        if (!Number.isSafeInteger(total) || total > original.amountCents) fail();
+        refunds.set(original.id, total);
+      }
+    const months = object(source.months);
+    if (Object.keys(months).length > 2400) fail();
+    for (const [m, raw] of Object.entries(months)) {
+      const v = object(raw);
+      fields(v, ['through']);
+      if (!monthKey(m) || !validDate(v.through) || v.through.slice(0, 7) !== m) fail();
+      out.months[m] = { through: v.through };
+    }
+    const goals = object(source.goals);
+    if (Object.keys(goals).length > 2400) fail();
+    for (const [m, raw] of Object.entries(goals)) {
+      if (!monthKey(m)) fail();
+      const entries = object(raw);
+      if (Object.keys(entries).length > 200) fail();
+      out.goals[m] = {};
+      for (const [categoryId, rawGoal] of Object.entries(entries)) {
+        const v = object(rawGoal);
+        fields(v, ['amountCents', 'setOn']);
+        if (
+          !safeId(categoryId) ||
+          categoryId === 'epargne' ||
+          !Number.isSafeInteger(v.amountCents) ||
+          v.amountCents <= 0 ||
+          v.amountCents > 10000000000 ||
+          !validDate(v.setOn) ||
+          (currencies[d.currency].digits === 0 && v.amountCents % 100)
+        )
+          fail();
+        out.goals[m][categoryId] = { amountCents: v.amountCents, setOn: v.setOn };
+      }
+    }
+    const place = object(source.location);
+    fields(place, ['country', 'city']);
+    if (
+      place.country !== undefined &&
+      (typeof place.country !== 'string' ||
+        (place.country !== '' && !/^[A-Z]{2}$/.test(place.country)))
+    )
+      fail();
+    if (place.city !== undefined && (typeof place.city !== 'string' || place.city.length > 100))
+      fail();
+    out.location = { country: place.country || '', city: (place.city || '').trim() };
+    return out;
+  }
+  /** Invalidate derived review evidence without changing ledger amounts. */
+  function reconcileAdviceContext(before, after) {
+    if (after.adviceSchema !== 1 || !after.advice || typeof after.advice !== 'object') return;
+    const contexts = after.advice.transactions || {},
+      oldContexts = before.advice?.transactions || {};
+    const previous = new Map(before.transactions.map((t) => [t.id, t])),
+      next = new Map(after.transactions.map((t) => [t.id, t]));
+    for (const id of Object.keys(contexts)) {
+      if (previous.has(id) && !next.has(id)) {
+        delete contexts[id];
+        continue;
+      }
+      if (
+        previous.has(id) &&
+        next.has(id) &&
+        previous.get(id).type !== next.get(id).type &&
+        JSON.stringify(contexts[id]) === JSON.stringify(oldContexts[id])
+      )
+        delete contexts[id];
+    }
+    for (const [id, c] of Object.entries(contexts))
+      if (c.refundOf && oldContexts[id]?.refundOf === c.refundOf) {
+        const a = previous.get(c.refundOf),
+          b = next.get(c.refundOf);
+        if (
+          a &&
+          (!b ||
+            a.type !== b.type ||
+            a.amountCents !== b.amountCents ||
+            a.categoryId !== b.categoryId ||
+            a.date !== b.date)
+        )
+          delete c.refundOf;
+      }
+    const project = (d) => {
+      const groups = new Map();
+      for (const t of d.transactions) {
+        const m = t.date?.slice(0, 7);
+        if (!groups.has(m)) groups.set(m, []);
+        const c = d.advice?.transactions?.[t.id] || {};
+        groups
+          .get(m)
+          .push([
+            t.id,
+            t.type,
+            t.amountCents,
+            t.date,
+            t.categoryId,
+            t.savingsProjectId || null,
+            c.nature || null,
+            c.refundOf || null,
+          ]);
+      }
+      return new Map(
+        [...groups].map(([m, rows]) => [
+          m,
+          JSON.stringify(rows.sort((a, b) => String(a[0]).localeCompare(String(b[0])))),
+        ]),
+      );
+    };
+    const a = project(before),
+      b = project(after);
+    for (const m of new Set([...a.keys(), ...b.keys()]))
+      if (a.get(m) !== b.get(m) && after.advice.months) delete after.advice.months[m];
+  }
   /**
    * Validate compatible JSON budget data and return a fresh JSON v3 object.
    * @param {unknown} input Parsed current or supported legacy backup.
@@ -453,6 +629,8 @@
       throw Error('Sauvegarde trop volumineuse.');
     if (input.expressSchema !== undefined && input.expressSchema !== 1)
       throw Error('Cette version Express nécessite une mise à jour de Clair.');
+    if(input.adviceSchema!==undefined&&input.adviceSchema!==1||input.advice!==undefined&&input.adviceSchema!==1)
+      throw Error('Cette version de CLAIR Conseils nécessite une mise à jour.');
     if (
       input.expressSchema !== 1 &&
       ((input.preferences && own(input.preferences, 'express')) ||
@@ -533,6 +711,7 @@
     d.budgets = moneyMap(input.budgets, d.currency);
     for (const [m, v] of Object.entries(input.budgetOverrides || {}))
       if (validDate(m + '-01')) d.budgetOverrides[m] = moneyMap(v, d.currency);
+    if(input.adviceSchema===1){d.adviceSchema=1;d.advice=normalizeAdvice(input.advice,d);}
     d.savingsGoal = Math.max(0, cents(input.savingsGoal ?? 0, d.currency)) / 100;
     normalizeSavings(input, d);
     d.fixedExpenses = (Array.isArray(input.fixedExpenses) ? input.fixedExpenses : [])
@@ -868,6 +1047,7 @@
     monthOffset,
     empty,
     normalize,
+    reconcileAdviceContext,
     normPrefs,
     dueAmount,
     occurrences,

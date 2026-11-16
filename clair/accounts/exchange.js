@@ -78,6 +78,9 @@
         Object.fromEntries(Object.entries(o).map(([k, n]) => [k, major(n)])),
       ]),
     );
+    if (out.adviceSchema === 1)
+      for (const goals of Object.values(out.advice.goals))
+        for (const goal of Object.values(goals)) goal.amountCents = convert(goal.amountCents);
     // Reconcile the rounded ledger with the directly converted balance today.
     out.openingCents += convert(balance(d, asOf)) - balance(out, asOf);
     return normalize(out);
