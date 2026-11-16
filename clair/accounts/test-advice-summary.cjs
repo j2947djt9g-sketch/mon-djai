@@ -180,6 +180,18 @@ test('recurring rows are counted once from recorded rows and unconfirmed obligat
   assert.ok(s.quality.notes.includes('unconfirmed-automatic'));
 });
 
+test('unconfirmed automatic savings remain a quality warning without becoming recurring ordinary spending', () => {
+  const d = budget([tx('automatic-saving', 8000, 'epargne', 'expense', '2026-10-03', {
+    autoKey: 'save:2026-10-03', ruleId: 'save', paymentConfirmed: false,
+  })]);
+  const s = summarize(d, options);
+  assert.equal(s.savingsCents, 8000);
+  assert.equal(s.expenseCents, 0);
+  assert.equal(s.recurringCents, 0);
+  assert.equal(s.quality.unconfirmedAutomaticCount, 1);
+  assert.ok(s.quality.notes.includes('unconfirmed-automatic'));
+});
+
 test('goal evidence requires a matching monthly override chosen before month start', () => {
   const d = budget();
   d.budgets = { food: 120, transport: 10 };

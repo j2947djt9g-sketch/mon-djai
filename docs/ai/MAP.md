@@ -1,6 +1,6 @@
 # Carte de lecture Clair
 
-`I` = `clair/app/index.template.html`, `A` = `clair/accounts/`, `D` = `clair/domain/engine.js`, `P` = `clair/application/`. `clair/index.html` est généré ; index racine autre app. Lire par extraits `rg -n`.
+`I`=`clair/app/index.template.html`, `A`=`clair/accounts/`, `D`=`clair/domain/engine.js`, `P`=`clair/application/`. Index CLAIR généré ; racine autre app. Lire par `rg -n`.
 
 | Tâche | Source / ancre | Vérifications dans A |
 |---|---|---|
@@ -19,8 +19,7 @@
 | Administration, aide, déverrouillage | `masterboard/` ; `supabase/functions/clair-{masterboard,account-help,device-unlock,account-recovery}/index.ts` et SQL ; `A/device-unlock.js` | `test-{masterboard,assisted-recovery,device-unlock,recovery-limits}`, `verify-masterboard-*` |
 | Assemblage, paquet, PWA, publication | `tools/clair/README.md`, `docs/architecture/CLAIR.md`, `docs/ai/DEPLOYMENT.md`, `clair-checks.yml`, `clair/sw.js`, manifest/head/robots/sitemap | `test-service-worker`, `test-mirrors`, `tools/clair/tests/` |
 
-Sources/template → `node tools/clair/build.mjs --generate` → `--check` + `check-mirrors.mjs`. Le moteur possède `accounts/exchange.js`, compatibilité générée depuis ses frontières uniques ; ne pas éditer ce fragment. Cinq scripts/sept conteneurs conservés. `reset-page.js`, `help-page.js`, `recovery-support.css` restent externes. `device-unlock.js` est aussi embarqué.
 
-`node A/test-*.cjs` = Node ; `verify-*.cjs` = Playwright (`CLAIR_CHROME_PATH`). Chargeur VM partagé : `tools/clair/test-support/vm-loader.cjs`. Fixtures adoptées explicitement ; aucun accès mutable à l’état privé. Simulation ≠ email réel ou preuve navigateur file://.
+Tests Node : `A/test-*.cjs` ; navigateur : `verify-*.cjs`, `CLAIR_CHROME_PATH`. VM partagée `tools/clair/test-support/vm-loader.cjs`. Simulation ≠ email réel ou file://.
 
-Conseils (conception à valider) : `docs/superpowers/specs/2026-11-16-clair-conseils-design.md` ; aucun module produit ajouté.
+Conseils : `domain/{monthly-summary,spending-trends,advice-rules}.js`, `application/advice-commands.js`, `accounts/monthly-advice-ui.js/css`, `config/advice-references.js` ; contrat `docs/architecture/CLAIR_CONSEILS.md`. Tests `test-advice-*`, `verify-{monthly-advice,advice-app,advice-sync}.cjs` ; SQL préparé `advice-compatibility.sql`, test Docker `tools/clair/tests/verify-advice-sql.cjs`. Publication/migration non autorisées.

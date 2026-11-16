@@ -1,6 +1,6 @@
-# CLAIR Conseils — proposition à examiner
+# CLAIR Conseils — conception approuvée
 
-Statut : audit et maquettes fictives uniquement, en attente de validation. La fonctionnalité n’est pas implémentée. Base inspectée : f323de4 ; branche `design/clair-conseils`. Aucun changement du produit, de Supabase ou de la production.
+Statut : Bilan compact approuvé par l’utilisateur le 16 novembre 2026 (« vas-y code »). Implémentation sur `feat/clair-conseils`, sans publication ni changement Supabase. La table ci-dessous décrit l’audit initial, avant implémentation ; contrat final et procédure : `docs/architecture/CLAIR_CONSEILS.md`.
 
 ## Proposition recommandée
 
@@ -10,7 +10,7 @@ Afficher au plus trois conseils, et moins quand seuls un ou deux constats sont s
 
 Les améliorations proposées par rapport aux quatre écrans initiaux sont : réunir le conseil et les achats concernés dans un détail de la page, séparer clairement résultat et épargne, puis n’offrir un objectif chiffré que si son origine est explicable. Un achat marqué ponctuel reste intégralement compté dans les dépenses.
 
-## Ce qui existe réellement
+## Audit initial du code existant
 
 | Besoin | Réutilisation / limite confirmée |
 |---|---|
@@ -32,7 +32,7 @@ Audit : sources uniquement, aucune transaction réelle lue. Notes détaillées d
 
 **Bilan et coach séparés.** Synthèse et coach en colonnes sur ordinateur ; vues locales Bilan/Conseils sur mobile. Lecture plus aérée, au prix d’une interaction supplémentaire. Les deux variantes partagent exactement les mêmes données et règles de présentation.
 
-Ce sont des propositions, pas un choix déjà approuvé. Les [maquettes conservées dans la documentation](2026-11-16-clair-conseils-prototype/README.md), également disponibles hors dépôt pour la revue, n’enregistrent rien et ne communiquent avec aucun compte. Mode sombre et états incomplets sont explorables. Les contrôles de démonstration sont distincts de l’interface envisagée.
+La variante Bilan compact a depuis été approuvée ; la variante séparée reste une alternative non retenue. Les [maquettes conservées dans la documentation](2026-11-16-clair-conseils-prototype/README.md), également disponibles hors dépôt pour la revue, n’enregistrent rien et ne communiquent avec aucun compte. Mode sombre et états incomplets sont explorables. Les contrôles de démonstration sont distincts de l’interface envisagée.
 
 ## Scénario et interactions
 
@@ -55,15 +55,15 @@ La maquette peut proposer un guide pédagogique [Comment faire ses comptes ?](ht
 
 Le [catalogue documentaire candidat](2026-11-16-clair-conseils-references.md) donne les liens primaires et leurs limites. Catalogue futur minimal : organisme/titre/URL, type, publication nullable, période des données, date de vérification, portée géographique, population/conditions, statut de revue et limite d’usage. Un tarif ou une aide chiffrée exige une preuve précise et une éligibilité explicitée ; sinon ne pas l’afficher. Le bilan reste utilisable hors ligne et sans pays.
 
-## Architecture envisagée après validation seulement
+## Architecture retenue après validation
 
 Responsabilités proposées : `domain/monthly-summary` (sélection/totaux/qualité), `domain/spending-trends` (périodes comparables), `domain/advice-rules` (constats déterministes et priorités), catalogue documentaire daté et `accounts/monthly-advice-ui` (extension de la page existante). Réutiliser les commandes d’enveloppes ; ne pas créer un deuxième moteur de montants ni un service d’objectifs sans responsabilité nouvelle démontrée.
 
 Les calculs lisent un snapshot fourni et ne modifient pas le ledger. Les vues sont scopées propriétaire/epoch/mois ; les modifications/suppressions/conversions invalident les résultats dérivés. Ne pas créer de cache global de conseils entre comptes. Préserver centimes, contraintes CFA, JSONv3, CAS/révisions, Auth, notifications et RLS. Les annotations nécessaires devront être couvertes par normalisation, validation JS/SQL, import/export et compatibilité avant toute persistance. Pas de migration ou API d’IA payante dans cette phase.
 
-Ordre futur proposé : sécuriser le contrat des données et le bilan, ajouter comparaison/constats et états incomplets, ajouter objectif facultatif via commandes existantes, puis contexte documentaire optionnel. Les anciens bilans sont recalculés depuis l’historique actuel ; aucune archive immuable inventée.
+Ordre de réalisation approuvé : sécuriser le contrat des données et le bilan, ajouter comparaison/constats et états incomplets, ajouter objectif facultatif via commandes existantes, puis contexte documentaire optionnel. Les anciens bilans sont recalculés depuis l’historique actuel ; aucune archive immuable inventée.
 
-Tests à prévoir après accord : montants exacts/8 devises, versement/retrait sans double comptage, remboursements/virements explicitement classés, automatiques non confirmés, historique absent/zéro/partiel, mois Paris, objectifs datés, modification/suppression et conversion, marquage sans altération des totaux, changement de propriétaire, hors ligne, navigation rapide, clavier/reduced-motion et iPhone/tablette/ordinateur. Les tests des maquettes ne valideront pas ce futur moteur.
+Tests prévus dans l’implémentation approuvée : montants exacts/8 devises, versement/retrait sans double comptage, remboursements/virements explicitement classés, automatiques non confirmés, historique absent/zéro/partiel, mois Paris, objectifs datés, modification/suppression et conversion, marquage sans altération des totaux, changement de propriétaire, hors ligne, navigation rapide, clavier/reduced-motion et iPhone/tablette/ordinateur. Les tests des maquettes ne valideront pas ce futur moteur.
 
 ## Validation attendue
 

@@ -40,3 +40,7 @@ Le change reste lexicalement imbriqué dans `engine.js`. Les deux commentaires u
 Tests canoniques directs : domaine, dix ans de rattrapage, devises/change, métadonnées Express, commandes et session. Intégration : chargeur VM partagé `tools/clair/test-support/vm-loader.cjs`, handlers de l’HTML réellement généré, fixtures explicitement adoptées. Les suites compte/Express ne réinjectent plus les sources absentes. Le retrait des nouveaux modules fait échouer le démarrage testé. Le fixture Cloud utilise la vraie session et conserve les tests hors ligne/reconnexion, réponse perdue, conflits, conversions et changements rapides de comptes.
 
 Les scripts CI Node/SQL/navigateur sont dans `clair-checks.yml`. Les SQL ne s’appliquent qu’en base locale jetable. Le navigateur teste HTTP, téléchargement et workers offline ; l’ouverture réelle `file://` reste NON EXÉCUTÉE dans l’environnement dont la politique Chromium la bloque. Les tests VM `location.protocol='file:'` constituent une preuve séparée, jamais un contournement ou une preuve navigateur. Aucun déploiement, base réelle, compte ou email réel n’est nécessaire à ces vérifications.
+
+## Bilan et conseils
+
+La page budget et ses modules purs sont décrits dans [CLAIR_CONSEILS.md](CLAIR_CONSEILS.md), avec le contrat JSON optionnel, les règles financières, la garde SQL préparée et les conditions de publication. Aucun service d’IA payant ni connexion bancaire.

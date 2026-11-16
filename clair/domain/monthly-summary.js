@@ -53,6 +53,8 @@
       const included = clone(row);
       if (context) included.context = clone(context);
       result.transactions.push(included);
+      const recurring = Boolean(row.autoKey || row.ruleId || row.fixedExpenseId);
+      if (recurring && !row.paymentConfirmed) result.quality.unconfirmedAutomaticCount += 1;
       const incoming = row.type === 'income';
       // Savings are already identified by the canonical ledger category.
       if (row.categoryId === 'epargne') {
@@ -85,9 +87,8 @@
       add(bucket, 'expenseCents', amount);
       bucket.count += 1;
       if (context?.exceptional === true) add(bucket, 'exceptionalCents', amount);
-      if (row.autoKey || row.ruleId || row.fixedExpenseId) {
+      if (recurring) {
         add(result, 'recurringCents', amount);
-        if (!row.paymentConfirmed) result.quality.unconfirmedAutomaticCount += 1;
       }
     }
     result.netExpenseCents = checked(result.expenseCents - result.refundCents);

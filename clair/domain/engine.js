@@ -137,9 +137,38 @@
         Object.fromEntries(Object.entries(o).map(([k, n]) => [k, major(n)])),
       ]),
     );
-    if (out.adviceSchema === 1)
-      for (const goals of Object.values(out.advice.goals))
-        for (const goal of Object.values(goals)) goal.amountCents = convert(goal.amountCents);
+    if (out.adviceSchema === 1) {
+      for (const [month, goals] of Object.entries(out.advice.goals))
+        for (const [categoryId, goal] of Object.entries(goals)) {
+          const previousOverride = d.budgetOverrides[month];
+          if (!previousOverride || !own(previousOverride, categoryId) ||
+            goal.amountCents !== cents(previousOverride[categoryId], from)) {
+            delete goals[categoryId];
+          } else {
+            // Preserve proven evidence; rounding must never revive stale evidence.
+            goal.amountCents = cents(out.budgetOverrides[month][categoryId], to);
+          }
+        }
+      // Independent rounding can put split refunds above their rounded original.
+      // Preserve every converted ledger amount; disclose those refunds as unlinked.
+      const rows = new Map(out.transactions.map((t) => [t.id, t])), groups = new Map();
+      for (const [id, context] of Object.entries(out.advice.transactions)) {
+        if (!context.refundOf) continue;
+        if (!groups.has(context.refundOf)) groups.set(context.refundOf, { total: 0n, ids: [] });
+        const group = groups.get(context.refundOf);
+        group.total += BigInt(rows.get(id).amountCents);
+        group.ids.push(id);
+      }
+      for (const [originalId, group] of groups) {
+        const original = rows.get(originalId);
+        if (group.total <= BigInt(original.amountCents)) continue;
+        delete out.advice.months[original.date.slice(0, 7)];
+        for (const id of group.ids) {
+          delete out.advice.transactions[id].refundOf;
+          delete out.advice.months[rows.get(id).date.slice(0, 7)];
+        }
+      }
+    }
     // Reconcile the rounded ledger with the directly converted balance today.
     out.openingCents += convert(balance(d, asOf)) - balance(out, asOf);
     return normalize(out);
@@ -548,6 +577,9 @@
   /** Invalidate derived review evidence without changing ledger amounts. */
   function reconcileAdviceContext(before, after) {
     if (after.adviceSchema !== 1 || !after.advice || typeof after.advice !== 'object') return;
+    const conversion = currencyCode(before.currency) !== currencyCode(after.currency) &&
+      after.currencyRevision === (before.currencyRevision || 0) + 1;
+    const expectedOldAmount = (amount) => conversion ? exchangeAmount(amount, before.currency, after.currency) : amount;
     const contexts = after.advice.transactions || {},
       oldContexts = before.advice?.transactions || {};
     const previous = new Map(before.transactions.map((t) => [t.id, t])),
@@ -560,10 +592,21 @@
       if (
         previous.has(id) &&
         next.has(id) &&
-        previous.get(id).type !== next.get(id).type &&
         JSON.stringify(contexts[id]) === JSON.stringify(oldContexts[id])
-      )
-        delete contexts[id];
+      ) {
+        const c = contexts[id], t = next.get(id);
+        // Ordinary edits may change the classification beneath unchanged context.
+        // Keep compatible fields, but never let old advice block a valid ledger edit.
+        if (t.categoryId === 'epargne' ||
+          (['income', 'refund'].includes(c.nature) && t.type !== 'income') ||
+          (c.nature === 'expense' && t.type !== 'expense')) {
+          delete c.nature;
+          delete c.refundOf;
+        }
+        if (c.exceptional && (t.type !== 'expense' || t.categoryId === 'epargne' ||
+          (c.nature && c.nature !== 'expense'))) delete c.exceptional;
+        if (!Object.keys(c).length) delete contexts[id];
+      }
     }
     for (const [id, c] of Object.entries(contexts))
       if (c.refundOf && oldContexts[id]?.refundOf === c.refundOf) {
@@ -573,13 +616,14 @@
           a &&
           (!b ||
             a.type !== b.type ||
-            a.amountCents !== b.amountCents ||
+            expectedOldAmount(a.amountCents) !== b.amountCents ||
             a.categoryId !== b.categoryId ||
-            a.date !== b.date)
+            a.date !== b.date ||
+            ['transfer', 'adjustment'].includes(contexts[b.id]?.nature))
         )
           delete c.refundOf;
       }
-    const project = (d) => {
+    const project = (d, amount = (value) => value) => {
       const groups = new Map();
       for (const t of d.transactions) {
         const m = t.date?.slice(0, 7);
@@ -590,7 +634,7 @@
           .push([
             t.id,
             t.type,
-            t.amountCents,
+            amount(t.amountCents),
             t.date,
             t.categoryId,
             t.savingsProjectId || null,
@@ -605,7 +649,7 @@
         ]),
       );
     };
-    const a = project(before),
+    const a = project(before, expectedOldAmount),
       b = project(after);
     for (const m of new Set([...a.keys(), ...b.keys()]))
       if (a.get(m) !== b.get(m) && after.advice.months) delete after.advice.months[m];

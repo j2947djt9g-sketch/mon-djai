@@ -78,9 +78,38 @@
         Object.fromEntries(Object.entries(o).map(([k, n]) => [k, major(n)])),
       ]),
     );
-    if (out.adviceSchema === 1)
-      for (const goals of Object.values(out.advice.goals))
-        for (const goal of Object.values(goals)) goal.amountCents = convert(goal.amountCents);
+    if (out.adviceSchema === 1) {
+      for (const [month, goals] of Object.entries(out.advice.goals))
+        for (const [categoryId, goal] of Object.entries(goals)) {
+          const previousOverride = d.budgetOverrides[month];
+          if (!previousOverride || !own(previousOverride, categoryId) ||
+            goal.amountCents !== cents(previousOverride[categoryId], from)) {
+            delete goals[categoryId];
+          } else {
+            // Preserve proven evidence; rounding must never revive stale evidence.
+            goal.amountCents = cents(out.budgetOverrides[month][categoryId], to);
+          }
+        }
+      // Independent rounding can put split refunds above their rounded original.
+      // Preserve every converted ledger amount; disclose those refunds as unlinked.
+      const rows = new Map(out.transactions.map((t) => [t.id, t])), groups = new Map();
+      for (const [id, context] of Object.entries(out.advice.transactions)) {
+        if (!context.refundOf) continue;
+        if (!groups.has(context.refundOf)) groups.set(context.refundOf, { total: 0n, ids: [] });
+        const group = groups.get(context.refundOf);
+        group.total += BigInt(rows.get(id).amountCents);
+        group.ids.push(id);
+      }
+      for (const [originalId, group] of groups) {
+        const original = rows.get(originalId);
+        if (group.total <= BigInt(original.amountCents)) continue;
+        delete out.advice.months[original.date.slice(0, 7)];
+        for (const id of group.ids) {
+          delete out.advice.transactions[id].refundOf;
+          delete out.advice.months[rows.get(id).date.slice(0, 7)];
+        }
+      }
+    }
     // Reconcile the rounded ledger with the directly converted balance today.
     out.openingCents += convert(balance(d, asOf)) - balance(out, asOf);
     return normalize(out);

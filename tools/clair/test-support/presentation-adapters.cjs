@@ -6,6 +6,8 @@ if(typeof renderDesktopNavigation!=='function'||typeof createPageHost!=='functio
 if(typeof $('#page').replaceChildren!=='function')$('#page').replaceChildren=function(){this.innerHTML=''};
 renderDesktopNavigation=(host,items,page,icon)=>{host.innerHTML=items.map(n=>'<button data-nav="'+n.id+'" class="'+(selectedPrimary(page)===n.id?'active':'')+'">'+icon(n.icon)+n.label+'</button>').join('')};
 reconcileJournalRows=(host,list)=>{host.innerHTML=list.map(t=>txRow(t)).join('')};
+budgetPageView.mount=host=>{host.innerHTML=pageBackLink()+budgetEnvelopes()};
+budgetPageView.update=()=>{$('#page').innerHTML=pageBackLink()+budgetEnvelopes()};
 simplePageView.update=context=>{$('#page').innerHTML=context.markup()};
 settingsPageView.update=context=>{$('#page').innerHTML=context.markup()};
 journalPageView.update=()=>{$('#page').innerHTML=journal();journalResults()};

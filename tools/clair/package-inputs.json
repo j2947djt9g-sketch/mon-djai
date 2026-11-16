@@ -71,7 +71,14 @@
     "clair/application/budget-commands.js",
     "clair/application/budget-session.js",
     "clair/ui/navigation.js",
-    "clair/ui/page-host.js"
+    "clair/ui/page-host.js",
+    "clair/domain/monthly-summary.js",
+    "clair/domain/spending-trends.js",
+    "clair/domain/advice-rules.js",
+    "clair/application/advice-commands.js",
+    "clair/config/advice-references.js",
+    "clair/accounts/monthly-advice-ui.js",
+    "clair/accounts/monthly-advice.css"
   ],
   "licenses": [
     "clair/accounts/LICENSE-supabase.txt",

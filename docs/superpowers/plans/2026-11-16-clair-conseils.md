@@ -46,9 +46,9 @@ Ruling: calculations show registered flows, not verified bank payments. Result=e
 
 Advice commands mutate only a caller-owned draft: `annotateTransaction(d,id,context)`, `reviewMonth(d,month,through)`, `setMonthlyGoal(d,{month,categoryId,amountCents,setOn})`, `setLocation(d,{country,city})`. Engine exports `reconcileAdviceContext(before,after)` and runs strict optional metadata normalization; commands call reconcile after change/sync before final validation.
 
-- [ ] Write/run failing tests for exact105000/77700/27300/8000 and food14000→18500 (+4500), purity, all eight currencies, future filtering, date ranges, absent/zero histories, refunds/transfers/adjustments and stale review/goal evidence.
-- [ ] Implement context/commands then reports/trends/rules. No read/write/network in pure modules. Keep maximum3, significant relative/personal-budget increases, dated goal overspend, imbalance, recurrent weight, positive savings/decreases; never invent causes or force a target.
-- [ ] Run focused and engine/command compatibility suites; review task diff and commit.
+- [x] Write/run failing tests for exact105000/77700/27300/8000 and food14000→18500 (+4500), purity, all eight currencies, future filtering, date ranges, absent/zero histories, refunds/transfers/adjustments and stale review/goal evidence.
+- [x] Implement context/commands then reports/trends/rules. No read/write/network in pure modules. Keep maximum3, significant relative/personal-budget increases, dated goal overspend, imbalance, recurrent weight, positive savings/decreases; never invent causes or force a target.
+- [x] Run focused and engine/command compatibility suites; review task diff and commit.
 
 ### Task2: Compact UI and integration
 
@@ -56,19 +56,19 @@ Advice commands mutate only a caller-owned draft: `annotateTransaction(d,id,cont
 
 **Interface:** `ClairMonthlyAdviceUI.create({getBudget,getOwner,commit,engine,categories,formatMoney,categoryVisual,monthNav,pageBackLink})` returns `{mount(host,{month}),update({month}),dispose()}`. Owner changes clear private state; all mutations use a live owner check and commit. Renderer retains open cards/drafts on metadata ACK, resets stale actions after real financial/context changes. UI observes no global user cache.
 
-- [ ] Write a failing real-browser flow against current budget page; use fake Auth/network with real app modules and no seeded production account.
-- [ ] Add summary/category rows, up to3 explainable expandable advice cards, real transaction context controls, reviewed-period action, chart labels and dated monthly goal form. Keep old envelope management available below. Show exact success only after commit.
-- [ ] Add optional country/city to existing profile; optional France guide only for explicit FR, no location required.
-- [ ] Integrate current page-host lifecycle, declared source tokens/mirrors/package inventory and generated HTML. Extend existing budget/profile handlers to preserve dated-goal evidence; preserve existing navigation/liquid shell.
-- [ ] Verify mobile320/390/tablet768/desktop1440, dark/reduced-motion/keyboard, no overflow, same18500/77700/27300/8000 after contextual marking, actual next-month override14000, correction/deletion, owner change, offline/reconnect and storage failure. Commit after review.
+- [x] Write a failing real-browser flow against current budget page; use fake Auth/network with real app modules and no seeded production account.
+- [x] Add summary/category rows, up to3 explainable expandable advice cards, real transaction context controls, reviewed-period action, chart labels and dated monthly goal form. Keep old envelope management available below. Show exact success only after commit.
+- [x] Add optional country/city to existing profile; optional France guide only for explicit FR, no location required.
+- [x] Integrate current page-host lifecycle, declared source tokens/mirrors/package inventory and generated HTML. Extend existing budget/profile handlers to preserve dated-goal evidence; preserve existing navigation/liquid shell.
+- [x] Verify mobile320/390/tablet768/desktop1440, dark/reduced-motion/keyboard, no overflow, same18500/77700/27300/8000 after contextual marking, actual next-month override14000, correction/deletion, owner change, offline/reconnect and storage failure. Commit after review.
 
 ### Task3: Compatibility, QA and handover
 
 **Files:** prepared `clair/accounts/advice-compatibility.sql`, isolated SQL verification, docs/architecture/CLAIR_CONSEILS.md, STATE/MAP, CI applicable checks.
 
-- [ ] Add failing SQL guard tests for marker downgrade, malformed metadata, authorized ownership/RLS/CAS preservation and currency-goal evidence; use only disposable PostgreSQL.
-- [ ] Prepare additive invoker/search_path-empty trigger guard without touching live schema; test upgrade/old payload preservation and eight currencies/conversion.
-- [ ] Run existing relevant Node/browser suites plus reproducible build/package checks. No file:// policy bypass; distinguish local policy block from CI evidence. Independent whole-branch review; fix actionable important findings.
+- [x] Add failing SQL guard tests for marker downgrade, malformed metadata, authorized ownership/RLS/CAS preservation and currency-goal evidence; use only disposable PostgreSQL.
+- [x] Prepare additive invoker/search_path-empty trigger guard without touching live schema; test upgrade/old payload preservation and eight currencies/conversion.
+- [x] Run existing relevant Node/browser suites plus reproducible build/package checks. No file:// policy bypass; distinguish local policy block from CI evidence. Independent whole-branch review; fix actionable important findings.
 - [ ] Update short state/architecture/contracts/tests/results/limits and deployment prerequisites. Commit and open draft PR, no merge or production deployment. Provide screenshots and a reviewable candidate.
 
 ## Progress / decisions

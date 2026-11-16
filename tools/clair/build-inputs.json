@@ -197,6 +197,48 @@
       "token": "@@CLAIR_PAGE_HOST@@",
       "container": 4,
       "transform": "trim"
+    },
+    {
+      "token": "@@CLAIR_MONTHLY_SUMMARY@@",
+      "source": "clair/domain/monthly-summary.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_SPENDING_TRENDS@@",
+      "source": "clair/domain/spending-trends.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_ADVICE_RULES@@",
+      "source": "clair/domain/advice-rules.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_ADVICE_COMMANDS@@",
+      "source": "clair/application/advice-commands.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_ADVICE_REFERENCES@@",
+      "source": "clair/config/advice-references.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_MONTHLY_ADVICE_UI@@",
+      "source": "clair/accounts/monthly-advice-ui.js",
+      "transform": "trim",
+      "container": 1
+    },
+    {
+      "token": "@@CLAIR_MONTHLY_ADVICE_CSS@@",
+      "source": "clair/accounts/monthly-advice.css",
+      "transform": "trim",
+      "container": 0
     }
   ]
 }
